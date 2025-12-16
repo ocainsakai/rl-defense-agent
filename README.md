@@ -34,5 +34,5 @@ This project aims to build an **Adaptive AI Defense Agent** trained using Reinfo
 
 ### 1. Clone Repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/rl-defense-agent.git](https://github.com/YOUR_USERNAME/rl-defense-agent.git)
+git clone [https://github.com/ocainsakai/rl-defense-agent.git](https://github.com/ocainsakai/rl-defense-agent.git)
 cd rl-defense-agent
