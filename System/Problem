@@ -1,0 +1,4 @@
+'''Signature Evasion: Attacker có thể tạo payload không match pattern nhưng vẫn exploit được
+False Positive với Code/Logs: Log file chứa <script> hay code PHP có thể bị đánh dấu malicious
+Context Unawareness: Không biết payload đang target endpoint nào (admin panel vs public API)
+Binary Traffic Blind: Không scan được binary protocols (gRPC, Protocol Buffers)'''
