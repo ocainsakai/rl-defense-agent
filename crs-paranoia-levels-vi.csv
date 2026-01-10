@@ -1,0 +1,5 @@
+Mức Paranoia,Tên gọi,Mô tả,Đối tượng sử dụng,Mức độ cảnh báo giả,Khuyến nghị
+PL 1,Cơ bản,An toàn mặc định với ít cảnh báo giả nhất,Website thông thường; blog; portfolio,Rất ít hoặc không có,Phù hợp cho hầu hết website
+PL 2,Trung bình,Bảo vệ tốt hơn; thêm nhiều rule phát hiện,Website thương mại điện tử; có đăng nhập người dùng,Có thể có; cần điều chỉnh,Cần thời gian tune false positives
+PL 3,Cao,Bảo mật cấp độ ngân hàng,Hệ thống tài chính; thanh toán; dữ liệu nhạy cảm,Nhiều; cần điều chỉnh kỹ,Cần đội ngũ bảo mật chuyên nghiệp
+PL 4,Tối đa,Bảo vệ tối đa; kiểm tra mọi thứ,Hệ thống quân sự; chính phủ; crown jewels,Rất nhiều,Chỉ dùng khi thực sự cần thiết

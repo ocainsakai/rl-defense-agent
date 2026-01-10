@@ -1,0 +1,5 @@
+Mức độ,Điểm số mặc định,Ý nghĩa tiếng Việt,Khi nào sử dụng
+CRITICAL,5,Nghiêm trọng,Phát hiện tấn công thực sự như SQL Injection; XSS; RCE
+ERROR,4,Lỗi,Vi phạm nghiêm trọng về giao thức hoặc cấu hình
+WARNING,3,Cảnh báo,Hành vi đáng ngờ; có thể là tấn công hoặc false positive
+NOTICE,2,Thông báo,Vi phạm nhẹ; thường là vấn đề về chuẩn giao thức
