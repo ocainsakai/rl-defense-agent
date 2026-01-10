@@ -1,0 +1,568 @@
+# Tổng Quan Hệ Thống Phát Hiện Xâm Nhập Mạng (NIDS)
+
+## 1. Kiến Trúc Tổng Quan
+
+```mermaid
+flowchart TB
+    subgraph "Data Capture Layer"
+        A[Network Interface] --> B[NetworkSniffer]
+        C[PCAP File] --> B
+    end
+    
+    subgraph "Parsing Layer"
+        B --> D[PacketLayerExtractor]
+        D --> E[LayerInfo]
+    end
+    
+    subgraph "Feature Extraction Layer"
+        E --> F[PacketWindow]
+        F --> G[FeatureVectorBuilder]
+        G --> H[6 Feature Calculators]
+    end
+    
+    subgraph "Output Layer"
+        H --> I["Vector [F1, F2, F3, F4, F5, F6]"]
+        I --> J[CSV File]
+    end
+    
+    style A fill:#e1f5fe
+    style C fill:#e1f5fe
+    style E fill:#fff3e0
+    style F fill:#fff3e0
+    style I fill:#c8e6c9
+    style J fill:#c8e6c9
+```
+
+### Luồng Xử Lý Dữ Liệu
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   RAW PACKET    │ ──► │   LayerInfo     │ ──► │  Feature Vector │
+│   (Scapy)       │     │   (Parsed)      │     │  [0-1, 0-1,...] │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │                       │
+        ▼                       ▼                       ▼
+ PacketParser            PacketWindow            CSV Output
+ (Trích xuất)           (Sliding Window)        (Lưu trữ)
+```
+
+---
+
+## 2. Chi Tiết Từng Module
+
+### 2.1 Entry Point - [main.py](file:///c:/Users/VyVa/Documents/IAP491/System/main.py)
+
+**Mục đích**: Điểm vào chính của chương trình, điều phối toàn bộ pipeline.
+
+#### Hàm `main()`
+- **Chức năng**: Parse tham số dòng lệnh (CLI) bằng `argparse`
+- **Tham số**:
+  - `-i/--interface`: Tên giao diện mạng (VD: "Ethernet", "Wi-Fi")
+  - `-o/--output`: File CSV đầu ra
+  - `-c/--count`: Số lượng gói tin (mặc định: không giới hạn)
+  - `-m/--mode`: Chế độ output (`per-packet` hoặc `aggregate`)
+
+#### Hàm `realtime_capture()`
+- **Chức năng**: Bắt gói tin real-time và trích xuất features
+- **Quy trình**:
+  1. Khởi tạo các component: `PacketParser`, `FeatureVectorBuilder`, `NetworkSniffer`
+  2. Mở file CSV và ghi header
+  3. Bắt đầu capture với callback `process_packet()`
+
+#### Hàm `process_packet(pkt)`
+- **Chức năng**: Callback xử lý từng gói tin
+- **Pipeline**:
+```python
+packet → PacketParser.extract() → LayerInfo
+LayerInfo → FeatureVectorBuilder.process_layer_info() → Vector[6]
+Vector[6] → CSV Writer → File
+```
+
+#### Hàm `write_aggregate_row()`
+- **Chức năng**: Gộp nhiều vector thành 1 dòng (chế độ aggregate)
+- **Logic**: Lấy MAX của mỗi feature (để capture peak attack behavior)
+
+---
+
+### 2.2 Bắt Gói Tin - [sniffer.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/sniffer.py)
+
+**Mục đích**: Wrapper cho Scapy `sniff()`, hỗ trợ cả Live và Offline mode.
+
+```mermaid
+classDiagram
+    class NetworkSniffer {
+        -is_running: bool
+        -packet_count: int
+        +start_live(interface, callback, count, filter)
+        +start_pcap(pcap_path, callback, count)
+        +stop()
+        +get_stats()
+    }
+```
+
+#### Hàm `__init__()`
+```python
+def __init__(self):
+    self.is_running = False   # Cờ trạng thái
+    self.packet_count = 0     # Bộ đếm packets
+```
+
+#### Hàm `start_live()`
+- **Chức năng**: Bắt gói tin real-time từ network interface
+- **Kỹ thuật quan trọng**: `store=0` để tránh tràn RAM
+- **Tham số `bpf_filter`**: Berkeley Packet Filter (VD: `"ip"`, `"tcp port 80"`)
+
+```python
+sniff(
+    iface=interface,         # Giao diện mạng
+    prn=wrapped_callback,    # Callback cho mỗi packet
+    filter=bpf_filter,       # Lọc packets
+    store=0,                 # QUAN TRỌNG: Không lưu vào RAM
+    count=final_count        # Số lượng tối đa
+)
+```
+
+#### Hàm `start_pcap()`
+- **Chức năng**: Đọc và xử lý file PCAP (offline analysis)
+- **Use case**: Phân tích dữ liệu đã capture trước đó
+
+#### Hàm `wrapped_callback(pkt)`
+- **Chức năng**: Wrapper để đếm packets và kiểm tra `is_running`
+- **Kỹ thuật**: Closure pattern để truy cập `self.packet_count`
+
+---
+
+### 2.3 Parsing Gói Tin - [packet_parser.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/packet_parser.py)
+
+**Mục đích**: Trích xuất thông tin từ các tầng gói tin (IP, TCP, UDP, ICMP, HTTP, DNS).
+
+```mermaid
+classDiagram
+    class PacketLayerExtractor {
+        -enable_http_parsing: bool
+        -use_packet_time: bool
+        -stats: Dict
+        +extract(packet, packet_number) LayerInfo
+        +parse(packet, packet_number) LayerInfo
+        +extract_batch(packets) List~LayerInfo~
+        +get_stats() Dict
+        +reset_stats()
+    }
+```
+
+#### Hàm `__init__()`
+- **Tham số**:
+  - `enable_http_parsing`: Bật/tắt parse HTTP headers (tốn tài nguyên)
+  - `use_packet_time`: Dùng timestamp từ PCAP thay vì `time.time()`
+
+#### Hàm `extract(packet, packet_number)`
+- **Chức năng**: Trích xuất TẤT CẢ thông tin từ packet trong MỘT lần duyệt
+- **Quy trình**:
+```
+1. Tạo LayerInfo object
+2. _extract_ip_layer()      → IP src/dst, TTL, version
+3. _extract_tcp_layer()     → Ports, TCP flags, seq/ack
+4. _extract_udp_layer()     → Ports, length
+5. _extract_icmp_layer()    → Type, code
+6. _extract_payload()       → Raw bytes, length
+7. _extract_http_layer()    → Method, URI, headers
+8. _extract_dns_layer()     → Query domain
+```
+
+#### Hàm `_extract_tcp_layer()`
+- **Trích xuất**:
+  - `tcp_sport`, `tcp_dport`: Cổng nguồn/đích
+  - `tcp_flags`: Chuỗi flags như "S" (SYN), "SA" (SYN-ACK), "R" (RST)
+  - `tcp_seq`, `tcp_ack`: Sequence và Acknowledgment numbers
+  - `tcp_window`: Window size
+
+#### Hàm `_extract_http_layer()`
+- **Phát hiện HTTP từ payload** (port 80/8080/443)
+- **Trích xuất**: Method, URI, Host, User-Agent, Status Code
+- **Kỹ thuật**: Regex parsing trên payload bytes
+
+---
+
+### 2.4 Data Object - [layer_info.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/layer_info.py)
+
+**Mục đích**: Đối tượng chứa tất cả thông tin đã parse từ một gói tin.
+
+```mermaid
+classDiagram
+    class LayerInfo {
+        +timestamp: float
+        +packet_number: int
+        
+        +has_ip: bool
+        +src_ip: str
+        +dst_ip: str
+        +ttl: int
+        
+        +has_tcp: bool
+        +tcp_sport: int
+        +tcp_dport: int
+        +tcp_flags: str
+        
+        +has_udp: bool
+        +udp_sport: int
+        +udp_dport: int
+        
+        +has_payload: bool
+        +payload_bytes: bytes
+        +payload_length: int
+        
+        +is_reset: bool
+        +is_icmp_unreach: bool
+        +to_dict() Dict
+        +to_json() str
+    }
+```
+
+#### Kỹ thuật sử dụng: `@dataclass`
+```python
+@dataclass
+class LayerInfo:
+    # Tất cả fields đều Optional để xử lý malformed packets
+    src_ip: Optional[str] = None
+    dst_ip: Optional[str] = None
+    ...
+```
+
+**Lợi ích của `@dataclass`**:
+- Tự động tạo `__init__()`, `__repr__()`, `__eq__()`
+- Code gọn gàng, dễ maintain
+- Hỗ trợ default values
+
+#### Hàm `__post_init__()`
+- **Chức năng**: Data Sanitization sau khi khởi tạo
+- **Xử lý**:
+  - Convert payload thành bytes nếu cần
+  - Convert TCP flags từ Scapy FlagValue thành string
+  - Decode HTTP headers từ bytes thành string
+
+#### Property `is_reset`
+```python
+@property
+def is_reset(self) -> bool:
+    return self.has_tcp and self.tcp_flags and "R" in self.tcp_flags
+```
+- **Mục đích**: Kiểm tra nhanh packet có phải TCP RST không
+
+---
+
+### 2.5 Sliding Window - [window_packet.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/window_packet.py)
+
+**Mục đích**: Lưu trữ lịch sử packets theo IP với cơ chế sliding window.
+
+```mermaid
+classDiagram
+    class PacketWindow {
+        -window_size: float
+        -max_ips: int
+        -packets_by_ip: Dict~str, deque~
+        -_stats_cache: Dict
+        -_cache_timestamp: Dict
+        
+        +add(layer_info)
+        +get_packets(src_ip) List~LayerInfo~
+        +get_count(src_ip) int
+        +get_tcp_flags_count(src_ip) Dict
+        +get_distinct_ports(src_ip) Set~int~
+        +get_payload_lengths(src_ip) List~int~
+        +get_payloads(src_ip) List~bytes~
+        +get_response_packets(src_ip) List~LayerInfo~
+        +cleanup_inactive_ips(min_packets) int
+    }
+```
+
+#### Cấu trúc dữ liệu chính
+```python
+self.packets_by_ip = defaultdict(lambda: deque(maxlen=3000))
+#                     ↑                      ↑
+#            Tự động tạo deque         Giới hạn 3000 packets/IP
+```
+
+#### Hàm `add(layer_info)`
+- **Quy trình**:
+```
+1. Kiểm tra has_ip
+2. Kiểm tra max_ips, xóa IP cũ nhất nếu đầy
+3. Append vào deque của IP
+4. Clean old packets (sliding window)
+5. Invalidate cache
+```
+
+#### Hàm `_clean_old_packets()`
+- **Sliding Window Implementation**:
+```python
+cutoff_time = current_time - window_size
+while packets and packets[0].timestamp < cutoff_time:
+    packets.popleft()  # O(1) complexity
+```
+
+#### Hàm `get_response_packets(src_ip)`
+- **Mục đích**: Lấy packets GỬI VỀ src_ip (bidirectional tracking)
+- **Use case**: Đếm RST responses trong Port Scan detection
+
+```
+Attacker (A) → SYN → Victim (V)
+Victim (V) → RST → Attacker (A)  ← get_response_packets("A") trả về packet này
+```
+
+---
+
+### 2.6 Feature Builder - [processor.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/processor.py)
+
+**Mục đích**: Điều phối tính toán 6 features từ LayerInfo.
+
+```mermaid
+flowchart LR
+    A[LayerInfo] --> B[PacketWindow.add]
+    B --> C[Feature1_PacketRate]
+    B --> D[Feature2_SynAckRatio]
+    B --> E[Feature3_DistinctPorts]
+    B --> F[Feature4_PayloadLength]
+    B --> G[Feature5_FailRate]
+    B --> H[Feature6_ContextScore]
+    
+    C --> I["[f1, f2, f3, f4, f5, f6]"]
+    D --> I
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+```
+
+#### Hàm `__init__()`
+```python
+def __init__(self, window_size: float = 1.0):
+    self.window = PacketWindow(window_size)
+    self.calculators = [
+        Feature1_PacketRate(),
+        Feature2_SynAckRatio(),
+        Feature3_DistinctPorts(),
+        Feature4_PayloadLength(),
+        Feature5_FailRate(),
+        Feature6_ContextScore()
+    ]
+```
+
+#### Hàm `process_layer_info(layer_info)`
+```python
+def process_layer_info(self, layer_info: LayerInfo) -> np.ndarray:
+    # 1. Update sliding window
+    self.window.add(layer_info)
+    
+    # 2. Calculate each feature
+    vector = []
+    for calc in self.calculators:
+        val = calc.calculate(layer_info, self.window)  # Đã normalize
+        vector.append(val)
+    
+    return np.array(vector)  # [f1, f2, f3, f4, f5, f6]
+```
+
+---
+
+### 2.7 Feature Calculators
+
+#### Base Class - [feature_base.py](file:///c:/Users/VyVa/Documents/IAP491/System/feature/feature_base.py)
+
+```mermaid
+classDiagram
+    class BaseFeatureCalculator {
+        <<abstract>>
+        +META_NAME: str
+        +META_MAX: float
+        +name: str
+        +min_val: float
+        +max_val: float
+        +calculate_raw(layer_info, window)* float
+        +calculate(layer_info, window) float
+        +normalize(value) float
+    }
+    
+    Feature1_PacketRate --|> BaseFeatureCalculator
+    Feature2_SynAckRatio --|> BaseFeatureCalculator
+    Feature3_DistinctPorts --|> BaseFeatureCalculator
+    Feature4_PayloadLength --|> BaseFeatureCalculator
+    Feature5_FailRate --|> BaseFeatureCalculator
+    Feature6_ContextScore --|> BaseFeatureCalculator
+```
+
+**Template Method Pattern**:
+```python
+def calculate(self, layer_info, window) -> float:
+    raw_value = self.calculate_raw(layer_info, window)  # Abstract
+    return self.normalize(raw_value)                     # Concrete
+```
+
+---
+
+#### Feature Logic - [feature_logic.py](file:///c:/Users/VyVa/Documents/IAP491/System/feature/feature_logic.py)
+
+### F1: Packet Rate
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Công thức** | `packet_count / window_size` |
+| **Đơn vị** | packets/giây |
+| **MAX** | 3000 (từ config) |
+| **Ứng dụng** | Phát hiện DDoS, Flood |
+
+```python
+def calculate_raw(self, info, window):
+    count = window.get_count(info.src_ip)
+    return count / window.window_size
+```
+
+### F2: SYN/ACK Ratio
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Công thức** | `SYN_count / (SYN_count + ACK_count)` |
+| **Phạm vi** | [0, 1] |
+| **MAX** | 1.0 |
+| **Ứng dụng** | Phát hiện SYN Flood |
+
+```python
+def calculate_raw(self, info, window):
+    flags = window.get_tcp_flags_count(info.src_ip)
+    syn = flags['SYN']
+    ack = flags['ACK']
+    if syn + ack == 0:
+        return 0.0
+    return syn / (syn + ack)
+```
+
+### F3: Distinct Ports
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Công thức** | `len(unique_dst_ports)` |
+| **MAX** | 100 ports |
+| **Ứng dụng** | Phát hiện Port Scan |
+
+```python
+def calculate_raw(self, info, window):
+    ports = window.get_distinct_ports(info.src_ip)
+    return float(len(ports))
+```
+
+### F4: Payload Length
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Công thức** | `avg(payload_lengths)` hoặc `max` nếu có outlier |
+| **MAX** | 1500 bytes (MTU) |
+| **Ứng dụng** | Phát hiện Buffer Overflow, exfiltration |
+
+**Outlier Detection**:
+```python
+if max_len > 3 * avg_len and max_len > 500:
+    return max_len  # Trả về outlier
+return avg_len      # Trả về trung bình
+```
+
+### F5: Fail Rate
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Công thức** | `(outbound_RST + inbound_RST + ICMP_unreachable) / total_packets` |
+| **Phạm vi** | [0, 1] |
+| **Ứng dụng** | Phát hiện Port Scan, Brute Force |
+
+**Bidirectional Tracking**:
+```
+Outbound failures:
+- RST từ src_ip (client reset)
+- ICMP Unreachable từ src_ip
+
+Inbound failures:
+- RST từ victim gửi về src_ip (đóng port)
+```
+
+### F6: Context Score
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Công thức** | `max(pattern_scores) + multi_layer_decode_score` |
+| **Phạm vi** | [0, 1] (đã normalize) |
+| **Ứng dụng** | Phát hiện SQLi, XSS, Command Injection, Path Traversal |
+
+**Multi-Layer Defense**:
+1. **Anti-ReDoS**: Giới hạn quantifiers trong regex
+2. **Multi-layer Decoding**: URL → HTML → Unicode normalization
+3. **Anti-Padding Attack**: Phát hiện payload chèn nhiều whitespace
+4. **Binary Detection**: Bỏ qua binary payloads
+
+**Pattern Categories**:
+- SQL Injection: `UNION SELECT`, `OR 1=1`, `--`
+- XSS: `<script>`, `onerror=`, `javascript:`
+- Command Injection: `; rm -rf`, `| cat /etc/passwd`
+- Path Traversal: `../../../etc/passwd`
+
+---
+
+## 3. Luồng Dữ Liệu Hoàn Chỉnh
+
+```mermaid
+sequenceDiagram
+    participant Net as Network/PCAP
+    participant Sniff as NetworkSniffer
+    participant Parse as PacketLayerExtractor
+    participant Info as LayerInfo
+    participant Win as PacketWindow
+    participant Build as FeatureVectorBuilder
+    participant Calc as Feature Calculators
+    participant CSV as CSV File
+    
+    Net->>Sniff: Raw Packet
+    Sniff->>Parse: sniff(callback=process_packet)
+    Parse->>Info: extract() → LayerInfo
+    Info->>Build: process_layer_info()
+    Build->>Win: window.add(layer_info)
+    
+    loop For each Feature (1-6)
+        Build->>Calc: calc.calculate(info, window)
+        Calc->>Win: Query (get_count, get_flags, etc.)
+        Win-->>Calc: Statistics
+        Calc-->>Build: Normalized value [0-1]
+    end
+    
+    Build-->>CSV: [f1, f2, f3, f4, f5, f6]
+```
+
+---
+
+## 4. Bảng Tóm Tắt Các File
+
+| File | Chức năng | Classes/Functions chính |
+|------|-----------|------------------------|
+| [main.py](file:///c:/Users/VyVa/Documents/IAP491/System/main.py) | Entry point, CLI | `main()`, `realtime_capture()`, `process_packet()` |
+| [sniffer.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/sniffer.py) | Bắt gói tin | `NetworkSniffer.start_live()`, `start_pcap()` |
+| [packet_parser.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/packet_parser.py) | Parse packets | `PacketLayerExtractor.extract()` |
+| [layer_info.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/layer_info.py) | Data object | `LayerInfo` dataclass |
+| [window_packet.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/window_packet.py) | Sliding window | `PacketWindow.add()`, `get_*()` methods |
+| [processor.py](file:///c:/Users/VyVa/Documents/IAP491/System/core/processor.py) | Feature builder | `FeatureVectorBuilder.process_layer_info()` |
+| [feature_base.py](file:///c:/Users/VyVa/Documents/IAP491/System/feature/feature_base.py) | Abstract base | `BaseFeatureCalculator` |
+| [feature_logic.py](file:///c:/Users/VyVa/Documents/IAP491/System/feature/feature_logic.py) | Feature implementations | `Feature1_*` đến `Feature6_*` |
+
+---
+
+## 5. Design Patterns Sử Dụng
+
+| Pattern | Áp dụng | Mục đích |
+|---------|---------|----------|
+| **Template Method** | `BaseFeatureCalculator` | Định nghĩa skeleton cho feature calculation |
+| **Strategy** | 6 Feature Calculators | Cho phép thay đổi algorithm tính feature |
+| **Observer** | Callback pattern trong Sniffer | Xử lý async packet capturing |
+| **Factory** | `defaultdict(lambda: deque)` | Tự động tạo storage cho IP mới |
+| **Decorator** | `@dataclass`, `@property` | Giảm boilerplate code |
+
+---
+
+## 6. Kỹ Thuật Tối Ưu Hiệu Năng
+
+| Kỹ thuật | Vị trí | Chi tiết |
+|----------|--------|----------|
+| `store=0` | `sniffer.py` | Tránh lưu packets vào RAM |
+| `deque(maxlen)` | `window_packet.py` | O(1) popleft, giới hạn bộ nhớ |
+| Time-based Cache | `window_packet.py` | Cache TCP flags 0.1s |
+| LRU IP Eviction | `window_packet.py` | `max_ips=10000` |
+| Lazy Regex Compile | `feature_logic.py` | Compile patterns một lần |
+| Numpy Vectorization | `processor.py` | `np.clip()` cho normalization |

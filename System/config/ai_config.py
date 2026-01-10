@@ -19,7 +19,7 @@ FEATURE_NAMES = [
     "f3_port_norm",
     "f4_len_norm",
     "f5_fail_norm",
-    "f6_ctx_norm"
+    "f6_ctx_score"
 ]
 
 # =============================================================================
@@ -68,3 +68,14 @@ def normalize(value: float, max_val: float) -> float:
         return 0.0
     norm = value / max_val
     return clamp(norm, 0.0, 1.0)
+
+def normalize_range(value: float, min_val: float, max_val: float) -> float:
+    """Chuẩn hóa value từ [min_val, max_val] về [0, 1] (có clamp)."""
+    rng = max_val - min_val
+    if rng == 0:
+        return 0.0
+    return clamp((value - min_val) / rng, 0.0, 1.0)
+
+def normalize_context_score(value: float) -> float:
+    """Chuẩn hóa Context Score từ [-1, 1] (SAFE/NEUTRAL/MALICIOUS) về [0, 1]."""
+    return normalize_range(value, CONTEXT_SAFE, CONTEXT_MALICIOUS)

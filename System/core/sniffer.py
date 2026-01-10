@@ -1,5 +1,47 @@
-""" Module bắt gói tin (Wrapper cho Scapy sniff).
-    Hỗ trợ cả chế độ Live (Realtime) và Offline (Pcap). """
+"""
+=============================================================================
+NETWORK SNIFFER - Module bắt gói tin mạng
+=============================================================================
+
+CHỨC NĂNG:
+- Wrapper cho Scapy sniff() function
+- Hỗ trợ chế độ Live (Real-time) và Offline (PCAP file)
+- Xử lý memory hiệu quả với store=0 (không lưu packets trong RAM)
+- Tự động xử lý KeyboardInterrupt (Ctrl+C)
+
+CHẾ ĐỘ HOẠT ĐỘNG:
+1. Live Mode: Bắt gói tin trực tiếp từ network interface
+2. Offline Mode: Đọc và xử lý file PCAP có sẵn
+
+CÁCH SỬ DỤNG:
+    from core.sniffer import NetworkSniffer
+    
+    # Khởi tạo sniffer
+    sniffer = NetworkSniffer()
+    
+    # Callback xử lý mỗi packet
+    def process_packet(pkt):
+        print(f"Received: {pkt.summary()}")
+    
+    # Live capture (chạy với quyền Admin trên Windows)
+    sniffer.start_live(
+        interface="Ethernet",
+        callback=process_packet,
+        packet_count=100,       # None = unlimited
+        bpf_filter="ip"         # BPF filter
+    )
+    
+    # Hoặc đọc file PCAP
+    sniffer.start_pcap(
+        pcap_path="capture.pcap",
+        callback=process_packet
+    )
+
+LƯU Ý:
+- Trên Windows: Cần quyền Administrator và Npcap đã cài đặt
+- Trên Linux: Cần quyền root hoặc CAP_NET_RAW capability
+- store=0 là BẮT BUỘC để tránh tràn RAM khi chạy lâu dài
+"""
     
 import sys
 from typing import Callable, Optional
