@@ -1,0 +1,6 @@
+# NIDS Real-time Feature Extraction System
+# Python 3.8+ required
+
+# Core dependencies
+scapy>=2.5.0          # Packet capture and parsing
+numpy>=1.21.0         # Numerical computations

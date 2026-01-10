@@ -1,38 +1,30 @@
 # core/processor.py
 """
 =============================================================================
-FEATURE VECTOR BUILDER - Xây dựng vector đặc trưng từ gói tin
+FEATURE VECTOR BUILDER - Orchestrator
 =============================================================================
 
 CHỨC NĂNG:
-- Điều phối việc tính toán 6 features từ LayerInfo
-- Quản lý PacketWindow để lưu trữ context theo thời gian
+- ORCHESTRATION: Kết nối FlowManager với Feature Calculators
+- KHÔNG tính features trực tiếp (để feature_flow.py làm)
 - Cung cấp API đơn giản: LayerInfo -> Vector [f1, f2, f3, f4, f5, f6]
 
 KIẾN TRÚC:
-    LayerInfo -> PacketWindow -> 6 Feature Calculators -> Vector [0-1, 0-1, ...]
-
-6 FEATURES:
-1. Packet Rate: Tốc độ gói tin/giây (phát hiện DDoS)
-2. SYN/ACK Ratio: Tỷ lệ SYN trên tổng (phát hiện SYN Flood)
-3. Distinct Ports: Số cổng đích khác nhau (phát hiện Port Scan)
-4. Payload Length: Độ dài trung bình payload (phát hiện Buffer Overflow)
-5. Fail Rate: Tỷ lệ kết nối lỗi (phát hiện Brute Force, Scan)
-6. Context Score: Điểm ngữ cảnh từ payload (phát hiện SQLi, XSS, v.v.)
+    LayerInfo -> FlowManager -> FlowState -> FlowFeatureCalculator -> Vector
 """
 
 import numpy as np
 from core.layer_info import LayerInfo
-from core.window_packet import PacketWindow
-from feature.feature_logic import (
-    Feature1_PacketRate, Feature2_SynAckRatio, Feature3_DistinctPorts,
-    Feature4_PayloadLength, Feature5_FailRate, Feature6_ContextScore
-)
+from core.flow_manager import FlowManager
+from feature.feature_flow import FlowFeatureCalculator
 
 
 class FeatureVectorBuilder:
     """
-    Lớp điều phối việc tính toán vector đặc trưng.
+    Lớp ORCHESTRATION - kết nối các components.
+    
+    KHÔNG tính features trực tiếp!
+    Gọi FlowFeatureCalculator để tính.
     
     CÁCH SỬ DỤNG:
         builder = FeatureVectorBuilder(window_size=1.0)
@@ -46,65 +38,70 @@ class FeatureVectorBuilder:
         
         Args:
             window_size (float): Kích thước cửa sổ thời gian (giây).
-                                 Mặc định 1.0s để tính features/giây.
         """
-        # PacketWindow lưu trữ lịch sử gói tin theo IP
-        self.window = PacketWindow(window_size)
+        # Flow Management
+        self.flow_manager = FlowManager(
+            window_size=window_size,
+            flow_timeout=30.0,
+            cleanup_interval=100
+        )
         
-        # Danh sách 6 Feature Calculators (theo thứ tự F1-F6)
-        self.calculators = [
-            Feature1_PacketRate(),      # F1: Packet Rate
-            Feature2_SynAckRatio(),     # F2: SYN/ACK Ratio
-            Feature3_DistinctPorts(),   # F3: Distinct Ports
-            Feature4_PayloadLength(),   # F4: Payload Length
-            Feature5_FailRate(),        # F5: Fail Rate
-            Feature6_ContextScore()     # F6: Context Score
-        ]
+        # Feature Calculation - Gọi class riêng
+        self.feature_calculator = FlowFeatureCalculator()
+        
+        self.window_size = window_size
 
     def process_layer_info(self, layer_info: LayerInfo) -> np.ndarray:
         """
         Xử lý LayerInfo và trả về vector 6 features đã chuẩn hóa.
         
         PIPELINE:
-        1. Cập nhật PacketWindow với gói tin mới
-        2. Tính toán từng feature bằng calculator tương ứng
-        3. Mỗi calculator tự normalize về [0, 1]
-        4. Trả về numpy array [f1, f2, f3, f4, f5, f6]
+        1. FlowManager xác định flow và direction (fwd/bwd)
+        2. Lấy tất cả flows của src_ip
+        3. FlowFeatureCalculator tính 6 features
+        4. Trả về numpy array
         
         Args:
             layer_info (LayerInfo): Thông tin gói tin đã phân tích
             
         Returns:
             np.ndarray: Vector 6 phần tử, mỗi phần tử trong [0, 1]
-        
-        LƯU Ý:
-        - Các giá trị đã được chuẩn hóa về [0, 1]
-        - Giá trị cao hơn = nghi ngờ tấn công hơn
         """
-        # Bước 1: Thêm gói tin vào cửa sổ trượt
-        self.window.add(layer_info)
+        # Bước 1: Process packet vào FlowManager
+        flow = self.flow_manager.process_packet(layer_info)
         
-        # Bước 2: Tính toán từng feature
-        vector = []
-        for calc in self.calculators:
-            # calc.calculate() đã bao gồm normalize
-            val = calc.calculate(layer_info, self.window)
-            vector.append(val)
-            
+        if flow is None or not layer_info.has_ip:
+            return np.zeros(6)
+        
+        # Bước 2: Lấy tất cả flows của flow initiator (Inter-flow)
+        # Quan trọng: với backward packets, layer_info.src_ip là server; ta vẫn muốn
+        # tính features cho initiator/client (flow.src_ip) để F5/F6 cập nhật đúng entity.
+        src_ip = flow.src_ip
+        all_flows = self.flow_manager.get_flows_by_src(src_ip)
+        
+        # Bước 3: Gọi FlowFeatureCalculator để tính features
+        vector = self.feature_calculator.calculate_all(all_flows)
+        
         return np.array(vector)
     
-    def cleanup_inactive_ips(self, min_packets: int = 10) -> int:
-        """
-        Dọn dẹp các IP không hoạt động để giải phóng bộ nhớ.
+    '''def get_raw_features(self, layer_info: LayerInfo) -> np.ndarray:
+        """Lấy features chưa normalize (cho debugging)"""
+        if not layer_info.has_ip:
+            return np.zeros(6)
+
+        flow = self.flow_manager.process_packet(layer_info)
+        if flow is None:
+            return np.zeros(6)
+
+        src_ip = flow.src_ip
+        all_flows = self.flow_manager.get_flows_by_src(src_ip)
         
-        LOGIC:
-        - Xóa các IP có ít hơn min_packets gói tin
-        - Gọi định kỳ (VD: mỗi 100,000 packets) để tránh tràn RAM
-        
-        Args:
-            min_packets (int): Ngưỡng tối thiểu. IP nào có ít hơn sẽ bị xóa.
-            
-        Returns:
-            int: Số lượng IP đã xóa.
-        """
-        return self.window.cleanup_inactive_ips(min_packets)
+        return np.array(self.feature_calculator.calculate_all_raw(all_flows))'''
+    
+    def cleanup_inactive_flows(self) -> int:
+        """Dọn dẹp flows không hoạt động."""
+        return self.flow_manager._cleanup_expired_flows()
+    
+    def get_stats(self) -> dict:
+        """Trả về thống kê"""
+        return self.flow_manager.get_stats()

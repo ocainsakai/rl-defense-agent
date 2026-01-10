@@ -1,0 +1,108 @@
+================================================================================
+SO SÁNH GIỮA HỆ THỐNG CỦA TÔI VÀ CICFlowMeter
+================================================================================
+
+### 1. THÔNG TIN CƠ BẢN
+
+Hệ thống của tôi (tcp_output_2.csv):
+  - Số flows: 65541
+  - Số features: 16
+
+CICFlowMeter (tcp_flood.pcap_Flow.csv):
+  - Số flows: 65540
+  - Số features: 84
+
+CIC sử dụng cột: Forward='Tot Fwd Pkts', Backward='Tot Bwd Pkts'
+
+================================================================================
+### 2. SO SÁNH FORWARD/BACKWARD PACKETS (10 flows đầu)
+================================================================================
+
+Hệ thống của tôi:
+Flow 1: Fwd=3, Bwd=0, Total=3
+Flow 2: Fwd=1, Bwd=0, Total=1
+Flow 3: Fwd=6, Bwd=3, Total=9
+Flow 4: Fwd=6, Bwd=3, Total=9
+Flow 5: Fwd=7, Bwd=4, Total=11
+Flow 6: Fwd=7, Bwd=5, Total=12
+Flow 7: Fwd=7, Bwd=5, Total=12
+Flow 8: Fwd=7, Bwd=5, Total=12
+Flow 9: Fwd=7, Bwd=5, Total=12
+Flow 10: Fwd=7, Bwd=5, Total=12
+
+CICFlowMeter:
+Flow 1: Fwd=5, Bwd=2
+Flow 2: Fwd=6, Bwd=3
+Flow 3: Fwd=5, Bwd=7
+Flow 4: Fwd=6, Bwd=3
+Flow 5: Fwd=8, Bwd=9
+Flow 6: Fwd=4, Bwd=1
+Flow 7: Fwd=6, Bwd=3
+Flow 8: Fwd=5, Bwd=2
+Flow 9: Fwd=8, Bwd=5
+Flow 10: Fwd=7, Bwd=4
+
+================================================================================
+### 3. THỐNG KÊ TỔN THỐNG VỀ PACKETS
+================================================================================
+
+Hệ thống của tôi:
+  Forward Pkts  - Mean: 7.55, Min: 1, Max: 13, Std: 1.55
+  Backward Pkts - Mean: 3.98, Min: 0, Max: 11, Std: 2.38
+
+CICFlowMeter:
+  Forward Pkts  - Mean: 6.55, Min: 0, Max: 12, Std: 1.55
+  Backward Pkts - Mean: 4.98, Min: 1, Max: 12, Std: 2.38
+
+================================================================================
+### 4. THỐNG KÊ VỀ 6 FEATURES
+================================================================================
+
+F1_PacketRate_RAW:
+  Mean=2.5546, Min=0.0500, Max=13421.7728, Std=52.4339
+  First 5 values: [0.05, 1.0, 2.9046, 2.9047, 3.5502]
+
+F2_SynRatio_RAW:
+  Mean=4.6345, Min=0.0000, Max=6.0000, Std=0.5777
+  First 5 values: [0.0, 0.0, 4.0, 4.0, 4.0]
+
+F3_DistinctPorts_RAW:
+  Mean=1.0000, Min=1.0000, Max=1.0000, Std=0.0000
+  First 5 values: [1.0, 1.0, 1.0, 1.0, 1.0]
+
+F4_PayloadLen_RAW:
+  Mean=0.0026, Min=0.0000, Max=125.0000, Std=0.5176
+  First 5 values: [44.0, 0.0, 0.0, 0.0, 0.0]
+
+F5_FailRate_RAW:
+  Mean=0.0019, Min=0.0000, Max=0.1000, Std=0.0115
+  First 5 values: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+F6_ContextScore_RAW:
+  Mean=0.0000, Min=0.0000, Max=0.0000, Std=0.0000
+  First 5 values: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+================================================================================
+### 5. TỈ LỆ FORWARD/BACKWARD
+================================================================================
+
+Hệ thống của tôi:
+  Mean ratio: 2.563
+  Median ratio: 2.250
+  Min/Max ratio: 0.778 / 8.000
+
+CICFlowMeter:
+  Mean ratio: 1.567
+  Median ratio: 1.500
+  Min/Max ratio: 0.000 / 6.000
+
+Chênh lệch Mean ratio: 0.996
+
+================================================================================
+### 6. KẾT LUẬN
+================================================================================
+
+Chênh lệch Forward packets: 15.26%
+Chênh lệch Backward packets: 20.07%
+
+Số flow: Tôi=65541, CIC=65540, Chênh lệch=1

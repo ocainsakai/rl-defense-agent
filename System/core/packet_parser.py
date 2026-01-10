@@ -23,7 +23,7 @@ class PacketLayerExtractor:
     - Xử lý an toàn các gói tin bị lỗi/hỏng
     """
     
-    def __init__(self, enable_http_parsing: bool = True, use_packet_time: bool = False):
+    def __init__(self, enable_http_parsing: bool = False, use_packet_time: bool = False):
         """
         Hàm khởi tạo PacketLayerExtractor
         
