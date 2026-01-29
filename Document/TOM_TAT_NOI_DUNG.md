@@ -74,6 +74,11 @@ Khác với học có giám sát truyền thống, tác tử RL được đề x
 
 **Giải pháp đề xuất:** Xây dựng một tác tử phòng thủ mạng dựa trên AI sử dụng Học Tăng cường (RL) để học các chiến lược phản ứng tối ưu thông qua tương tác thử-và-sai trong môi trường mạng mô phỏng.
 
+**Các câu hỏi nghiên cứu chính:**
+1. **RQ1 (Hiệu quả so sánh):** Tác tử RL vượt trội thế nào so với các cơ chế dựa trên quy tắc truyền thống trong việc giảm thiểu tấn công mạng?
+2. **RQ2 (Đánh đổi vận hành):** Các hành động phòng thủ tự động ảnh hưởng thế nào đến sự cân bằng giữa bảo mật và tính sẵn sàng dịch vụ?
+3. **RQ3 (Tính ổn định):** Agent có thể duy trì một chính sách phòng thủ ổn định trước các vector tấn công luôn thay đổi mà không cần cấu hình lại thủ công không?
+
 ### 1.3. Mục tiêu nghiên cứu (Research Objectives)
 
 1. **Nghiên cứu khả năng áp dụng** của các kỹ thuật Học Tăng cường cho việc ra quyết định tự động trong các kịch bản phòng thủ mạng
