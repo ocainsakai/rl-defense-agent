@@ -60,9 +60,6 @@ class FlowState:
     def _cleanup_old_packets(self, current_time: float) -> None:
         """
         Xóa packets cũ hơn window_size (sliding window).
-        
-        CRITICAL FIX: Validate timestamp before comparison to prevent TypeError.
-        If timestamp is None, packet is kept (assumed to be current).
         """
         cutoff = current_time - self.window_size
         
@@ -97,6 +94,13 @@ class FlowState:
     def get_packet_count(self) -> int:
         """Tổng packets (cả 2 chiều)"""
         return len(self.fwd_packets) + len(self.bwd_packets)
+    
+    def is_empty(self) -> bool:
+        """
+        Kiểm tra flow có rỗng không (không còn packets nào).
+        Được sử dụng bởi FlowManager.slide_window_packets() để cleanup flows rỗng.
+        """
+        return len(self.fwd_packets) == 0 and len(self.bwd_packets) == 0
     
     # =========================================================================
     # PACKET LISTS
@@ -197,6 +201,42 @@ class FlowState:
         return self.get_fwd_payloads() + self.get_bwd_payloads()
     
     # =========================================================================
+    # LAZY REASSEMBLY - Nối payload để phát hiện tấn công bị phân mảnh
+    # =========================================================================
+    
+    def get_reassembled_fwd_payload(self) -> bytes:
+        """
+        Nối tất cả forward payloads thành 1 chuỗi bytes liên tục.
+        
+        LAZY REASSEMBLY: Chỉ nối theo thứ tự thời gian, không xử lý
+        sequence number hay retransmission.
+        
+        USE CASE: Phát hiện SQLi/XSS signature bị cắt đôi qua nhiều packet.
+        
+        Returns:
+            bytes: Payload đã nối (có thể rỗng nếu không có payload)
+        """
+        return b''.join(self.get_fwd_payloads())
+    
+    def get_reassembled_bwd_payload(self) -> bytes:
+        """
+        Nối tất cả backward payloads thành 1 chuỗi bytes liên tục.
+        
+        Returns:
+            bytes: Payload đã nối từ server response
+        """
+        return b''.join(self.get_bwd_payloads())
+    
+    def get_reassembled_payload(self) -> bytes:
+        """
+        Nối tất cả payloads (cả 2 chiều) thành 1 chuỗi bytes.
+        
+        Returns:
+            bytes: Toàn bộ payload của flow
+        """
+        return b''.join(self.get_payloads())
+    
+    # =========================================================================
     # UTILITY METHODS
     # =========================================================================
     
@@ -208,7 +248,7 @@ class FlowState:
         """Xóa dữ liệu trong flow"""
         self.fwd_packets.clear()
         self.bwd_packets.clear()
-    
+
     @property
     def src_ip(self) -> str:
         return self.flow_key[0]

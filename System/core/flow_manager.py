@@ -30,17 +30,20 @@ class FlowManager:
         self, 
         window_size: float = 1.0, 
         flow_timeout: float = 30.0,
-        cleanup_interval: int = 100
+        cleanup_interval: int = 100,
+        max_flows: int = 50000  # Giới hạn cứng số lượng flow
     ):
         """
         Args:
             window_size: Kích thước sliding window cho mỗi flow (giây)
             flow_timeout: Thời gian để coi 1 flow là expired (giây)
             cleanup_interval: Sau bao nhiêu packets thì chạy cleanup
+            max_flows: Số lượng flow tối đa cho phép để bảo vệ RAM
         """
         self.window_size = window_size
         self.flow_timeout = flow_timeout
         self.cleanup_interval = cleanup_interval
+        self.max_flows = max_flows
         
         # Flow storage: {flow_key: FlowState}
         self.flows: Dict[tuple, FlowState] = {}
@@ -113,6 +116,15 @@ class FlowManager:
         
         # Case 3: New flow (packet đầu tiên LÀ FORWARD)
         else:
+            # KIỂM TRA GIỚI HẠN BỘ NHỚ (Memory Safety)
+            if len(self.flows) >= self.max_flows:
+                # Thử dọn dẹp các flow hết hạn trước
+                removed = self._cleanup_expired_flows()
+                
+                # Nếu vẫn đầy sau khi dọn dẹp -> Drop flow mới (Fail-safe)
+                if len(self.flows) >= self.max_flows:
+                    return None
+            
             flow = FlowState(flow_key, self.window_size)
             self.flows[flow_key] = flow
             self.flows_by_src[flow_key[0]].add(flow_key)
@@ -204,3 +216,25 @@ class FlowManager:
         self.flows.clear()
         self.flows_by_src.clear()
         self._packet_counter = 0
+
+    def slide_window_packets(self, current_time: float) -> None:
+        """
+        Thực hiện Sliding Window:
+        1. Xóa packets cũ hơn window_size trong tất cả các flows.
+        2. Nếu flow rỗng sau khi xóa -> Xóa flow.
+        """
+        # 1. Cleanup old packets in each flow
+        for flow in self.flows.values():
+            flow._cleanup_old_packets(current_time)
+            
+        # 2. Cleanup empty flows
+        expired_keys = [k for k, f in self.flows.items() if f.is_empty()]
+        
+        for flow_key in expired_keys:
+            del self.flows[flow_key]
+            # Clean index
+            src_ip = flow_key[0]
+            if src_ip in self.flows_by_src:
+                self.flows_by_src[src_ip].discard(flow_key)
+                if not self.flows_by_src[src_ip]:
+                    del self.flows_by_src[src_ip]

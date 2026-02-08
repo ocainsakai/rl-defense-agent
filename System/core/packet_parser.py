@@ -1,8 +1,98 @@
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 from scapy.all import IP, TCP, UDP, ICMP, Raw, DNS
+from scapy.layers.http import HTTPRequest, HTTPResponse
 
 from core.layer_info import LayerInfo
+
+
+class HttpPayloadExtractor:
+    """
+    Extract HTTP information and build composite payload for analysis.
+    
+    Responsibilities:
+    - Extract HTTP request/response from Scapy packet
+    - Build composite payload [URI + User-Agent + Body] for pattern matching
+    
+    Separation of Concerns:
+    - This class: Raw extraction (bytes, no transformation)
+    - PayloadContextScorer: Normalization for pattern matching
+    """
+    
+    @staticmethod
+    def extract_http_info(packet, info: 'LayerInfo') -> bool:
+        """
+        Extract HTTP request/response into LayerInfo.
+        
+        Returns:
+            bool: True if HTTP layer was found and extracted
+        """
+        # HTTP Request
+        if packet.haslayer(HTTPRequest):
+            info.has_http = True
+            http_req = packet[HTTPRequest]
+            info.http_method = http_req.Method
+            info.http_uri = http_req.Path
+            info.http_host = http_req.Host
+            info.http_user_agent = http_req.User_Agent
+            return True
+        
+        # HTTP Response
+        if packet.haslayer(HTTPResponse):
+            info.has_http = True
+            http_resp = packet[HTTPResponse]
+            try:
+                info.http_status = int(http_resp.Status_Code) if http_resp.Status_Code else None
+            except (ValueError, TypeError):
+                info.http_status = None
+            return True
+        
+        return False
+    
+    @staticmethod
+    def build_composite_payload(pkt) -> bytes:
+        """
+        Build composite payload: [URI] + [User-Agent] + [Body]
+        
+        Logic Fail-Fast:
+        - Regex quét từ trái sang phải
+        - Tấn công thường nằm ở URI (GET) hoặc User-Agent
+        - Đặt Header trước Body → phát hiện sớm, tránh quét Body lớn
+        
+        Args:
+            pkt: LayerInfo object with HTTP attributes
+            
+        Returns:
+            bytes: Composite payload for analysis
+        """
+        body = getattr(pkt, 'payload_bytes', None) or b''
+        
+        if not getattr(pkt, 'has_http', False):
+            return body
+        
+        parts = []
+        
+        # Header 1: URI (quan trọng cho SQLi/XSS qua GET params)
+        uri = getattr(pkt, 'http_uri', None)
+        if uri:
+            if isinstance(uri, str):
+                parts.append(uri.encode('utf-8', errors='ignore'))
+            elif isinstance(uri, bytes):
+                parts.append(uri)
+        
+        # Header 2: User-Agent (vector tấn công phổ biến)
+        ua = getattr(pkt, 'http_user_agent', None)
+        if ua:
+            if isinstance(ua, str):
+                parts.append(ua.encode('utf-8', errors='ignore'))
+            elif isinstance(ua, bytes):
+                parts.append(ua)
+        
+        # Cuối cùng là Body
+        parts.append(body)
+        
+        # Nối bằng space để regex \s hoạt động giữa các phần
+        return b' '.join(parts)
 
 
 class PacketLayerExtractor:
@@ -47,7 +137,7 @@ class PacketLayerExtractor:
             'udp_packets': 0,          # Số gói tin UDP
             'icmp_packets': 0,         # Số gói tin ICMP
             'with_payload': 0,         # Số gói tin có payload/dữ liệu
-            'http_requests': 0         # Số HTTP request
+            'http_requests': 0         # Số HTTP request/response
         }
     
     def extract(self, packet, packet_number: int = 0) -> LayerInfo:
@@ -92,10 +182,12 @@ class PacketLayerExtractor:
             # Bước 3: Trích xuất Payload (dữ liệu thô)
             self._extract_payload(packet, info)
             
-            # Bước 4: Trích xuất tầng Application (HTTP, DNS) nếu có payload
-            if self.enable_http_parsing and info.has_payload:
-                self._extract_http_layer(info)      # HTTP: method, URI, host, status
-                self._extract_dns_layer(packet, info)  # DNS: query
+            # Bước 4: Trích xuất tầng Application (HTTP) sử dụng Scapy layers
+            if self.enable_http_parsing:
+                self._extract_http_layer(packet, info)
+            
+            # Finalize: Sanitize data (decode bytes -> str)
+            info.sanitize()
             
         except Exception as e:
             self.stats['malformed_packets'] += 1
@@ -148,130 +240,46 @@ class PacketLayerExtractor:
     
     def _extract_udp_layer(self, packet, info: LayerInfo):
         """
-        Trích xuất thông tin tầng UDP (User Datagram Protocol)
-        
-        CHỨC NĂNG:
-        - Lấy cổng nguồn và đích
-        - Lấy độ dài gói tin UDP
-        - UDP không có connection (không giống TCP), đơn giản và nhanh hơn
+        Trích xuất tầng UDP - Chỉ lấy độ dài nếu cần
         """
         if packet.haslayer(UDP):
             info.has_udp = True
-            info.udp_sport = packet[UDP].sport      # Cổng nguồn
-            info.udp_dport = packet[UDP].dport      # Cổng đích
-            info.udp_len = packet[UDP].len          # Độ dài gói tin UDP
-            
+            info.udp_sport = packet[UDP].sport
+            info.udp_dport = packet[UDP].dport
+            info.udp_len = packet[UDP].len  
+
             self.stats['udp_packets'] += 1
-    
+
     def _extract_icmp_layer(self, packet, info: LayerInfo):
         """
-        Trích xuất thông tin tầng ICMP (Internet Control Message Protocol)
-        
-        CHỨC NĂNG:
-        - ICMP dùng cho ping, traceroute, báo lỗi
-        - Lấy ICMP type (8=Echo Request/Ping, 0=Echo Reply, 3=Destination Unreachable)
-        - Lấy ICMP code (chi tiết thêm về type)
+        ICMP Layer - Giữ tối giản
         """
         if packet.haslayer(ICMP):
             info.has_icmp = True
-            info.icmp_type = packet[ICMP].type      # Loại ICMP (8=ping request, 0=ping reply)
-            info.icmp_code = packet[ICMP].code      # Mã chi tiết
-            
+            info.icmp_type = packet[ICMP].type 
+            info.icmp_code = packet[ICMP].code
+
             self.stats['icmp_packets'] += 1
     
     def _extract_payload(self, packet, info: LayerInfo):
         """
-        Trích xuất Payload - dữ liệu thô của gói tin
-        
-        CHỨC NĂNG:
-        - Lấy dữ liệu thực tế được truyền trong gói tin (nội dung HTTP, DNS, v.v.)
-        - Chuyển payload thành bytes để xử lý
-        - Đếm độ dài payload
+        Trích xuất Payload - Tối ưu hóa
         """
         if packet.haslayer(Raw):
             info.has_payload = True
-            info.payload_bytes = bytes(packet[Raw].load)   # Dữ liệu thô dạng bytes
-            info.payload_length = len(info.payload_bytes)  # Độ dài payload
-            
+            info.payload_bytes = bytes(packet[Raw].load)
+            info.payload_length = len(info.payload_bytes)
+
             self.stats['with_payload'] += 1
 
-    ##################################################################
-    def _extract_http_layer(self, info: LayerInfo):
+    def _extract_http_layer(self, packet, info: LayerInfo):
         """
-        Phân tích tầng HTTP từ payload (cả Request và Response)
-        
-        CHỨC NĂNG:
-        - Phát hiện và trích xuất HTTP Request (GET, POST, PUT, DELETE, v.v.)
-        - Phát hiện và trích xuất HTTP Response (Status Code: 200, 404, 500, v.v.)
-        - Lấy thông tin HTTP headers (Host, User-Agent)
-        - Lấy HTTP method, URI, và status code
+        Phân tích HTTP sử dụng HttpPayloadExtractor.
+        Delegate logic extraction, chỉ giữ lại stats counting.
         """
-        if not info.payload_bytes:
-            return
-        
-        try:
-            # Chuyển payload bytes thành chuỗi UTF-8 (bỏ qua lỗi decode)
-            payload_str = info.payload_bytes.decode('utf-8', errors='ignore')
-            
-            # 1. PHÁT HIỆN VÀ XỬ LÝ HTTP REQUEST (GET, POST, PUT, DELETE, v.v.)
-            if payload_str.startswith(('GET ', 'POST ', 'PUT ', 'DELETE ', 'HEAD ', 'OPTIONS ')):
-                info.has_http = True
-                
-                # Tách payload thành các dòng (HTTP dùng \r\n làm dấu phân cách)
-                lines = payload_str.split('\r\n')
-                
-                # Phân tích dòng đầu tiên: "GET /index.html HTTP/1.1"
-                request_line = lines[0]
-                parts = request_line.split(' ')
-                
-                if len(parts) >= 2:
-                    info.http_method = parts[0]   # Method: GET, POST, PUT, v.v.
-                    info.http_uri = parts[1]      # URI: /index.html, /api/users, v.v.
-                
-                # Phân tích các HTTP headers (Host, User-Agent, v.v.)
-                for line in lines[1:]:
-                    if ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip().lower()
-                        value = value.strip()
-                        
-                        if key == 'host':
-                            info.http_host = value           # Host: www.example.com
-                        elif key == 'user-agent':
-                            info.http_user_agent = value     # User-Agent: Mozilla/5.0...
-                
-                self.stats['http_requests'] += 1
+        if HttpPayloadExtractor.extract_http_info(packet, info):
+            self.stats['http_requests'] += 1
 
-            # 2. PHÁT HIỆN VÀ XỬ LÝ HTTP RESPONSE (để lấy Status Code)
-            elif payload_str.startswith('HTTP/'):
-                # Ví dụ dòng đầu tiên: "HTTP/1.1 404 Not Found"
-                first_line = payload_str.split('\r\n')[0]
-                parts = first_line.split(' ')
-                if len(parts) >= 2:
-                    try:
-                        # parts[1] chính là HTTP Status Code (200=OK, 404=Not Found, 500=Server Error)
-                        info.http_status = int(parts[1])
-                    except ValueError:
-                        pass  # Nếu không parse được thì bỏ qua
-        except:
-            pass  # Xử lý lỗi an toàn: nếu có lỗi thì bỏ qua
-    
-    def _extract_dns_layer(self, packet, info: LayerInfo):
-        """
-        Trích xuất thông tin DNS (Domain Name System)
-        
-        CHỨC NĂNG:
-        - Lấy DNS query (tên miền được truy vấn)
-        - Ví dụ: www.google.com, api.example.com
-        - DNS dùng để chuyển tên miền thành địa chỉ IP
-        """
-        if packet.haslayer(DNS):
-            info.has_dns = True
-            dns_layer = packet[DNS]
-            
-            # Lấy DNS query (qd = question domain)
-            if dns_layer.qd:
-                info.dns_query = dns_layer.qd.qname.decode('utf-8', errors='ignore')
     
     def parse(self, packet, packet_number: int = 0) -> LayerInfo:
         """

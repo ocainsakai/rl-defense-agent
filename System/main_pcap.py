@@ -35,23 +35,94 @@ from scapy.all import PcapReader
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
 from feature.feature_flow import FlowFeatureCalculator
+from config.data_params import ANONYMIZE_SRC_IP_FOR_TRAINING, anonymize_src_ip
+
+
+def group_flows_by_src_ip(flows: list) -> dict:
+    """
+    Gom các flows theo source IP address.
+    
+    Tại sao cần gom flows?
+    ========================
+    6 Features được thiết kế để phân tích behavior của MỘT src_ip,
+    không phải của MỘT flow riêng lẻ:
+    
+    - F1_PacketRate: Tổng packets từ TẤT CẢ flows của src_ip
+    - F2_SynRatio: SYN/ACK ratio từ TẤT CẢ flows của src_ip
+    - F3_DistinctPorts: Số ports khác nhau mà src_ip kết nối đến
+      → Phát hiện Port Scanning (nếu chỉ tính 1 flow thì luôn = 1)
+    - F4_PayloadLen: Avg payload từ TẤT CẢ flows của src_ip
+    - F5_FailRate: Tỷ lệ RST/errors từ TẤT CẢ flows của src_ip
+    - F6_ContextScore: Malicious patterns từ TẤT CẢ flows của src_ip
+    
+    Args:
+        flows (list): List of FlowState objects
+    
+    Returns:
+        dict: Mapping {src_ip: [flow1, flow2, ...]}
+    
+    Example:
+        Input: [
+            Flow(192.168.1.100 -> 10.0.0.1:80),
+            Flow(192.168.1.100 -> 10.0.0.1:443),
+            Flow(192.168.1.200 -> 10.0.0.1:22),
+        ]
+        
+        Output: {
+            '192.168.1.100': [flow1, flow2],  # F3 = 2 ports {80, 443}
+            '192.168.1.200': [flow3],         # F3 = 1 port {22}
+        }
+    """
+    flows_by_src = {}
+    
+    for flow in flows:
+        src_ip = flow.src_ip
+        
+        if src_ip not in flows_by_src:
+            flows_by_src[src_ip] = []
+        
+        flows_by_src[src_ip].append(flow)
+    
+    return flows_by_src
 
 
 def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
     """
-    Phân tích PCAP file và tính toán 6 features RAW values cho mỗi flow.
+    Phân tích PCAP file và tính toán 6 features RAW values cho mỗi SOURCE IP.
     
     Args:
         pcap_file (str): Đường dẫn file PCAP
         output_csv (str): Đường dẫn file CSV output
-        verbose (bool): In chi tiết flows ra màn hình
+        verbose (bool): In chi tiết src IPs ra màn hình
     
     LOGIC:
     1. Đọc toàn bộ PCAP
     2. Parse packets → LayerInfo
     3. Map packets vào flows (5-tuple)
-    4. Tính 6 features RAW cho MỖI FLOW
-    5. Export CSV với format giống CICFlowMeter
+    4. Group flows theo src_ip
+    5. Tính 6 features RAW cho MỖI SRC_IP (aggregate từ tất cả flows)
+    6. Export CSV: 1 row = 1 src_ip với aggregated features
+    
+    WHY GROUP BY SRC_IP?
+    ====================
+    6 Features được thiết kế để phân tích BEHAVIOR của mỗi src_ip:
+    - F1: Packet rate từ tất cả flows của src_ip
+    - F2: SYN/ACK ratio để detect SYN flood
+    - F3: Distinct ports → Phát hiện Port Scanning
+          (Nếu không gom theo src_ip, F3 sẽ luôn = 1 vì mỗi flow có cố định 1 port)
+    - F4: Average payload length
+    - F5: Fail rate (RST + HTTP errors)
+    - F6: Malicious payload detection
+    
+    OUTPUT FORMAT:
+    ==============
+    Mỗi row = 1 src_ip với:
+    - Src_IP
+    - Total_Flows (số flows từ IP này)
+    - Total_Unique_Dst_IPs
+    - Total_Pkts, Total_Fwd_Pkts, Total_Bwd_Pkts
+    - Total_Duration
+    - 6 RAW Features (F1-F6)
     """
     
     if not os.path.exists(pcap_file):
@@ -73,8 +144,12 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
     # Parser: Dùng packet timestamp từ PCAP
     parser = PacketLayerExtractor(
         enable_http_parsing=True,  # Enable để detect HTTP status codes cho F5
-        use_packet_time=True       # Dùng PCAP timestamp
+        use_packet_time=True       # QUAN TRỌNG: Dùng timestamp từ PCAP, KHÔNG dùng thời gian máy
     )
+    
+    print("[✓] PacketLayerExtractor configured:")
+    print("    - use_packet_time=True → Timestamps từ PCAP file")
+    print("    - Timestamps phản ánh thời gian ghi trong PCAP, KHÔNG phải thời gian hiện tại\n")
     
     # FlowManager: Vô hiệu hóa sliding window (lưu toàn bộ PCAP)
     flow_manager = FlowManager(
@@ -132,7 +207,7 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         sys.exit(1)
     
     # ========================================================================
-    # TẠO OUTPUT CSV
+    # TẠO OUTPUT CSV - GROUP BY SRC_IP
     # ========================================================================
     
     all_flows = flow_manager.get_all_flows()
@@ -142,107 +217,136 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         duration = last_timestamp - first_timestamp
         print(f"[+] Capture duration: {duration:.2f} seconds")
     
+    # Group flows by source IP
+    print("\n[*] Grouping flows by source IP...")
+    flows_by_src = group_flows_by_src_ip(all_flows)
+    print(f"[+] Unique source IPs: {len(flows_by_src)}")
+    
     # CSV Headers
     headers = [
-        # Flow Identification
-        "Flow_ID",
+        # Source IP Identification (1 row per src_ip)
         "Src_IP",
-        "Dst_IP", 
-        "Src_Port",
-        "Dst_Port",
-        "Protocol",
+        "DateTime",              # Human-readable timestamp (first packet)
+        "Total_Flows",           # Số flows từ src_ip này
+        "Total_Unique_Dst_IPs",  # Số dst_ip khác nhau
         
-        # Flow Statistics
-        "Duration",
+        # Aggregated Statistics (tổng hợp từ tất cả flows)
         "Total_Fwd_Pkts",
         "Total_Bwd_Pkts",
         "Total_Pkts",
+        "Total_Duration",
         
-        # RAW Features (6 features)
-        "F1_PacketRate_RAW",
-        "F2_SynRatio_RAW",
-        "F3_DistinctPorts_RAW",
-        "F4_PayloadLen_RAW",
-        "F5_FailRate_RAW",
-        "F6_ContextScore_RAW",
+        # TCP Flags Summary (from forward packets)
+        "TCP_Flags",             # Format: "SYN:10,ACK:20,RST:5,FIN:2"
+        
+        # NORMALIZED Features (all in [0,1] range - aggregated across all flows from src_ip)
+        "F1_PacketRate_NORM",
+        "F2_SynRatio_NORM",
+        "F3_DistinctPorts_NORM",    # Số ports khác nhau mà src_ip scan
+        "F4_PayloadLen_NORM",
+        "F5_FailRate_NORM",
+        "F6_ContextScore_NORM",
     ]
     
     rows = []
     
-    print("\n[*] Calculating features for each flow...")
+    print("\n[*] Calculating features per source IP...")
     
-    for i, flow in enumerate(all_flows, 1):
-        # Flow identification
-        flow_id = f"{flow.src_ip}-{flow.dst_ip}-{flow.src_port}-{flow.dst_port}-{flow.protocol}"
+    for i, (src_ip, flows_list) in enumerate(flows_by_src.items(), 1):
+        src_ip_out = anonymize_src_ip(src_ip) if ANONYMIZE_SRC_IP_FOR_TRAINING else src_ip
+        # Aggregate statistics từ tất cả flows
+        total_fwd = sum(f.get_fwd_packet_count() for f in flows_list)
+        total_bwd = sum(f.get_bwd_packet_count() for f in flows_list)
+        total_pkts = total_fwd + total_bwd
         
-        # Protocol name
-        proto_name = "TCP" if flow.protocol == 6 else ("UDP" if flow.protocol == 17 else "OTHER")
+        # Unique destination IPs
+        unique_dst_ips = len(set(f.dst_ip for f in flows_list))
         
-        # Flow statistics
-        fwd_count = flow.get_fwd_packet_count()
-        bwd_count = flow.get_bwd_packet_count()
-        total_pkts = fwd_count + bwd_count
+        # Unique destination ports
+        unique_dst_ports = set()
+        for f in flows_list:
+            unique_dst_ports.update(f.get_distinct_ports())
+        dst_ports_str = ','.join(str(p) for p in sorted(unique_dst_ports)) if unique_dst_ports else "NONE"
         
-        # Duration (from first to last packet in flow)
-        all_packets = flow.get_all_packets()
-        if all_packets:
-            timestamps = [p.timestamp for p in all_packets if p.timestamp]
-            if timestamps:
-                flow_duration = max(timestamps) - min(timestamps)
-            else:
-                flow_duration = 0.0
+        # Total duration (sum of all flow durations)
+        total_duration = sum(f.duration for f in flows_list)
+        
+        # Get first packet timestamp for DateTime
+        first_timestamp = None
+        for flow in flows_list:
+            all_pkts = flow.get_all_packets()
+            if all_pkts and all_pkts[0].timestamp:
+                first_timestamp = all_pkts[0].timestamp
+                break
+        
+        if first_timestamp:
+            dt_str = datetime.fromtimestamp(first_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         else:
-            flow_duration = 0.0
+            dt_str = "N/A"
+        
+        # Aggregate TCP Flags từ forward packets
+        tcp_flags_agg = {'SYN': 0, 'ACK': 0, 'RST': 0, 'FIN': 0, 'PSH': 0, 'URG': 0}
+        for flow in flows_list:
+            flags = flow.get_fwd_tcp_flags_count()
+            for flag_name in tcp_flags_agg.keys():
+                tcp_flags_agg[flag_name] += flags.get(flag_name, 0)
+        
+        tcp_flags_str = ','.join([f"{k}:{v}" for k, v in tcp_flags_agg.items() if v > 0])
+        if not tcp_flags_str:
+            tcp_flags_str = "NONE"
         
         # Calculate 6 features RAW VALUES
-        # Để tính features cho 1 flow, ta cần pass list chứa flow đó
-        # (vì FlowFeatureCalculator.calculate_all() nhận List[FlowState])
-        features = feature_calc.calculate_all([flow])
+        # Truyền TẤT CẢ flows từ src_ip này → Features được tính đúng!
+        features = feature_calc.calculate_all(flows_list)
         
         if features is None:
-            # Flow rỗng - skip
+            # Flows rỗng - skip
             continue
         
         # Unpack 6 features
         f1_packet_rate = features[0]
         f2_syn_ratio = features[1]
-        f3_distinct_ports = features[2]
+        f3_distinct_ports = features[2]  # Bây giờ sẽ > 1 nếu có port scan!
         f4_payload_len = features[3]
         f5_fail_rate = features[4]
         f6_context_score = features[5]
         
         # Tạo row
         row = {
-            "Flow_ID": flow_id,
-            "Src_IP": flow.src_ip,
-            "Dst_IP": flow.dst_ip,
-            "Src_Port": flow.src_port,
-            "Dst_Port": flow.dst_port,
-            "Protocol": proto_name,
-            "Duration": f"{flow_duration:.6f}",
-            "Total_Fwd_Pkts": fwd_count,
-            "Total_Bwd_Pkts": bwd_count,
+            "Src_IP": src_ip_out,
+            "Dst_Ports": dst_ports_str,
+            "DateTime": dt_str,
+            "Total_Flows": len(flows_list),
+            "Total_Unique_Dst_IPs": unique_dst_ips,
+            "Total_Fwd_Pkts": total_fwd,
+            "Total_Bwd_Pkts": total_bwd,
             "Total_Pkts": total_pkts,
-            "F1_PacketRate_RAW": f"{f1_packet_rate:.4f}",
-            "F2_SynRatio_RAW": f"{f2_syn_ratio:.4f}",
-            "F3_DistinctPorts_RAW": f"{f3_distinct_ports:.4f}",
-            "F4_PayloadLen_RAW": f"{f4_payload_len:.4f}",
-            "F5_FailRate_RAW": f"{f5_fail_rate:.4f}",
-            "F6_ContextScore_RAW": f"{f6_context_score:.4f}",
+            "Total_Duration": f"{total_duration:.6f}",
+            "TCP_Flags": tcp_flags_str,
+            "F1_PacketRate_NORM": f"{f1_packet_rate:.4f}",
+            "F2_SynRatio_NORM": f"{f2_syn_ratio:.4f}",
+            "F3_DistinctPorts_NORM": f"{f3_distinct_ports:.4f}",
+            "F4_PayloadLen_NORM": f"{f4_payload_len:.4f}",
+            "F5_FailRate_NORM": f"{f5_fail_rate:.4f}",
+            "F6_ContextScore_NORM": f"{f6_context_score:.4f}",
         }
         rows.append(row)
         
         # Verbose output
         if verbose and i <= 20:
-            print(f"\n--- Flow {i} ---")
-            print(f"ID: {flow_id}")
-            print(f"Packets: {total_pkts} (Fwd: {fwd_count}, Bwd: {bwd_count})")
-            print(f"Duration: {flow_duration:.3f}s")
-            print(f"Features: F1={f1_packet_rate:.2f}, F2={f2_syn_ratio:.2f}, "
-                  f"F3={f3_distinct_ports:.0f}, F4={f4_payload_len:.2f}, "
-                  f"F5={f5_fail_rate:.2f}, F6={f6_context_score:.2f}")
+            print(f"\n--- Source IP {i}/{len(flows_by_src)} ---")
+            print(f"IP: {src_ip_out}, Time: {dt_str}")
+            print(f"Flows: {len(flows_list)}, Dst IPs: {unique_dst_ips}")
+            print(f"Packets: {total_pkts} (Fwd: {total_fwd}, Bwd: {total_bwd})")
+            print(f"Duration: {total_duration:.3f}s, Flags: {tcp_flags_str}")
+            print(f"Features:")
+            print(f"  F1_PacketRate:    {f1_packet_rate:.2f} pkts/s")
+            print(f"  F2_SynRatio:      {f2_syn_ratio:.4f}")
+            print(f"  F3_DistinctPorts: {f3_distinct_ports:.4f}")
+            print(f"  F4_PayloadLen:    {f4_payload_len:.2f} bytes")
+            print(f"  F5_FailRate:      {f5_fail_rate:.4f}")
+            print(f"  F6_ContextScore:  {f6_context_score:.0f}")
     
-    # Ghi ra CSV
     print(f"\n[*] Writing output to {output_csv}...")
     
     with open(output_csv, 'w', newline='', encoding='utf-8') as f:
@@ -250,10 +354,10 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         writer.writeheader()
         writer.writerows(rows)
     
-    print(f"[+] Successfully exported {len(rows)} flows")
+    print(f"[+] Successfully exported {len(rows)} source IPs")
     
     if verbose and len(rows) > 20:
-        print(f"    (Displayed first 20 flows, {len(rows) - 20} more in CSV)")
+        print(f"    (Displayed first 20 source IPs, {len(rows) - 20} more in CSV)")
     
     # ========================================================================
     # SUMMARY
@@ -262,20 +366,19 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
     print(f"\n{'='*70}")
     print(f"ANALYSIS COMPLETE")
     print(f"{'='*70}")
-    print(f"Total Packets:  {processed_count}")
-    print(f"Total Flows:    {len(rows)}")
-    print(f"Output File:    {output_csv}")
+    print(f"Total Packets:   {processed_count}")
+    print(f"Total Flows:     {len(all_flows)}")
+    print(f"Unique Src IPs:  {len(rows)}")
+    print(f"Output File:     {output_csv}")
     print(f"{'='*70}\n")
     
     print("[+] NEXT STEPS:")
     print("    1. Open the CSV file to review RAW feature values")
-    print("    2. Compare with CICFlowMeter output:")
-    print(f"       - Your file: {output_csv}")
-    print(f"       - CIC file:  {os.path.splitext(pcap_file)[0]}_Flow.csv")
-    print("    3. Verify that logic is correct by comparing:")
-    print("       - Total_Fwd_Pkts, Total_Bwd_Pkts")
-    print("       - F2_SynRatio (SYN / (SYN + ACK))")
-    print("       - F4_PayloadLen (average payload)")
+    print("    2. Check F3_DistinctPorts column:")
+    print("       - High values (>10) = Potential Port Scanning")
+    print("       - Low values (1-5) = Normal traffic")
+    print("    3. Each row represents aggregated data from ONE source IP")
+    print("    4. Features are calculated across ALL flows from that IP")
     print("")
 
 

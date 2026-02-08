@@ -73,8 +73,15 @@ class LayerInfo:
 
     def __post_init__(self):
         """
+        Gọi sanitize ngay khi init nếu dữ liệu được truyền vào constructor.
+        """
+        self.sanitize()
+
+    def sanitize(self):
+        """
         Giai đoạn Data Sanitization
         Đảm bảo dữ liệu đúng kiểu trước khi sử dụng.
+        Cần được gọi thủ công nếu populate fields sau khi init.
         """
         # 1. Xử lý Payload (đảm bảo là bytes)
         if self.payload_bytes and not isinstance(self.payload_bytes, bytes):
@@ -95,6 +102,7 @@ class LayerInfo:
         self.http_host = self._safe_decode(self.http_host)
         self.http_user_agent = self._safe_decode(self.http_user_agent)
         self.dns_query = self._safe_decode(self.dns_query)
+
     
     def _safe_decode(self, value: Any) -> Optional[str]:
         """Hàm phụ trợ: Chuyển bytes thành str an toàn"""
