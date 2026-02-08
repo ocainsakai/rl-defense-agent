@@ -1,0 +1,178 @@
+,,,,,,,,,,
+,,,BẢNG TỔNG HỢP BIẾN THỐNG KÊ - HỆ THỐNG NIDS,,,,,,,,
+,,,Phân tầng: RAW (đo trực tiếp) → DERIVED (tính từ biến thô),,,,,,,,
+,,,,,,,,,,
+========,========,========,========,========,========,========,========,========,========,========
+TẦNG 1,BIẾN THÔ (RAW),- Đếm / Đo trực tiếp từ packet hoặc flow,,,,,,,,
+========,========,========,========,========,========,========,========,========,========,========
+,,,,,,,,,,
+STT,Phân nhóm,Tên biến,Kiểu,Khoảng giá trị,Cách đo,Ý nghĩa,Phát hiện tấn công,Bình thường,Bất thường,File nguồn
+,,,,,,,,,,
+---,--- NETWORK: Đếm gói tin ---,,,,,,,,,
+1,Network / Flow,total_packets,int,[0; +inf),Đếm tổng gói tin trong flow (fwd + bwd),Tổng lượng gói tin qua luồng mạng,DDoS / Flood,-,-,core/flow_state.py
+2,Network / Flow,fwd_packets,int,[0; +inf),Đếm gói forward (client → server),Số gói gửi từ nguồn đến đích,Traffic volume,-,-,core/flow_state.py
+3,Network / Flow,bwd_packets,int,[0; +inf),Đếm gói backward (server → client),Số gói phản hồi từ đích về nguồn,Traffic volume,-,-,core/flow_state.py
+4,Network / Flow,window_size,float,[0; +inf),Lấy từ config sliding window hoặc flow duration,Khoảng thời gian phân tích (giây),Context cho tính rate,1.0s (default),-,core/flow_state.py
+,,,,,,,,,,
+---,--- TCP FLAGS: Đếm cờ TCP theo chiều ---,,,,,,,,,
+5,TCP Flags (fwd),fwd_SYN_count,int,[0; +inf),Đếm cờ SYN trong gói forward,Số yêu cầu mở kết nối từ client,SYN Flood,-,-,core/flow_state.py
+6,TCP Flags (fwd),fwd_ACK_count,int,[0; +inf),Đếm cờ ACK trong gói forward,Số xác nhận từ client,Baseline cho SYN/ACK ratio,-,-,core/flow_state.py
+7,TCP Flags (fwd),fwd_FIN_count,int,[0; +inf),Đếm cờ FIN trong gói forward,Số yêu cầu đóng kết nối từ client,Connection behavior,-,-,core/flow_state.py
+8,TCP Flags (fwd),fwd_PSH_count,int,[0; +inf),Đếm cờ PSH trong gói forward,Số gói đẩy dữ liệu ngay từ client,Data transfer pattern,-,-,core/flow_state.py
+9,TCP Flags (fwd),fwd_URG_count,int,[0; +inf),Đếm cờ URG trong gói forward,Số gói khẩn cấp từ client,Anomaly,-,-,core/flow_state.py
+10,TCP Flags (bwd),bwd_RST_count,int,[0; +inf),Đếm cờ RST trong gói backward,Số lần server reset kết nối,Port Scan,-,-,core/flow_state.py
+11,TCP Flags (bwd),bwd_SYN_count,int,[0; +inf),Đếm cờ SYN trong gói backward,SYN-ACK phản hồi từ server,Connection tracking,-,-,core/flow_state.py
+12,TCP Flags (bwd),bwd_ACK_count,int,[0; +inf),Đếm cờ ACK trong gói backward,Xác nhận từ server,Connection tracking,-,-,core/flow_state.py
+13,TCP Flags (bwd),bwd_FIN_count,int,[0; +inf),Đếm cờ FIN trong gói backward,Server đóng kết nối,Connection behavior,-,-,core/flow_state.py
+,,,,,,,,,,
+---,--- TIMING: Thời gian ---,,,,,,,,,
+14,Timing,timestamps[],float[],-,Lấy timestamp từ mỗi packet,Mảng thời điểm đến của từng gói tin,Input cho IAT,-,-,core/layer_info.py
+15,Timing,flow_duration,float,[0; +inf),last_timestamp - first_timestamp,Thời gian tồn tại flow (giây),Session analysis,-,-,core/flow_state.py
+16,Timing,created_at,float,-,Timestamp gói đầu tiên của flow,Thời điểm bắt đầu flow,-,-,-,core/flow_state.py
+17,Timing,last_update,float,-,Timestamp gói cuối cùng của flow,Thời điểm cập nhật gần nhất,-,-,-,core/flow_state.py
+,,,,,,,,,,
+---,--- PORTS: Cổng mạng ---,,,,,,,,,
+18,Port,dst_ports[],set,-,Thu thập dst_port từ mỗi packet trong flow,Tập hợp cổng đích không trùng lặp,Port Scanning,-,-,core/flow_state.py
+,,,,,,,,,,
+---,--- HTTP RESPONSE: Đếm mã phản hồi ---,,,,,,,,,
+19,HTTP (bwd),http_401_count,int,[0; +inf),Đếm gói backward có http_status == 401,Số phản hồi Unauthorized,Brute Force,0,Nhiều,core/flow_state.py
+20,HTTP (bwd),http_403_count,int,[0; +inf),Đếm gói backward có http_status == 403,Số phản hồi Forbidden,Access bypass,0,Nhiều,core/flow_state.py
+21,HTTP (bwd),http_5xx_count,int,[0; +inf),Đếm gói backward có 500 <= http_status < 600,Số lỗi server (Internal Error / Unavailable),SQLi crash / DoS,0,Nhiều,core/flow_state.py
+22,HTTP (bwd),total_http_responses,int,[0; +inf),Đếm tổng gói backward có http_status,Tổng phản hồi HTTP từ server,-,-,-,core/flow_state.py
+,,,,,,,,,,
+---,--- HTTP REQUEST: Đếm URL ---,,,,,,,,,
+23,HTTP (fwd),url_request_counts{},dict,-,"Đếm số request đến mỗi URL (bỏ query params: path?q=x → path)",Map URL → số lần request,Brute Force / L7 DDoS,-,-,feature/feature_flow.py
+24,HTTP (fwd),total_http_requests,int,[0; +inf),Tổng số forward packets có http_uri,Tổng request HTTP gửi đi,-,-,-,feature/feature_flow.py
+25,HTTP (fwd),max_requests_single_url,int,[0; +inf),max(url_request_counts.values()),Số request cao nhất đến 1 URL duy nhất,URL concentration,-,-,feature/feature_flow.py
+,,,,,,,,,,
+---,--- PAYLOAD: Đo trực tiếp trên nội dung ---,,,,,,,,,
+26,Payload (raw),payload_bytes,bytes,-,Composite payload = [URI] + [User-Agent] + [Body],Nội dung thô gói tin (bytes),Input cho mọi phân tích,-,-,core/packet_parser.py
+27,Payload (count),payload_length,int,[0; +inf),len(payload_bytes) cho mỗi packet,Kích thước payload đơn lẻ (bytes),Buffer overflow,Tùy app,Đột biến,feature/feature_flow.py
+28,Payload (count),single_quote_count,int,[0; +inf),Đếm ký tự ' trong payload,Số dấu nháy đơn,SQLi,0,>2,feature/behavioral_features.py
+29,Payload (count),double_quote_count,int,[0; +inf),Đếm ký tự " trong payload,Số dấu nháy kép,XSS,0-1,>3,feature/behavioral_features.py
+30,Payload (count),semicolon_count,int,[0; +inf),Đếm ký tự ;,Số dấu chấm phẩy,SQLi (stacked queries),0-1,>2,feature/payload_features.py
+31,Payload (count),equals_count,int,[0; +inf),Đếm ký tự =,Số dấu bằng,SQLi / XSS,0-3,>5,feature/payload_features.py
+32,Payload (count),parenthesis_count,int,[0; +inf),count('(') + count(')'),Tổng dấu ngoặc tròn,Function call injection,0-2,>4,feature/payload_features.py
+33,Payload (count),angle_bracket_count,int,[0; +inf),count('<') + count('>'),Tổng dấu ngoặc nhọn,XSS / HTML tag,0,>2,feature/behavioral_features.py
+34,Payload (count),bracket_count,int,[0; +inf),"count([ ] { })",Tổng ngoặc vuông + xoắn,Data structure injection,0,>2,feature/behavioral_features.py
+35,Payload (count),special_char_count,int,[0; +inf),Đếm ký tự thuộc tập SPECIAL_CHARS,Tổng ký tự đặc biệt (không phải chữ/số/space),Injection,0-5,>10,feature/behavioral_features.py
+36,Payload (count),sql_special_char_count,int,[0; +inf),"Đếm ký tự thuộc tập {' - ; # =}",Số ký tự đặc biệt liên quan SQL,SQLi,-,-,feature/feature_flow.py
+37,Payload (count),xss_special_char_count,int,[0; +inf),"Đếm ký tự thuộc tập {< > ( ) = /}",Số ký tự đặc biệt liên quan XSS,XSS,-,-,feature/feature_flow.py
+38,Payload (count),uppercase_count,int,[0; +inf),Đếm ký tự A-Z,Số chữ in hoa,Evasion,-,-,feature/behavioral_features.py
+39,Payload (count),digit_count,int,[0; +inf),Đếm ký tự 0-9,Số chữ số,Encoded payload,-,-,feature/behavioral_features.py
+40,Payload (count),whitespace_count,int,[0; +inf),Đếm space/tab/newline,Số khoảng trắng,Padding,-,-,feature/behavioral_features.py
+41,Payload (count),word_count,int,[0; +inf),"Đếm từ bằng regex \b\w+\b",Số lượng từ trong payload,-,-,-,feature/behavioral_features.py
+42,Payload (count),total_word_char_length,int,[0; +inf),sum(len(word) for word in words),Tổng ký tự của tất cả từ,-,-,-,feature/behavioral_features.py
+43,Payload (count),tag_count,int,[0; +inf),count('<') + count('>'),Số dấu mở/đóng tag HTML,XSS,0,>2,feature/payload_features.py
+44,Payload (count),dash_dash_count,int,[0; +inf),Đếm chuỗi --,Comment SQL kiểu line,SQLi,0,>0,feature/behavioral_features.py
+45,Payload (count),slash_star_count,int,[0; +inf),Đếm chuỗi /*,Comment SQL kiểu block,SQLi / WAF bypass,0,>0,feature/behavioral_features.py
+46,Payload (count),url_encoded_count,int,[0; +inf),"Đếm pattern %[0-9A-Fa-f]{2}",Số chuỗi URL-encoded (%XX),Evasion,0-3,>10,feature/behavioral_features.py
+47,Payload (count),hex_encoded_count,int,[0; +inf),Đếm pattern 0x[0-9A-Fa-f]+,Số chuỗi hex-encoded,Evasion,0,>2,feature/behavioral_features.py
+48,Payload (count),unicode_encoded_count,int,[0; +inf),"Đếm pattern \\u[0-9A-Fa-f]{4}",Số chuỗi unicode-encoded,Evasion,0,>2,feature/behavioral_features.py
+49,Payload (count),case_variation,int,[0; +inf),"Đếm chuyển đổi HOA↔thường liên tiếp (A→a hoặc a→A)",Mức trộn chữ hoa/thường (vd: sCrIpT),WAF Bypass,0-2,>5,feature/behavioral_features.py
+,,,,,,,,,,
+---,--- KEYWORD MATCHING: Đếm keyword ---,,,,,,,,,
+50,Keyword (SQL),sql_keyword_count,int,[0; +inf),"Đếm từ khóa SQL (select/union/drop/insert/update/delete...)",Số từ khóa SQL tìm thấy,SQL Injection,0,>2,feature/payload_features.py
+51,Keyword (SQL),sqli_keyword_matches,int,[0; +inf),"Đếm keyword SQL (1 điểm mỗi match) qua PayloadContextScorer",Số keyword SQLi (phần keyword của weighted score),SQLi,0,>2,feature/payload_context.py
+52,Keyword (SQL),sqli_pattern_matches,int,[0; +inf),"Đếm pattern SQLi (union..select / or 1=1 / drop table...) (2 điểm mỗi match)",Số pattern phức hợp SQLi,SQLi,0,>0,feature/payload_context.py
+53,Keyword (XSS),xss_keyword_count,int,[0; +inf),"Đếm từ khóa XSS (script/alert/eval/prompt/iframe...)",Số từ khóa XSS tìm thấy,XSS,0,>1,feature/payload_features.py
+54,Keyword (XSS),xss_keyword_matches,int,[0; +inf),"Đếm keyword XSS (1 điểm mỗi match) qua PayloadContextScorer",Số keyword XSS (phần keyword của weighted score),XSS,0,>1,feature/payload_context.py
+55,Keyword (XSS),xss_pattern_matches,int,[0; +inf),"Đếm pattern XSS (<script> / onerror=... / javascript:) (2 điểm mỗi match)",Số pattern phức hợp XSS,XSS,0,>0,feature/payload_context.py
+56,Keyword (XSS),event_handler_count,int,[0; +inf),"Đếm pattern on\w+= (onerror= / onclick= / onload=...)",Số event handler JavaScript,XSS,0,>0,feature/payload_features.py
+57,Keyword (XSS),script_tag_count,int,[0; +inf),"Đếm <script và </script (case-insensitive)",Số thẻ script,XSS,0,>0,feature/behavioral_features.py
+58,Keyword (count),or_and_count,int,[0; +inf),"Đếm keyword OR / AND (case-insensitive; word boundary)",Số toán tử logic boolean,SQLi,0,>2,feature/payload_features.py
+59,Keyword (count),concat_function_count,int,[0; +inf),"Đếm ""concat("" (case-insensitive)",Số lần gọi hàm concat(),SQLi,0,>0,feature/behavioral_features.py
+60,Keyword (count),char_function_count,int,[0; +inf),"Đếm ""char("" (case-insensitive)",Số lần gọi hàm char(),SQLi / XSS,0,>0,feature/behavioral_features.py
+,,,,,,,,,,
+---,--- BINARY DETECTION: Có/Không (0/1) ---,,,,,,,,,
+61,Binary flag,has_comment,int,{0; 1},"1 nếu payload chứa -- hoặc /* hoặc #",Có cú pháp comment SQL,SQLi,0,1,feature/behavioral_features.py
+62,Binary flag,has_javascript,int,{0; 1},"1 nếu chứa ""javascript:""",Có protocol handler javascript,XSS,0,1,feature/behavioral_features.py
+63,Binary flag,has_union,int,{0; 1},"1 nếu chứa ""union"" (case-insensitive)",Có từ khóa UNION,SQLi (UNION-based),0,1,feature/behavioral_features.py
+64,Binary flag,has_select,int,{0; 1},"1 nếu chứa ""select"" (case-insensitive)",Có từ khóa SELECT,SQLi,0,1,feature/behavioral_features.py
+65,Binary flag,has_or_and,int,{0; 1},"1 nếu chứa OR hoặc AND (word boundary)",Có toán tử logic,SQLi boolean,0,1,feature/behavioral_features.py
+66,Binary flag,numeric_comparison,int,{0; 1},"1 nếu có pattern 1=1 / 0=0 / 'a'='a' (tautology)",Phát hiện điều kiện luôn đúng,SQLi tautology,0,1,feature/payload_features.py
+67,Binary flag,comment_indicator,int,{0; 1},"1 nếu có -- hoặc /* hoặc #",Có chứa ký hiệu comment SQL,SQLi,0,1,feature/payload_features.py
+68,Binary flag,quote_imbalance,int,{0; 1},"1 nếu số quote lẻ (chưa đóng)",Dấu nháy không cân bằng,Injection fragment,0,1,feature/payload_features.py
+69,Binary flag,xss_structure_score,int,{0; 1},"1 nếu phát hiện cấu trúc XSS (<script> / javascript: / expression())",Cấu trúc XSS hoàn chỉnh,XSS,0,1,feature/payload_features.py
+,,,,,,,,,,
+,,,,,,,,,,
+========,========,========,========,========,========,========,========,========,========,========
+TẦNG 2,BIẾN DẪN XUẤT (DERIVED),- Tính từ biến thô bằng công thức,,,,,,,,
+========,========,========,========,========,========,========,========,========,========,========
+,,,,,,,,,,
+STT,Phân nhóm,Tên biến,Kiểu,Khoảng giá trị,Công thức (từ biến thô),Ý nghĩa,Phát hiện tấn công,Bình thường,Bất thường,File nguồn
+,,,,,,,,,,
+---,--- FLOW FEATURES (F1-F8): Rate và Ratio từ network ---,,,,,,,,,
+D1,Flow (F1),packet_rate,float,[0; +inf),= total_packets / window_size,Tốc độ gửi gói tin (packets/giây),DDoS / Flood,10-100 pkt/s,>1000 pkt/s,feature/feature_flow.py
+D2,Flow (F2),syn_ack_ratio,float,[0; +inf),= fwd_SYN_count / max(fwd_ACK_count; 1),Tỷ lệ SYN so với ACK trong chiều forward,SYN Flood,~1.0,>10,feature/feature_flow.py
+D3,Flow (F3),inter_arrival_time,float,[0; +inf),= avg(timestamps[i+1] - timestamps[i]) cho fwd packets,Thời gian trung bình giữa các gói tin liên tiếp (giây),Scripted attack,0.1-1.0s,<0.001s,feature/feature_flow.py
+D4,Flow (F4),rst_ratio,float,[0; 1],= bwd_RST_count / bwd_packets,Tỷ lệ RST trong phản hồi server,Port Scan,~0,>0.5,feature/feature_flow.py
+D5,Flow (F5),distinct_ports,int,[0; +inf),= len(dst_ports[]),Số cổng đích không trùng lặp,Port Scanning,1-5,>50,feature/feature_flow.py
+D6,Flow (F6),url_concentration,float,[0; 1],= max_requests_single_url / total_http_requests,Mức tập trung request vào 1 URL,Brute Force / L7 DDoS,0.1-0.3,>0.9,feature/feature_flow.py
+D7,Flow (F7),auth_fail_rate,float,[0; 1],= (http_401_count + http_403_count) / total_http_responses,Tỷ lệ thất bại xác thực,Login Brute Force,~0,>0.7,feature/feature_flow.py
+D8,Flow (F8),server_error_rate,float,[0; 1],= http_5xx_count / total_http_responses,Tỷ lệ lỗi server,SQLi crash / DoS,~0,>0.1,feature/feature_flow.py
+,,,,,,,,,,
+---,--- FLOW FEATURES (F9-F14): Phân tích payload ---,,,,,,,,,
+D9,Flow (F9),total_payload_length,float,[0; +inf),= sum(payload_length) cho tất cả fwd packets,Tổng kích thước payload gửi đi (bytes),Buffer overflow,Tùy app,Đột biến lớn,feature/feature_flow.py
+D10,Flow (F10),payload_entropy,float,[0; 8],= -sum(p * log2(p)) với p = byte_freq / total_bytes,Entropy Shannon - đo độ ngẫu nhiên của payload,Obfuscation / Encryption,4-5 (text),>7 (encrypted),feature/feature_flow.py
+D11,Flow (F11),sqli_keyword_score,float,[0; +inf),= sqli_keyword_matches × 1 + sqli_pattern_matches × 2,Điểm tổng hợp SQLi (keyword 1đ + pattern 2đ),SQL Injection,0,>3,feature/feature_flow.py
+D12,Flow (F12),sql_special_char_ratio,float,[0; 1],= sql_special_char_count / total_payload_length,Tỷ lệ ký tự đặc biệt SQL trong payload,SQL Injection,<0.05,>0.15,feature/feature_flow.py
+D13,Flow (F13),xss_keyword_score,float,[0; +inf),= xss_keyword_matches × 1 + xss_pattern_matches × 2,Điểm tổng hợp XSS (keyword 1đ + pattern 2đ),Cross-Site Scripting,0,>3,feature/feature_flow.py
+D14,Flow (F14),xss_special_char_ratio,float,[0; 1],= xss_special_char_count / total_payload_length,Tỷ lệ ký tự đặc biệt XSS trong payload,Cross-Site Scripting,<0.05,>0.15,feature/feature_flow.py
+,,,,,,,,,,
+---,--- RATIO: Tỷ lệ tính từ count / length ---,,,,,,,,,
+D15,Ratio,special_char_ratio,float,[0; 1],= special_char_count / payload_length,Tỷ lệ ký tự đặc biệt trong payload,Injection,<0.1,>0.25,feature/payload_features.py
+D16,Ratio,uppercase_ratio,float,[0; 1],= uppercase_count / payload_length,Tỷ lệ chữ in hoa,Evasion (trộn case),0.02-0.15,Biến động lớn,feature/payload_features.py
+D17,Ratio,digit_ratio,float,[0; 1],= digit_count / payload_length,Tỷ lệ chữ số,Encoded payload,0.05-0.2,>0.5,feature/payload_features.py
+D18,Ratio,whitespace_ratio,float,[0; 1],= whitespace_count / payload_length,Tỷ lệ khoảng trắng,Padding attack,0.1-0.25,>0.5,feature/payload_features.py
+D19,Ratio,sql_keyword_density,float,[0; 1],= sql_keyword_count / word_count,Mật độ từ khóa SQL so với tổng từ,SQL Injection,0,>0.3,feature/payload_features.py
+D20,Ratio,xss_keyword_density,float,[0; 1],= xss_keyword_count / word_count,Mật độ từ khóa XSS so với tổng từ,XSS,0,>0.2,feature/behavioral_features.py
+D21,Ratio,char_diversity,float,[0; 1],= len(unique_chars) / payload_length,Tỷ lệ ký tự không trùng lặp,Anomaly,0.2-0.5,>0.8 hoặc <0.05,feature/behavioral_features.py
+,,,,,,,,,,
+---,--- AGGREGATE: Tổng hợp từ nhiều biến thô ---,,,,,,,,,
+D22,Aggregate,quote_count,int,[0; +inf),= single_quote_count + double_quote_count,Tổng số dấu nháy (đơn + kép),SQLi / XSS,0-2,>5,feature/payload_features.py
+D23,Aggregate,quote_imbalance_behavioral,int,[0; +inf),= |single_quote_count - double_quote_count|,Chênh lệch giữa nháy đơn và kép,Injection,0,>2,feature/behavioral_features.py
+D24,Aggregate,unclosed_quotes,int,{0; 1},= (single_quote_count % 2) + (double_quote_count % 2),Có dấu nháy chưa đóng (lẻ),Injection fragment,0,>0,feature/behavioral_features.py
+D25,Aggregate,parenthesis_imbalance,int,[0; +inf),= |count('(') - count(')')|,Ngoặc tròn không cân bằng,Injection fragment,0,>0,feature/behavioral_features.py
+D26,Aggregate,avg_word_length,float,[0; +inf),= total_word_char_length / word_count,Độ dài trung bình mỗi từ,Obfuscation,4-8,>15,feature/payload_features.py
+D27,Aggregate,encoding_layers,int,[0; +inf),= url_encoded_count (số chuỗi %XX),Số lớp encoding URL,Evasion / Double encoding,0-5,>10,feature/payload_features.py
+,,,,,,,,,,
+---,--- ENTROPY: Tính từ phân bố byte ---,,,,,,,,,
+D28,Entropy,entropy,float,[0; 8],= -sum(p * log2(p)) với p = char_freq / len(payload),Shannon entropy trên payload text,Obfuscation / Encryption,4-5 (text),>7 hoặc <2,feature/payload_features.py
+,,,,,,,,,,
+---,--- CONTEXT SCORE: Tổng hợp cuối cùng ---,,,,,,,,,
+D29,Context,sqli_indicator_score,float,[0; +inf),= sqli_keyword_matches × 1 + sqli_pattern_matches × 2,Điểm tổng hợp SQLi từ PayloadContextScorer,SQL Injection,0,>3,feature/payload_context.py
+D30,Context,xss_indicator_score,float,[0; +inf),= xss_keyword_matches × 1 + xss_pattern_matches × 2,Điểm tổng hợp XSS từ PayloadContextScorer,XSS,0,>3,feature/payload_context.py
+D31,Context,payload_score,int,{0; 1},"= 1 nếu (sqli_indicator_score > 0 HOẶC xss_indicator_score > 0), else 0",Nhãn cuối: payload lành (0) hay ác (1),Tổng hợp tất cả,0,1,feature/payload_context.py
+,,,,,,,,,,
+,,,,,,,,,,
+========,========,========,========,========,========,========,========,========,========,========
+PHỤ LỤC,BIỂU ĐỒ QUAN HỆ BIẾN THÔ → BIẾN DẪN XUẤT,,,,,,,,
+========,========,========,========,========,========,========,========,========,========,========
+,,,,,,,,,,
+Biến dẫn xuất,Biến thô thành phần,Phép tính,,,,,,,,
+packet_rate (D1),total_packets + window_size,Chia,,,,,,,,
+syn_ack_ratio (D2),fwd_SYN_count + fwd_ACK_count,Chia,,,,,,,,
+inter_arrival_time (D3),timestamps[],Trung bình delta,,,,,,,,
+rst_ratio (D4),bwd_RST_count + bwd_packets,Chia,,,,,,,,
+distinct_ports (D5),dst_ports[],Đếm unique,,,,,,,,
+url_concentration (D6),max_requests_single_url + total_http_requests,Chia,,,,,,,,
+auth_fail_rate (D7),http_401_count + http_403_count + total_http_responses,Chia,,,,,,,,
+server_error_rate (D8),http_5xx_count + total_http_responses,Chia,,,,,,,,
+total_payload_length (D9),payload_length (mỗi packet),Tổng,,,,,,,,
+payload_entropy (D10),payload_bytes (byte distribution),Shannon entropy,,,,,,,,
+sqli_keyword_score (D11),sqli_keyword_matches + sqli_pattern_matches,Weighted sum (1đ + 2đ),,,,,,,,
+sql_special_char_ratio (D12),sql_special_char_count + total_payload_length,Chia,,,,,,,,
+xss_keyword_score (D13),xss_keyword_matches + xss_pattern_matches,Weighted sum (1đ + 2đ),,,,,,,,
+xss_special_char_ratio (D14),xss_special_char_count + total_payload_length,Chia,,,,,,,,
+special_char_ratio (D15),special_char_count + payload_length,Chia,,,,,,,,
+uppercase_ratio (D16),uppercase_count + payload_length,Chia,,,,,,,,
+digit_ratio (D17),digit_count + payload_length,Chia,,,,,,,,
+whitespace_ratio (D18),whitespace_count + payload_length,Chia,,,,,,,,
+sql_keyword_density (D19),sql_keyword_count + word_count,Chia,,,,,,,,
+xss_keyword_density (D20),xss_keyword_count + word_count,Chia,,,,,,,,
+char_diversity (D21),unique_chars + payload_length,Chia,,,,,,,,
+quote_count (D22),single_quote_count + double_quote_count,Cộng,,,,,,,,
+avg_word_length (D26),total_word_char_length + word_count,Chia,,,,,,,,
+entropy (D28),payload char frequency distribution,Shannon entropy,,,,,,,,
+payload_score (D31),sqli_indicator_score + xss_indicator_score,Binary threshold,,,,,,,,
