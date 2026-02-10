@@ -44,18 +44,29 @@ class FlowState:
         # Timestamps
         self.created_at: float = time.time()
         self.last_update: float = time.time()
+        
+        # Nginx Proxy: X-Real-IP (IP gốc của client khi sniff sau Nginx)
+        self._x_real_ip: str = None
     
     def add_forward_packet(self, layer_info: LayerInfo) -> None:
         """Thêm packet FORWARD (src → dst)"""
         self.fwd_packets.append(layer_info)
         self.last_update = layer_info.timestamp if layer_info.timestamp else time.time()
         self._cleanup_old_packets(self.last_update)
+        
+        # Capture X-Real-IP từ packet (nếu có)
+        if not self._x_real_ip and hasattr(layer_info, 'x_real_ip') and layer_info.x_real_ip:
+            self._x_real_ip = layer_info.x_real_ip
     
     def add_backward_packet(self, layer_info: LayerInfo) -> None:
         """Thêm packet BACKWARD (dst → src)"""
         self.bwd_packets.append(layer_info)
         self.last_update = layer_info.timestamp if layer_info.timestamp else time.time()
         self._cleanup_old_packets(self.last_update)
+        
+        # Capture X-Real-IP từ packet (nếu có)
+        if not self._x_real_ip and hasattr(layer_info, 'x_real_ip') and layer_info.x_real_ip:
+            self._x_real_ip = layer_info.x_real_ip
     
     def _cleanup_old_packets(self, current_time: float) -> None:
         """
@@ -252,6 +263,16 @@ class FlowState:
     @property
     def src_ip(self) -> str:
         return self.flow_key[0]
+    
+    @property
+    def x_real_ip(self) -> str:
+        """IP gốc của client (từ X-Real-IP header sau Nginx)"""
+        return self._x_real_ip
+    
+    @property
+    def effective_src_ip(self) -> str:
+        """IP thực sự của client: Uu tiên X-Real-IP nếu có (sau Nginx)"""
+        return self._x_real_ip if self._x_real_ip else self.flow_key[0]
     
     @property
     def dst_ip(self) -> str:

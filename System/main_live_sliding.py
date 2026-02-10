@@ -68,11 +68,23 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 
-def group_flows_by_src_ip(flows: list) -> dict:
-    """Groups flows by source IP address."""
+def group_flows_by_src_ip(flows: list, use_x_real_ip: bool = True) -> dict:
+    """
+    Groups flows by source IP address.
+    
+    Args:
+        flows: List of FlowState objects
+        use_x_real_ip: If True, prefer X-Real-IP header over packet src_ip
+                       (useful when sniffing after Nginx proxy)
+    """
     flows_by_src = {}
     for flow in flows:
-        src_ip = flow.src_ip
+        # Prefer effective_src_ip (X-Real-IP nếu có, fallback về src_ip)
+        if use_x_real_ip and hasattr(flow, 'effective_src_ip'):
+            src_ip = flow.effective_src_ip
+        else:
+            src_ip = flow.src_ip
+        
         if src_ip not in flows_by_src:
             flows_by_src[src_ip] = []
         flows_by_src[src_ip].append(flow)
@@ -85,10 +97,11 @@ class RealTimeSlidingNIDS:
     Outputs raw features to JSON/JSONL format only.
     """
     
-    def __init__(self, interface: str, window_size: float = 1.0, slide_step: float = 0.5, output_file: str = "live_output.jsonl"):
+    def __init__(self, interface: str, window_size: float = 1.0, slide_step: float = None, output_file: str = "live_output.jsonl"):
         self.interface = interface
         self.window_size = window_size
-        self.slide_step = slide_step  # True Sliding Window: slide by step, not window_size
+        # DISABLED OVERLAP: slide_step = window_size (no overlap for clearer testing)
+        self.slide_step = slide_step if slide_step is not None else window_size
         self.output_file = output_file
         self.is_running = False
         
@@ -222,6 +235,15 @@ class RealTimeSlidingNIDS:
         if packet_rate <= 0:
             return  # Skip this row - no data to report
         
+        # Check if we have X-Real-IP (sniffing after Nginx)
+        x_real_ip = None
+        packet_src_ip = None
+        for flow in flows_list:
+            if hasattr(flow, 'x_real_ip') and flow.x_real_ip:
+                x_real_ip = flow.x_real_ip
+                packet_src_ip = flow.src_ip  # Original packet src (usually Nginx IP)
+                break
+        
         # Write JSON line
         if self.output_fd:
             json_row = {
@@ -234,6 +256,12 @@ class RealTimeSlidingNIDS:
                 "conn_fail_rate": round(float(features_raw[4]), 4),
                 "context_score": round(float(features_raw[5]), 4)
             }
+            
+            # Add X-Real-IP info if present (debug: show we're using proxy header)
+            if x_real_ip:
+                json_row["x_real_ip"] = x_real_ip
+                json_row["proxy_ip"] = packet_src_ip
+            
             self.output_fd.write(json.dumps(json_row) + "\n")
             self.output_fd.flush()
             self.stats['rows_written'] += 1
@@ -269,7 +297,10 @@ class RealTimeSlidingNIDS:
         logger.info("🎬 SYSTEM RUNNING. Press Ctrl+C to stop.")
         logger.info(f"   - Interface: {self.interface}")
         logger.info(f"   - Window Size: {self.window_size}s")
-        logger.info(f"   - Slide Step: {self.slide_step}s (overlap: {self.window_size - self.slide_step}s)")
+        if self.slide_step < self.window_size:
+            logger.info(f"   - Slide Step: {self.slide_step}s (overlap: {self.window_size - self.slide_step}s)")
+        else:
+            logger.info(f"   - Slide Step: {self.slide_step}s (NO OVERLAP - clean windows)")
         logger.info(f"   - Output: {self.output_file}")
         
         try:
@@ -317,18 +348,20 @@ Examples:
                         help="Network Interface (e.g., 'Ethernet', 'Wi-Fi')")
     parser.add_argument("-w", "--window", type=float, default=1.0,
                         help="Window size in seconds (default: 1.0)")
-    parser.add_argument("-s", "--step", type=float, default=0.5,
-                        help="Slide step in seconds (default: 0.5). Smaller = more overlap.")
+    parser.add_argument("-s", "--step", type=float, default=None,
+                        help="Slide step in seconds (default: same as window = no overlap).")
     parser.add_argument("-o", "--output", type=str, default="live_output.jsonl",
                         help="Output file (default: live_output.jsonl)")
     
     args = parser.parse_args()
     
     # Validate step size
-    if args.step <= 0:
+    if args.step is None:
+        args.step = args.window  # No overlap by default
+    elif args.step <= 0:
         print("[!] Error: Step size must be > 0")
         sys.exit(1)
-    if args.step > args.window:
+    elif args.step > args.window:
         print(f"[!] Warning: Step ({args.step}s) > Window ({args.window}s). Setting step = window.")
         args.step = args.window
     

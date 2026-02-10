@@ -100,8 +100,7 @@ class PayloadFeatureExtractor:
         length = len(decoded) if decoded else 1  # Avoid div by zero
         
         return {
-            # 1-2: Quote features
-            'quote_count': self._quote_count(decoded),
+            # 1: Quote imbalance (quote_count removed - use single+double from _count_brackets)
             'quote_imbalance': self._quote_imbalance(decoded),
             
             # 3: Special char ratio
@@ -131,8 +130,7 @@ class PayloadFeatureExtractor:
             'encoding_layers': self._encoding_layers(text),
             'whitespace_ratio': self._whitespace_ratio(decoded, length),
             
-            # 16-17: XSS specific
-            'tag_count': self._tag_count(decoded),
+            # 16-17: XSS specific (tag_count removed - redundant with angle_bracket_count)
             'event_handler_count': self._event_handler_count(decoded),
             'xss_keyword_count': self._xss_keyword_count(decoded),
             'xss_structure_score': self._xss_structure_score(decoded),
@@ -203,14 +201,14 @@ class PayloadFeatureExtractor:
     def _empty_features(self) -> Dict[str, float]:
         """Return zero-initialized features dict."""
         return {
-            'quote_count': 0.0, 'quote_imbalance': 0.0,
+            'quote_imbalance': 0.0,
             'special_char_ratio': 0.0, 'sql_keyword_count': 0.0,
             'sql_keyword_density': 0.0, 'comment_indicator': 0.0,
             'semicolon_count': 0.0, 'equals_count': 0.0,
             'numeric_comparison': 0.0, 'entropy': 0.0,
             'length': 0.0, 'uppercase_ratio': 0.0,
             'case_variation': 0.0, 'encoding_layers': 0.0,
-            'whitespace_ratio': 0.0, 'tag_count': 0.0,
+            'whitespace_ratio': 0.0,
             'event_handler_count': 0.0, 'xss_keyword_count': 0.0,
             'xss_structure_score': 0.0, 'parenthesis_count': 0.0,
             'or_and_count': 0.0, 'avg_word_length': 0.0, 'digit_ratio': 0.0,
@@ -350,13 +348,13 @@ class PayloadFeatureExtractor:
     
     @staticmethod
     def get_feature_names() -> list:
-        """Return list of 20 feature names."""
+        """Return list of feature names (quote_count, tag_count removed as redundant)."""
         return [
-            'quote_count', 'quote_imbalance', 'special_char_ratio',
+            'quote_imbalance', 'special_char_ratio',
             'sql_keyword_count', 'sql_keyword_density', 'comment_indicator',
             'semicolon_count', 'equals_count', 'numeric_comparison',
             'entropy', 'length', 'uppercase_ratio', 'case_variation',
-            'encoding_layers', 'whitespace_ratio', 'tag_count',
+            'encoding_layers', 'whitespace_ratio',
             'event_handler_count', 'xss_keyword_count', 'xss_structure_score',
             'parenthesis_count', 'or_and_count',
             'avg_word_length', 'digit_ratio'

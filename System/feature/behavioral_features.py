@@ -66,7 +66,7 @@ class BehavioralFeatureExtractor:
             "avg_word_length": sum(len(w) for w in words) / len(words) if words else 0,
             
             # === CHARACTER RATIO FEATURES ===
-            "special_char_count": sum(1 for c in payload if c in cls.SPECIAL_CHARS),
+            # NOTE: special_char_count removed (redundant with special_char_ratio)
             "special_char_ratio": sum(1 for c in payload if c in cls.SPECIAL_CHARS) / len(payload),
             "uppercase_ratio": sum(1 for c in payload if c.isupper()) / len(payload) if payload else 0,
             "digit_ratio": sum(1 for c in payload if c.isdigit()) / len(payload) if payload else 0,
@@ -91,7 +91,7 @@ class BehavioralFeatureExtractor:
             "equals_count": payload.count("="),
             "dash_dash_count": payload.count("--"),
             "slash_star_count": payload.count("/*"),
-            "has_comment": 1 if ("--" in payload or "/*" in payload or "#" in payload) else 0,
+            # NOTE: has_comment removed (redundant with dash_dash_count + slash_star_count)
             
             # === XSS INDICATORS ===
             "xss_keyword_count": sum(1 for w in words if w in cls.XSS_KEYWORDS),
@@ -102,7 +102,7 @@ class BehavioralFeatureExtractor:
             
             # === ENTROPY & RANDOMNESS ===
             "entropy": cls._calculate_entropy(payload),
-            "char_diversity": len(set(payload)) / len(payload) if payload else 0,
+            # NOTE: char_diversity removed (highly correlated with entropy, r>0.9)
             
             # === ENCODING INDICATORS ===
             "url_encoded_count": len(re.findall(r'%[0-9a-fA-F]{2}', payload)),
@@ -110,7 +110,7 @@ class BehavioralFeatureExtractor:
             "unicode_encoded_count": len(re.findall(r'\\u[0-9a-fA-F]{4}', payload)),
             
             # === PATTERN INDICATORS ===
-            "has_or_and": 1 if re.search(r'\b(or|and)\b', payload_lower) else 0,
+            # NOTE: has_or_and removed (use or_and_count in PayloadFeatureExtractor for detailed count)
             "has_union": 1 if 'union' in payload_lower else 0,
             "has_select": 1 if 'select' in payload_lower else 0,
             "numeric_comparison": len(re.findall(r'\d+\s*=\s*\d+', payload)),
@@ -165,7 +165,6 @@ class BehavioralFeatureExtractor:
             "length": 0,
             "word_count": 0,
             "avg_word_length": 0,
-            "special_char_count": 0,
             "special_char_ratio": 0,
             "uppercase_ratio": 0,
             "digit_ratio": 0,
@@ -184,18 +183,15 @@ class BehavioralFeatureExtractor:
             "equals_count": 0,
             "dash_dash_count": 0,
             "slash_star_count": 0,
-            "has_comment": 0,
             "xss_keyword_count": 0,
             "xss_keyword_density": 0,
             "script_tag_count": 0,
             "event_handler_count": 0,
             "has_javascript": 0,
             "entropy": 0,
-            "char_diversity": 0,
             "url_encoded_count": 0,
             "hex_encoded_count": 0,
             "unicode_encoded_count": 0,
-            "has_or_and": 0,
             "has_union": 0,
             "has_select": 0,
             "numeric_comparison": 0,

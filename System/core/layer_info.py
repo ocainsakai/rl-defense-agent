@@ -68,6 +68,10 @@ class LayerInfo:
     http_user_agent: Optional[str] = None   # User-Agent header
     http_status: Optional[int] = None       # HTTP status code (200, 404, 500, v.v.)
     
+    # Nginx Proxy Headers (injected sau Nginx)
+    x_real_ip: Optional[str] = None         # IP gốc của client (từ X-Real-IP header)
+    x_request_id: Optional[str] = None      # Request ID để tracking (từ X-Request-ID header)
+    
     has_dns: bool = False                   # Có DNS query không?
     dns_query: Optional[str] = None         # Tên miền được truy vấn (VD: www.google.com)
 
@@ -101,6 +105,8 @@ class LayerInfo:
         self.http_uri = self._safe_decode(self.http_uri)
         self.http_host = self._safe_decode(self.http_host)
         self.http_user_agent = self._safe_decode(self.http_user_agent)
+        self.x_real_ip = self._safe_decode(self.x_real_ip)
+        self.x_request_id = self._safe_decode(self.x_request_id)
         self.dns_query = self._safe_decode(self.dns_query)
 
     

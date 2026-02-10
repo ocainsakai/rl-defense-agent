@@ -35,6 +35,9 @@ class HttpPayloadExtractor:
             info.http_uri = http_req.Path
             info.http_host = http_req.Host
             info.http_user_agent = http_req.User_Agent
+            
+            # Extract X-Real-IP and X-Request-ID from headers (Nginx proxy headers)
+            HttpPayloadExtractor._extract_proxy_headers(packet, info)
             return True
         
         # HTTP Response
@@ -48,6 +51,41 @@ class HttpPayloadExtractor:
             return True
         
         return False
+    
+    @staticmethod
+    def _extract_proxy_headers(packet, info: 'LayerInfo'):
+        """
+        Extract Nginx proxy headers (X-Real-IP, X-Request-ID) from raw payload.
+        
+        Scapy không tự parse các custom headers, nên cần parse thủ công từ Raw layer.
+        """
+        if not packet.haslayer(Raw):
+            return
+        
+        try:
+            raw_data = bytes(packet[Raw].load)
+            text = raw_data.decode('utf-8', errors='ignore')
+            lines = text.split('\r\n')
+            
+            for line in lines:
+                line_lower = line.lower()
+                
+                # X-Real-IP header (IP gốc của client)
+                if line_lower.startswith('x-real-ip:'):
+                    info.x_real_ip = line.split(':', 1)[-1].strip()
+                
+                # X-Request-ID header (tracking ID)
+                elif line_lower.startswith('x-request-id:'):
+                    info.x_request_id = line.split(':', 1)[-1].strip()
+                
+                # X-Forwarded-For (fallback nếu không có X-Real-IP)
+                elif line_lower.startswith('x-forwarded-for:') and not info.x_real_ip:
+                    # X-Forwarded-For có thể chứa nhiều IP, lấy IP đầu tiên
+                    xff_value = line.split(':', 1)[-1].strip()
+                    info.x_real_ip = xff_value.split(',')[0].strip()
+                    
+        except Exception:
+            pass  # Ignore parse errors
     
     @staticmethod
     def build_composite_payload(pkt) -> bytes:
