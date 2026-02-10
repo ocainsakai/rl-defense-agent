@@ -222,46 +222,74 @@ class RealTimeSlidingNIDS:
             self._export_features(src_ip, flows_list)
     
     def _export_features(self, src_ip: str, flows_list: list):
-        """Export raw features for a Source IP to JSON."""
+        """Export raw features for a Source IP to JSON.
+
+        14 Features (matching feature_flow.py):
+            F1:  packet_rate          packets/s
+            F2:  syn_ack_ratio        ratio
+            F3:  iat                  seconds (inter-arrival time)
+            F4:  rst_ratio            ratio [0,1]
+            F5:  distinct_ports       count
+            F6:  url_concentration    ratio [0,1]
+            F7:  auth_fail_rate       ratio [0,1]
+            F8:  server_error_rate    ratio [0,1]
+            F9:  payload_len          bytes
+            F10: payload_entropy      bits [0,8]
+            F11: sqli_keyword         count
+            F12: sql_special_char_ratio  ratio [0,1]
+            F13: xss_keyword          count
+            F14: xss_special_char_ratio  ratio [0,1]
+        """
         # Set window_size for F1 calculation
         for flow in flows_list:
             flow.analysis_window_size = self.window_size
-        
-        # Calculate raw features
+
+        # Calculate raw features (14 features)
         features_raw = self.feature_calc.calculate_all_raw(flows_list)
-        
-        # FIX: Skip rows with packet_rate = 0 (empty windows / no actual data)
+
+        # Skip rows with packet_rate = 0 (empty windows / no actual data)
         packet_rate = float(features_raw[0])
         if packet_rate <= 0:
-            return  # Skip this row - no data to report
-        
+            return
+
         # Check if we have X-Real-IP (sniffing after Nginx)
         x_real_ip = None
         packet_src_ip = None
         for flow in flows_list:
             if hasattr(flow, 'x_real_ip') and flow.x_real_ip:
                 x_real_ip = flow.x_real_ip
-                packet_src_ip = flow.src_ip  # Original packet src (usually Nginx IP)
+                packet_src_ip = flow.src_ip
                 break
-        
+
         # Write JSON line
         if self.output_fd:
             json_row = {
                 "timestamp": round(self.current_window_end, 6),
                 "src_ip": src_ip,
+                # Network & Timing (F1-F5)
                 "packet_rate": round(packet_rate, 4),
                 "syn_ack_ratio": round(float(features_raw[1]), 4),
-                "distinct_ports": int(features_raw[2]),
-                "payload_len": round(float(features_raw[3]), 4),
-                "conn_fail_rate": round(float(features_raw[4]), 4),
-                "context_score": round(float(features_raw[5]), 4)
+                "iat": round(float(features_raw[2]), 6),
+                "rst_ratio": round(float(features_raw[3]), 4),
+                "distinct_ports": int(features_raw[4]),
+                # Application Behavior (F6-F8)
+                "url_concentration": round(float(features_raw[5]), 4),
+                "auth_fail_rate": round(float(features_raw[6]), 4),
+                "server_error_rate": round(float(features_raw[7]), 4),
+                # Payload Analysis (F9-F14)
+                "payload_len": round(float(features_raw[8]), 4),
+                "payload_entropy": round(float(features_raw[9]), 4),
+                "sqli_keyword": round(float(features_raw[10]), 4),
+                "sql_special_char_ratio": round(float(features_raw[11]), 4),
+                "xss_keyword": round(float(features_raw[12]), 4),
+                "xss_special_char_ratio": round(float(features_raw[13]), 4),
             }
-            
-            # Add X-Real-IP info if present (debug: show we're using proxy header)
+
+            # Add X-Real-IP info if present
             if x_real_ip:
                 json_row["x_real_ip"] = x_real_ip
                 json_row["proxy_ip"] = packet_src_ip
-            
+
             self.output_fd.write(json.dumps(json_row) + "\n")
             self.output_fd.flush()
             self.stats['rows_written'] += 1

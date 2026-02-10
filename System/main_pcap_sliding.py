@@ -157,28 +157,39 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
         "Window_Start",          # PCAP timestamp (epoch seconds)
         "Window_End",            # PCAP timestamp (epoch seconds)
         "DateTime",              # Human-readable: YYYY-MM-DD HH:MM:SS
-        
+
         # Source IP Identification
         "Src_IP",
         "Total_Flows",
         "Total_Unique_Dst_IPs",
-        
+
         # Aggregated Statistics
         "Total_Fwd_Pkts",
         "Total_Bwd_Pkts",
         "Total_Pkts",
         "Total_Duration",
-        
+
         # TCP Flags Summary (from forward packets)
         "TCP_Flags",             # Format: "SYN:10,ACK:20,RST:5,FIN:2"
-        
-        # RAW Features (F1 adjusted for sliding window)
+
+        # 14 RAW Features (F1 adjusted for sliding window)
+        # Network & Timing (F1-F5)
         "F1_PacketRate_RAW",
         "F2_SynRatio_RAW",
-        "F3_DistinctPorts_RAW",
-        "F4_PayloadLen_RAW",
-        "F5_FailRate_RAW",
-        "F6_ContextScore_RAW",
+        "F3_IAT_RAW",
+        "F4_RstRatio_RAW",
+        "F5_DistinctPorts_RAW",
+        # Application Behavior (F6-F8)
+        "F6_URLConcentration_RAW",
+        "F7_AuthFailRate_RAW",
+        "F8_ServerErrorRate_RAW",
+        # Payload Analysis (F9-F14)
+        "F9_PayloadLen_RAW",
+        "F10_PayloadEntropy_RAW",
+        "F11_SQLiKeyword_RAW",
+        "F12_SQLSpecialCharRatio_RAW",
+        "F13_XSSKeyword_RAW",
+        "F14_XSSSpecialCharRatio_RAW",
     ]
     
     # Open CSV file for writing
@@ -244,13 +255,14 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
             
             # Calculate features với window_size adjustment
             features = calculate_features_with_window_size(flows_list, window_size)
-            
+
             if features is None:
                 continue
-            
-            # Unpack features
-            f1, f2, f3, f4, f5, f6 = features
-            
+
+            # Unpack 14 features
+            (f1, f2, f3, f4, f5, f6, f7, f8,
+             f9, f10, f11, f12, f13, f14) = features
+
             # Write row
             row = {
                 "Window_Start": f"{current_window_start:.6f}",
@@ -264,19 +276,30 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
                 "Total_Pkts": total_pkts,
                 "Total_Duration": f"{total_duration:.6f}",
                 "TCP_Flags": tcp_flags_str,
+                # Network & Timing (F1-F5)
                 "F1_PacketRate_RAW": f"{f1:.4f}",
                 "F2_SynRatio_RAW": f"{f2:.4f}",
-                "F3_DistinctPorts_RAW": f"{f3:.0f}",
-                "F4_PayloadLen_RAW": f"{f4:.4f}",
-                "F5_FailRate_RAW": f"{f5:.4f}",
-                "F6_ContextScore_RAW": f"{f6:.4f}",
+                "F3_IAT_RAW": f"{f3:.6f}",
+                "F4_RstRatio_RAW": f"{f4:.4f}",
+                "F5_DistinctPorts_RAW": f"{f5:.0f}",
+                # Application Behavior (F6-F8)
+                "F6_URLConcentration_RAW": f"{f6:.4f}",
+                "F7_AuthFailRate_RAW": f"{f7:.4f}",
+                "F8_ServerErrorRate_RAW": f"{f8:.4f}",
+                # Payload Analysis (F9-F14)
+                "F9_PayloadLen_RAW": f"{f9:.4f}",
+                "F10_PayloadEntropy_RAW": f"{f10:.4f}",
+                "F11_SQLiKeyword_RAW": f"{f11:.4f}",
+                "F12_SQLSpecialCharRatio_RAW": f"{f12:.4f}",
+                "F13_XSSKeyword_RAW": f"{f13:.4f}",
+                "F14_XSSSpecialCharRatio_RAW": f"{f14:.4f}",
             }
             writer.writerow(row)
             total_rows_written += 1
-            
+
             if verbose:
                 print(f"    └─ {src_ip}: Flows={len(flows_list)}, "
-                      f"F1={f1:.1f}, F3={f3:.0f} ports, Flags={tcp_flags_str}")
+                      f"F1={f1:.1f}, F5={f5:.0f} ports, Flags={tcp_flags_str}")
     
     # ========================================================================
     # ĐỌC PCAP VÀ XỬ LÝ THEO WINDOWS

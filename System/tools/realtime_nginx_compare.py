@@ -32,6 +32,7 @@ start_time = None
 before_log_file = None
 after_log_file = None
 stats_log_file = None
+comparison_log_file = None
 log_lock = threading.Lock()
 
 
@@ -96,6 +97,11 @@ after_stats = RealtimeStats()
 # Buffer for matching packets
 before_buffer: Dict[str, PacketInfo] = {}  # key = src_ip + path
 after_buffer: Dict[str, PacketInfo] = {}   # key = x_real_ip + path
+
+# Packet counters
+before_packet_count = 0
+after_packet_count = 0
+matched_count = 0
 
 # Lock for thread safety
 stats_lock = threading.Lock()
@@ -221,40 +227,148 @@ def format_packet_log_line(location: str, pkt_info: PacketInfo) -> str:
         payload_preview += f" | X-Real-IP: {pkt_info.x_real_ip}"
     if pkt_info.x_request_id:
         payload_preview += f" | X-Request-ID: {pkt_info.x_request_id}"
-    
+
     return (f"[{location}] {pkt_info.timestamp_str} | "
             f"{pkt_info.src_ip}:{pkt_info.src_port} -> {pkt_info.dst_ip}:{pkt_info.dst_port} "
             f"{flags}{payload_preview}")
 
 
-def log_packet(location: str, pkt_info: PacketInfo):
-    """Ghi packet vào log file"""
+def format_packet_detailed(location: str, pkt_info: PacketInfo, packet_num: int = 0) -> str:
+    """Format packet với thông tin chi tiết đầy đủ"""
+    lines = []
+    lines.append("=" * 70)
+    lines.append(f"Packet #{packet_num} | {pkt_info.timestamp_str} | {location}")
+    lines.append("=" * 70)
+    lines.append("[IP]")
+    lines.append(f"  Src IP:   {pkt_info.src_ip}")
+    lines.append(f"  Dst IP:   {pkt_info.dst_ip}")
+
+    if pkt_info.src_port or pkt_info.dst_port:
+        lines.append("[TCP]")
+        lines.append(f"  Src Port: {pkt_info.src_port}")
+        lines.append(f"  Dst Port: {pkt_info.dst_port}")
+        lines.append(f"  Flags:    {pkt_info.tcp_flags}")
+        lines.append(f"  Seq:      {pkt_info.seq}")
+        lines.append(f"  Ack:      {pkt_info.ack}")
+
+    if pkt_info.payload_size > 0:
+        lines.append(f"[Payload] ({pkt_info.payload_size} bytes)")
+        if pkt_info.http_method:
+            # Parse HTTP payload
+            try:
+                text = pkt_info.payload.decode('utf-8', errors='ignore')
+                http_lines = text.split('\r\n')[:15]  # First 15 lines
+                for line in http_lines:
+                    if line.strip():
+                        lines.append(f"  | {line}")
+            except:
+                lines.append(f"  | (binary data)")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def format_matched_packets_detailed(before_pkt: PacketInfo, after_pkt: PacketInfo, match_num: int = 0) -> str:
+    """Format matched packets với highlight thay đổi"""
+    lines = []
+    lines.append("\n" + "=" * 70)
+    lines.append(f"🔗 MATCHED PAIR #{match_num}")
+    lines.append("=" * 70)
+
+    # Request info
+    lines.append(f"Request: {after_pkt.http_method} {after_pkt.http_path}")
+    if after_pkt.x_request_id:
+        lines.append(f"X-Request-ID: {after_pkt.x_request_id}")
+
+    lines.append("\n" + "-" * 70)
+    lines.append("COMPARISON TABLE:")
+    lines.append("-" * 70)
+    lines.append(f"{'Field':<20} | {'BEFORE Nginx':<22} | {'AFTER Nginx':<22}")
+    lines.append("-" * 70)
+
+    # Compare fields
+    comparisons = [
+        ("Timestamp", before_pkt.timestamp_str, after_pkt.timestamp_str),
+        ("Src IP", before_pkt.src_ip, after_pkt.src_ip),
+        ("Dst IP", before_pkt.dst_ip, after_pkt.dst_ip),
+        ("Src Port", str(before_pkt.src_port), str(after_pkt.src_port)),
+        ("Dst Port", str(before_pkt.dst_port), str(after_pkt.dst_port)),
+        ("TCP Flags", before_pkt.tcp_flags, after_pkt.tcp_flags),
+        ("Seq", str(before_pkt.seq), str(after_pkt.seq)),
+        ("Ack", str(before_pkt.ack), str(after_pkt.ack)),
+        ("Payload Size", str(before_pkt.payload_size), str(after_pkt.payload_size)),
+    ]
+
+    for field, before, after in comparisons:
+        if before != after:
+            marker = " [CHANGED]"
+        else:
+            marker = ""
+        lines.append(f"{field:<20} | {before:<22} | {after:<22}{marker}")
+
+    # Extra headers added by Nginx
+    lines.append("-" * 70)
+    lines.append("NGINX ADDED HEADERS:")
+    lines.append("-" * 70)
+    lines.append(f"X-Real-IP:           | {'(not set)':<22} | {after_pkt.x_real_ip or 'N/A':<22}")
+    if after_pkt.x_request_id:
+        lines.append(f"X-Request-ID:        | {'(not set)':<22} | {after_pkt.x_request_id:<22}")
+
+    lines.append("=" * 70)
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def log_packet(location: str, pkt_info: PacketInfo, packet_num: int = 0):
+    """Ghi packet vào log file với format chi tiết"""
     global before_log_file, after_log_file
-    
-    log_line = format_packet_log_line(location, pkt_info)
-    
+
+    # Detailed log
+    detailed_log = format_packet_detailed(location, pkt_info, packet_num)
+
     with log_lock:
         if location == "BEFORE" and before_log_file:
-            before_log_file.write(log_line + "\n")
+            before_log_file.write(detailed_log + "\n")
             before_log_file.flush()
         elif location == "AFTER" and after_log_file:
-            after_log_file.write(log_line + "\n")
+            after_log_file.write(detailed_log + "\n")
             after_log_file.flush()
 
 
-def print_packet_simple(location: str, pkt_info: PacketInfo):
+def log_matched_packets(before_pkt: PacketInfo, after_pkt: PacketInfo, match_num: int):
+    """Ghi matched packets vào cả 2 log files với comparison"""
+    global before_log_file, after_log_file, comparison_log_file
+
+    comparison_log = format_matched_packets_detailed(before_pkt, after_pkt, match_num)
+
+    with log_lock:
+        # Log to separate comparison file if available
+        if comparison_log_file:
+            comparison_log_file.write(comparison_log)
+            comparison_log_file.flush()
+        # Also log to both before and after files
+        if before_log_file:
+            before_log_file.write(comparison_log)
+            before_log_file.flush()
+        if after_log_file:
+            after_log_file.write(comparison_log)
+            after_log_file.flush()
+
+
+def print_packet_simple(location: str, pkt_info: PacketInfo, packet_num: int = 0):
     """In thông tin packet đơn giản"""
     flags = pkt_info.tcp_flags
     payload_preview = ""
     if pkt_info.http_method:
         payload_preview = f" | {pkt_info.http_method} {pkt_info.http_path[:30]}"
-    
-    print(f"[{location}] {pkt_info.timestamp_str} | "
+
+    print(f"[{location}] #{packet_num} {pkt_info.timestamp_str} | "
           f"{pkt_info.src_ip}:{pkt_info.src_port} → {pkt_info.dst_ip}:{pkt_info.dst_port} "
           f"{flags}{payload_preview}")
-    
+
     # Also log to file
-    log_packet(location, pkt_info)
+    log_packet(location, pkt_info, packet_num)
 
 
 def print_matched_comparison(before_pkt: PacketInfo, after_pkt: PacketInfo):
@@ -317,26 +431,29 @@ def try_match_packets():
 
 def sniffer_before(interface: str):
     """Sniffer cho traffic TRƯỚC Nginx"""
-    global running, before_stats, before_buffer
-    
+    global running, before_stats, before_buffer, before_packet_count
+
     def packet_callback(pkt):
+        global before_packet_count
         if not running:
             return
-        
+
         pkt_info = extract_packet_info(pkt)
         if not pkt_info:
             return
-        
+
         with stats_lock:
             update_stats(before_stats, pkt_info)
-        
+            before_packet_count += 1
+            pkt_num = before_packet_count
+
         # Add to buffer for matching
         if pkt_info.http_path:
             key = f"{pkt_info.src_ip}|{pkt_info.http_path}"
             with buffer_lock:
                 before_buffer[key] = pkt_info
-        
-        print_packet_simple("BEFORE", pkt_info)
+
+        print_packet_simple("BEFORE", pkt_info, pkt_num)
     
     print(f"[BEFORE] 📡 Bắt đầu sniff trên {interface}...")
     
@@ -354,31 +471,39 @@ def sniffer_before(interface: str):
 
 def sniffer_after(interface: str):
     """Sniffer cho traffic SAU Nginx"""
-    global running, after_stats, after_buffer
-    
+    global running, after_stats, after_buffer, after_packet_count, matched_count
+
     def packet_callback(pkt):
+        global after_packet_count, matched_count
         if not running:
             return
-        
+
         pkt_info = extract_packet_info(pkt)
         if not pkt_info:
             return
-        
+
         with stats_lock:
             update_stats(after_stats, pkt_info)
-        
+            after_packet_count += 1
+            pkt_num = after_packet_count
+
         # Add to buffer for matching
         if pkt_info.x_real_ip and pkt_info.http_path:
             key = f"{pkt_info.x_real_ip}|{pkt_info.http_path}"
             with buffer_lock:
                 after_buffer[key] = pkt_info
-        
-        print_packet_simple("AFTER ", pkt_info)
-        
+
+        print_packet_simple("AFTER ", pkt_info, pkt_num)
+
         # Try to match
         matches = try_match_packets()
         for before_pkt, after_pkt in matches:
+            with stats_lock:
+                matched_count += 1
+                match_num = matched_count
             print_matched_comparison(before_pkt, after_pkt)
+            # Log matched packets to files
+            log_matched_packets(before_pkt, after_pkt, match_num)
     
     print(f"[AFTER ] 📡 Bắt đầu sniff trên {interface}...")
     
@@ -490,11 +615,12 @@ Ví dụ:
     parser.add_argument("--log-before", type=str, default="", help="File log cho traffic TRƯỚC Nginx")
     parser.add_argument("--log-after", type=str, default="", help="File log cho traffic SAU Nginx")
     parser.add_argument("--log-stats", type=str, default="", help="File log cho stats summary")
-    
+    parser.add_argument("--log-comparison", type=str, default="", help="File log cho matched packet comparisons")
+
     args = parser.parse_args()
-    
+
     # Setup log files
-    global before_log_file, after_log_file, stats_log_file
+    global before_log_file, after_log_file, stats_log_file, comparison_log_file
     
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -503,9 +629,11 @@ Ví dụ:
         before_log_path = os.path.join(args.log_dir, f"before_nginx_{timestamp_str}.log")
         after_log_path = os.path.join(args.log_dir, f"after_nginx_{timestamp_str}.log")
         stats_log_path = os.path.join(args.log_dir, f"stats_{timestamp_str}.log")
+        comparison_log_path = os.path.join(args.log_dir, f"comparison_{timestamp_str}.log")
         before_log_file = open(before_log_path, "w", encoding="utf-8")
         after_log_file = open(after_log_path, "w", encoding="utf-8")
         stats_log_file = open(stats_log_path, "w", encoding="utf-8")
+        comparison_log_file = open(comparison_log_path, "w", encoding="utf-8")
         print(f"  📝 Logging to: {args.log_dir}/")
     else:
         if args.log_before:
@@ -517,6 +645,9 @@ Ví dụ:
         if args.log_stats:
             stats_log_file = open(args.log_stats, "w", encoding="utf-8")
             print(f"  📝 Stats log: {args.log_stats}")
+        if args.log_comparison:
+            comparison_log_file = open(args.log_comparison, "w", encoding="utf-8")
+            print(f"  📝 Comparison log: {args.log_comparison}")
     
     print("""
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -536,12 +667,19 @@ Ví dụ:
         before_log_file.write(f"# Realtime Nginx Compare - BEFORE Nginx Log\n")
         before_log_file.write(f"# Interface: {args.before}\n")
         before_log_file.write(f"# Started: {datetime.now().isoformat()}\n")
-        before_log_file.write("#" + "="*78 + "\n")
+        before_log_file.write("#" + "="*78 + "\n\n")
     if after_log_file:
         after_log_file.write(f"# Realtime Nginx Compare - AFTER Nginx Log\n")
         after_log_file.write(f"# Interface: {args.after}\n")
         after_log_file.write(f"# Started: {datetime.now().isoformat()}\n")
-        after_log_file.write("#" + "="*78 + "\n")
+        after_log_file.write("#" + "="*78 + "\n\n")
+    if comparison_log_file:
+        comparison_log_file.write(f"# Realtime Nginx Compare - MATCHED PACKET COMPARISONS\n")
+        comparison_log_file.write(f"# Interface Before: {args.before}\n")
+        comparison_log_file.write(f"# Interface After: {args.after}\n")
+        comparison_log_file.write(f"# Started: {datetime.now().isoformat()}\n")
+        comparison_log_file.write(f"# This file shows side-by-side comparisons of matched packets\n")
+        comparison_log_file.write("#" + "="*78 + "\n\n")
     
     print("\n" + "="*80 + "\n")
     
@@ -612,10 +750,15 @@ Ví dụ:
         after_log_file.write(f"# Total packets: {after_stats.total_packets}\n")
         after_log_file.close()
         print(f"  📝 After log saved")
+    if comparison_log_file:
+        comparison_log_file.write(f"\n# Ended: {datetime.now().isoformat()}\n")
+        comparison_log_file.write(f"# Total matched pairs: {matched_count}\n")
+        comparison_log_file.close()
+        print(f"  📝 Comparison log saved ({matched_count} matched pairs)")
     if stats_log_file:
         stats_log_file.close()
         print(f"  📝 Stats log saved")
-    
+
     print("\n  ✅ Done!")
 
 

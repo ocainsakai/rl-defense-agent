@@ -239,13 +239,24 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         # TCP Flags Summary (from forward packets)
         "TCP_Flags",             # Format: "SYN:10,ACK:20,RST:5,FIN:2"
         
-        # NORMALIZED Features (all in [0,1] range - aggregated across all flows from src_ip)
-        "F1_PacketRate_NORM",
-        "F2_SynRatio_NORM",
-        "F3_DistinctPorts_NORM",    # Số ports khác nhau mà src_ip scan
-        "F4_PayloadLen_NORM",
-        "F5_FailRate_NORM",
-        "F6_ContextScore_NORM",
+        # 14 RAW Features (aggregated across all flows from src_ip)
+        # Network & Timing (F1-F5)
+        "F1_PacketRate_RAW",
+        "F2_SynRatio_RAW",
+        "F3_IAT_RAW",
+        "F4_RstRatio_RAW",
+        "F5_DistinctPorts_RAW",
+        # Application Behavior (F6-F8)
+        "F6_URLConcentration_RAW",
+        "F7_AuthFailRate_RAW",
+        "F8_ServerErrorRate_RAW",
+        # Payload Analysis (F9-F14)
+        "F9_PayloadLen_RAW",
+        "F10_PayloadEntropy_RAW",
+        "F11_SQLiKeyword_RAW",
+        "F12_SQLSpecialCharRatio_RAW",
+        "F13_XSSKeyword_RAW",
+        "F14_XSSSpecialCharRatio_RAW",
     ]
     
     rows = []
@@ -295,22 +306,17 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         if not tcp_flags_str:
             tcp_flags_str = "NONE"
         
-        # Calculate 6 features RAW VALUES
+        # Calculate 14 features RAW VALUES
         # Truyền TẤT CẢ flows từ src_ip này → Features được tính đúng!
         features = feature_calc.calculate_all(flows_list)
-        
+
         if features is None:
-            # Flows rỗng - skip
             continue
-        
-        # Unpack 6 features
-        f1_packet_rate = features[0]
-        f2_syn_ratio = features[1]
-        f3_distinct_ports = features[2]  # Bây giờ sẽ > 1 nếu có port scan!
-        f4_payload_len = features[3]
-        f5_fail_rate = features[4]
-        f6_context_score = features[5]
-        
+
+        # Unpack 14 features
+        (f1, f2, f3, f4, f5, f6, f7, f8,
+         f9, f10, f11, f12, f13, f14) = features
+
         # Tạo row
         row = {
             "Src_IP": src_ip_out,
@@ -323,15 +329,26 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
             "Total_Pkts": total_pkts,
             "Total_Duration": f"{total_duration:.6f}",
             "TCP_Flags": tcp_flags_str,
-            "F1_PacketRate_NORM": f"{f1_packet_rate:.4f}",
-            "F2_SynRatio_NORM": f"{f2_syn_ratio:.4f}",
-            "F3_DistinctPorts_NORM": f"{f3_distinct_ports:.4f}",
-            "F4_PayloadLen_NORM": f"{f4_payload_len:.4f}",
-            "F5_FailRate_NORM": f"{f5_fail_rate:.4f}",
-            "F6_ContextScore_NORM": f"{f6_context_score:.4f}",
+            # Network & Timing (F1-F5)
+            "F1_PacketRate_RAW": f"{f1:.4f}",
+            "F2_SynRatio_RAW": f"{f2:.4f}",
+            "F3_IAT_RAW": f"{f3:.6f}",
+            "F4_RstRatio_RAW": f"{f4:.4f}",
+            "F5_DistinctPorts_RAW": f"{f5:.0f}",
+            # Application Behavior (F6-F8)
+            "F6_URLConcentration_RAW": f"{f6:.4f}",
+            "F7_AuthFailRate_RAW": f"{f7:.4f}",
+            "F8_ServerErrorRate_RAW": f"{f8:.4f}",
+            # Payload Analysis (F9-F14)
+            "F9_PayloadLen_RAW": f"{f9:.4f}",
+            "F10_PayloadEntropy_RAW": f"{f10:.4f}",
+            "F11_SQLiKeyword_RAW": f"{f11:.4f}",
+            "F12_SQLSpecialCharRatio_RAW": f"{f12:.4f}",
+            "F13_XSSKeyword_RAW": f"{f13:.4f}",
+            "F14_XSSSpecialCharRatio_RAW": f"{f14:.4f}",
         }
         rows.append(row)
-        
+
         # Verbose output
         if verbose and i <= 20:
             print(f"\n--- Source IP {i}/{len(flows_by_src)} ---")
@@ -340,12 +357,20 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
             print(f"Packets: {total_pkts} (Fwd: {total_fwd}, Bwd: {total_bwd})")
             print(f"Duration: {total_duration:.3f}s, Flags: {tcp_flags_str}")
             print(f"Features:")
-            print(f"  F1_PacketRate:    {f1_packet_rate:.2f} pkts/s")
-            print(f"  F2_SynRatio:      {f2_syn_ratio:.4f}")
-            print(f"  F3_DistinctPorts: {f3_distinct_ports:.4f}")
-            print(f"  F4_PayloadLen:    {f4_payload_len:.2f} bytes")
-            print(f"  F5_FailRate:      {f5_fail_rate:.4f}")
-            print(f"  F6_ContextScore:  {f6_context_score:.0f}")
+            print(f"  F1_PacketRate:     {f1:.2f} pkts/s")
+            print(f"  F2_SynRatio:       {f2:.4f}")
+            print(f"  F3_IAT:            {f3:.6f}s")
+            print(f"  F4_RstRatio:       {f4:.4f}")
+            print(f"  F5_DistinctPorts:  {f5:.0f}")
+            print(f"  F6_URLConc:        {f6:.4f}")
+            print(f"  F7_AuthFail:       {f7:.4f}")
+            print(f"  F8_ServerErr:      {f8:.4f}")
+            print(f"  F9_PayloadLen:     {f9:.2f} bytes")
+            print(f"  F10_Entropy:       {f10:.4f}")
+            print(f"  F11_SQLiKW:        {f11:.4f}")
+            print(f"  F12_SQLSpecChar:   {f12:.4f}")
+            print(f"  F13_XSSKW:         {f13:.4f}")
+            print(f"  F14_XSSSpecChar:   {f14:.4f}")
     
     print(f"\n[*] Writing output to {output_csv}...")
     

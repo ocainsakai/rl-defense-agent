@@ -72,8 +72,13 @@ class RealTimeNIDS:
             # Write Header
             headers = [
                 "Timestamp", "SrcIP", "DstIP", "Protocol",
-                "F1_Raw", "F2_Raw", "F3_Raw", "F4_Raw", "F5_Raw", "F6_Raw",
-                "F1_Norm", "F2_Norm", "F3_Norm", "F4_Norm", "F5_Norm", "F6_Norm"
+                # 14 RAW Features
+                "F1_PktRate_Raw", "F2_SynRatio_Raw", "F3_IAT_Raw",
+                "F4_RstRatio_Raw", "F5_DistPorts_Raw",
+                "F6_URLConc_Raw", "F7_AuthFail_Raw", "F8_SrvErr_Raw",
+                "F9_PayloadLen_Raw", "F10_Entropy_Raw",
+                "F11_SQLiKW_Raw", "F12_SQLSpecChar_Raw",
+                "F13_XSSKW_Raw", "F14_XSSSpecChar_Raw",
             ]
             self.csv_writer.writerow(headers)
             self.csv_file.flush()
@@ -182,56 +187,52 @@ class RealTimeNIDS:
         # IMPORTANT: Set window_size for F1 calculation
         flow.analysis_window_size = self.window_size
         
-        # 1. Normalized Features
-        features_norm = self.feature_calc.calculate_all([flow])
-        # 2. Raw Features (cho CSV export)
+        # Raw Features (14 features) cho CSV export
         features_raw = self.feature_calc.calculate_all_raw([flow])
-        
+
         # Export CSV
         if self.csv_writer:
             try:
-                # Basic Info
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 src = flow.src_ip
-                dst = flow.dst_ip # Represents one of the destinations
-                # Determine Protocol (heuristic from one packet)
-                proto = "TCP" # Default
+                dst = flow.dst_ip
+                proto = "TCP"
                 if flow.fwd_packets:
                     p = flow.fwd_packets[0]
                     if hasattr(p, 'has_udp') and p.has_udp: proto = "UDP"
                     elif hasattr(p, 'has_icmp') and p.has_icmp: proto = "ICMP"
-                
-                # Create row
+
                 row = [timestamp, src, dst, proto] + \
-                      [f"{v:.4f}" for v in features_raw] + \
-                      [f"{v:.4f}" for v in features_norm]
-                
+                      [f"{v:.4f}" for v in features_raw]
+
                 self.csv_writer.writerow(row)
-                if self.stats['processed'] % 10 == 0: # Flush periodically
+                if self.stats['processed'] % 10 == 0:
                     self.csv_file.flush()
             except Exception as e:
                 logger.error(f"[CSV] Error writing row: {e}")
 
-        # [F1, F2, F3, F4, F5, F6] normalized
-        f1_pkt_rate = features_norm[0]
-        f2_syn_ratio = features_norm[1]
-        f6_context = features_norm[5]
-        
         # --- RULE-BASED DETECTION (DEMO) ---
-        
-        # 1. Phát hiện DoS/Flood (Dựa vào F1)
-        # Ngưỡng demo: 0.8 (Tương ứng với 80% Max Packet Rate config)
-        if f1_pkt_rate > 0.8:
-            self._alert(flow.src_ip, "High Packet Rate (Possible DoS)", f"Rate={f1_pkt_rate:.2f}")
+        # F1: Packet Rate, F2: SYN/ACK Ratio, F11: SQLi Keyword
+        f1_pkt_rate = features_raw[0]
+        f2_syn_ratio = features_raw[1]
+        f11_sqli = features_raw[10]
+        f13_xss = features_raw[12]
 
-        # 2. Phát hiện SYN Flood (Dựa vào F2)
-        # F2 > 0.9 nghĩa là hầu hết là SYN mà không có ACK
+        # 1. Phát hiện DoS/Flood (F1 > 2400 pkts/s = 80% of MAX_PACKET_RATE 3000)
+        if f1_pkt_rate > 2400:
+            self._alert(flow.src_ip, "High Packet Rate (Possible DoS)", f"Rate={f1_pkt_rate:.0f} pkt/s")
+
+        # 2. Phát hiện SYN Flood (F2 > 0.9)
         if f2_syn_ratio > 0.9:
             self._alert(flow.src_ip, "SYN Flood Detected", f"SYN Ratio={f2_syn_ratio:.2f}")
 
-        # 3. Phát hiện Web Attack (Dựa vào F6)
-        if f6_context > 0.5: # 1.0 là malicious
-            self._alert(flow.src_ip, "Web Attack Signature", "Malicious Payload")
+        # 3. Phát hiện SQLi (F11 > 0)
+        if f11_sqli > 0:
+            self._alert(flow.src_ip, "SQLi Detected", f"SQLi Keywords={f11_sqli:.0f}")
+
+        # 4. Phát hiện XSS (F13 > 0)
+        if f13_xss > 0:
+            self._alert(flow.src_ip, "XSS Detected", f"XSS Keywords={f13_xss:.0f}")
 
     def _alert(self, src_ip, alert_type, details):
         """Ghi cảnh báo"""
