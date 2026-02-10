@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 """
-Packet Viewer - Hiển thị thông tin packet như Wireshark
-Usage:
-    sudo python3 main_packet_viewer.py -i eth0
-    sudo python3 main_packet_viewer.py -i eth0 -f "tcp port 80"
-    sudo python3 main_packet_viewer.py -r capture.pcap
-    sudo python3 main_packet_viewer.py -i eth0 -l logs/packets.log
 """
 
 import argparse
