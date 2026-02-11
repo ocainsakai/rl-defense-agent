@@ -45,7 +45,7 @@ from collections import defaultdict
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
 from core.flow_state import FlowState
-from feature.feature_flow import FlowFeatureCalculator
+from feature.calculator import FlowFeatureCalculator
 
 
 def group_flows_by_src_ip(flows: list) -> dict:

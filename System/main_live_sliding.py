@@ -41,7 +41,8 @@ from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
 from core.packet_queue import PacketQueue
 from core.sniffer import NetworkSniffer
-from feature.feature_flow import FlowFeatureCalculator
+from feature.calculator import FlowFeatureCalculator
+from feature.wamm_classifier import WammClassifier
 
 from logging.handlers import RotatingFileHandler
 
@@ -126,7 +127,8 @@ class RealTimeSlidingNIDS:
             cleanup_interval=100000    # Vô hiệu hóa - slide_window_packets() làm việc này
         )
 
-        self.feature_calc = FlowFeatureCalculator()
+        wamm = WammClassifier()  # Auto-loads model if available
+        self.feature_calc = FlowFeatureCalculator(wamm_classifier=wamm)
         self.sniffer = NetworkSniffer()
         
         # Thread synchronization
@@ -224,7 +226,7 @@ class RealTimeSlidingNIDS:
     def _export_features(self, src_ip: str, flows_list: list):
         """Export raw features for a Source IP to JSON.
 
-        14 Features (matching feature_flow.py):
+        16 Features:
             F1:  packet_rate          packets/s
             F2:  syn_ack_ratio        ratio
             F3:  iat                  seconds (inter-arrival time)
@@ -235,17 +237,19 @@ class RealTimeSlidingNIDS:
             F8:  server_error_rate    ratio [0,1]
             F9:  payload_len          bytes
             F10: payload_entropy      bits [0,8]
-            F11: sqli_keyword         count
+            F11: sqli_keyword         weighted score
             F12: sql_special_char_ratio  ratio [0,1]
-            F13: xss_keyword          count
+            F13: xss_keyword          weighted score
             F14: xss_special_char_ratio  ratio [0,1]
+            F15: wamm_attack_type     0=normal, 1=sqli, 2=xss
+            F16: wamm_confidence      [0,1]
         """
         # Set window_size for F1 calculation
         for flow in flows_list:
             flow.analysis_window_size = self.window_size
 
-        # Calculate raw features (14 features)
-        features_raw = self.feature_calc.calculate_all_raw(flows_list)
+        # Calculate raw features
+        features_raw = self.feature_calc.calculate_all(flows_list)
 
         # Skip rows with packet_rate = 0 (empty windows / no actual data)
         packet_rate = float(features_raw[0])
@@ -283,6 +287,9 @@ class RealTimeSlidingNIDS:
                 "sql_special_char_ratio": round(float(features_raw[11]), 4),
                 "xss_keyword": round(float(features_raw[12]), 4),
                 "xss_special_char_ratio": round(float(features_raw[13]), 4),
+                # WAMM ML Classification (F15-F16)
+                "wamm_attack_type": int(features_raw[14]),
+                "wamm_confidence": round(float(features_raw[15]), 4),
             }
 
             # Add X-Real-IP info if present

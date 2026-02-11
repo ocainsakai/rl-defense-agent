@@ -17,7 +17,7 @@ from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
 from core.packet_queue import PacketQueue
 from core.sniffer import NetworkSniffer
-from feature.feature_flow import FlowFeatureCalculator
+from feature.calculator import FlowFeatureCalculator
 # from config.data_params import WINDOW_SIZE_SECONDS
 # from config import ai_config as config
 WINDOW_SIZE_SECONDS = 1.0

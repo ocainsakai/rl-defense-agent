@@ -34,7 +34,8 @@ from scapy.all import PcapReader
 
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
-from feature.feature_flow import FlowFeatureCalculator
+from feature.calculator import FlowFeatureCalculator
+from feature.wamm_classifier import WammClassifier
 from config.data_params import ANONYMIZE_SRC_IP_FOR_TRAINING, anonymize_src_ip
 
 
@@ -158,8 +159,9 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         cleanup_interval=999999    # Không cleanup trong quá trình xử lý
     )
     
-    # Feature Calculator
-    feature_calc = FlowFeatureCalculator()
+    # Feature Calculator (with WAMM if model available)
+    wamm = WammClassifier()
+    feature_calc = FlowFeatureCalculator(wamm_classifier=wamm)
     
     # ========================================================================
     # ĐỌC VÀ XỬ LÝ PCAP
@@ -239,7 +241,7 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         # TCP Flags Summary (from forward packets)
         "TCP_Flags",             # Format: "SYN:10,ACK:20,RST:5,FIN:2"
         
-        # 14 RAW Features (aggregated across all flows from src_ip)
+        # 16 RAW Features (aggregated across all flows from src_ip)
         # Network & Timing (F1-F5)
         "F1_PacketRate_RAW",
         "F2_SynRatio_RAW",
@@ -257,6 +259,9 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         "F12_SQLSpecialCharRatio_RAW",
         "F13_XSSKeyword_RAW",
         "F14_XSSSpecialCharRatio_RAW",
+        # WAMM ML Classification (F15-F16)
+        "F15_WammAttackType_RAW",
+        "F16_WammConfidence_RAW",
     ]
     
     rows = []
@@ -306,16 +311,16 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         if not tcp_flags_str:
             tcp_flags_str = "NONE"
         
-        # Calculate 14 features RAW VALUES
+        # Calculate 16 features RAW VALUES
         # Truyền TẤT CẢ flows từ src_ip này → Features được tính đúng!
         features = feature_calc.calculate_all(flows_list)
 
         if features is None:
             continue
 
-        # Unpack 14 features
+        # Unpack 16 features
         (f1, f2, f3, f4, f5, f6, f7, f8,
-         f9, f10, f11, f12, f13, f14) = features
+         f9, f10, f11, f12, f13, f14, f15, f16) = features
 
         # Tạo row
         row = {
@@ -346,6 +351,9 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
             "F12_SQLSpecialCharRatio_RAW": f"{f12:.4f}",
             "F13_XSSKeyword_RAW": f"{f13:.4f}",
             "F14_XSSSpecialCharRatio_RAW": f"{f14:.4f}",
+            # WAMM ML Classification (F15-F16)
+            "F15_WammAttackType_RAW": f"{f15:.0f}",
+            "F16_WammConfidence_RAW": f"{f16:.4f}",
         }
         rows.append(row)
 
@@ -371,7 +379,9 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
             print(f"  F12_SQLSpecChar:   {f12:.4f}")
             print(f"  F13_XSSKW:         {f13:.4f}")
             print(f"  F14_XSSSpecChar:   {f14:.4f}")
-    
+            print(f"  F15_WammAttack:    {f15:.0f}")
+            print(f"  F16_WammConf:      {f16:.4f}")
+
     print(f"\n[*] Writing output to {output_csv}...")
     
     with open(output_csv, 'w', newline='', encoding='utf-8') as f:
