@@ -18,8 +18,11 @@ import base64
 import html
 import re
 import unicodedata
+import warnings
 from collections import Counter
 from urllib.parse import unquote, unquote_plus
+
+from feature.context import PayloadNormalizer
 
 try:
     import ahocorasick
@@ -294,20 +297,20 @@ class PayloadContextScorer:
             # Try smart stripping (removes most frequent repetitive char)
             stripped = cls._smart_strip_padding(raw_bytes)
             if stripped and stripped != raw_bytes:
-                normalized = cls._normalize_payload(stripped)
+                normalized = PayloadNormalizer.normalize(stripped)
                 if cls._scan_for_patterns_combined(normalized) == CONTEXT_MALICIOUS:
                     return CONTEXT_MALICIOUS
             
             # Also try traditional whitespace stripping
             stripped_ws = raw_bytes.strip(b" \t\n\r\x00")
             if stripped_ws and stripped_ws != raw_bytes:
-                normalized = cls._normalize_payload(stripped_ws)
+                normalized = PayloadNormalizer.normalize(stripped_ws)
                 if cls._scan_for_patterns_combined(normalized) == CONTEXT_MALICIOUS:
                     return CONTEXT_MALICIOUS
 
         # Multi-point sampling with Combined Regex
         for sample_bytes in cls._multi_point_sample(raw_bytes):
-            normalized = cls._normalize_payload(sample_bytes)
+            normalized = PayloadNormalizer.normalize(sample_bytes)
             result = cls._scan_for_patterns_combined(normalized)
             if result == CONTEXT_MALICIOUS:
                 return CONTEXT_MALICIOUS
@@ -338,7 +341,7 @@ class PayloadContextScorer:
             return 0.0
         
         # Normalize payload
-        normalized = cls._normalize_payload(raw_bytes)
+        normalized = PayloadNormalizer.normalize(raw_bytes)
         if not normalized:
             return 0.0
         
@@ -383,7 +386,7 @@ class PayloadContextScorer:
             return 0.0
         
         # Normalize payload
-        normalized = cls._normalize_payload(raw_bytes)
+        normalized = PayloadNormalizer.normalize(raw_bytes)
         if not normalized:
             return 0.0
         
@@ -610,51 +613,78 @@ class PayloadContextScorer:
 
     @classmethod
     def _normalize_payload(cls, raw_bytes: bytes) -> str:
+        """DEPRECATED: Sử dụng PayloadNormalizer.normalize() thay thế.
+        
+        Phương thức này được giữ lại để tương thích ngược nhưng sẽ bị xóa
+        trong phiên bản tương lai. Vui lòng sử dụng:
+        
+            from feature.context import PayloadNormalizer
+            normalized = PayloadNormalizer.normalize(raw_bytes)
+        
+        Args:
+            raw_bytes: Payload bytes để chuẩn hóa
+        
+        Returns:
+            Chuỗi chuẩn hóa
+        """
+        warnings.warn(
+            "_normalize_payload is deprecated and will be removed in v2.0. "
+            "Use PayloadNormalizer.normalize() from feature.context instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
+        # Import ở đây để tránh circular import
         try:
-            payload = raw_bytes.decode("utf-8", errors="ignore")
+            from feature.context import PayloadNormalizer
+            return PayloadNormalizer.normalize(raw_bytes)
+        except ImportError:
+            # Fallback to old implementation nếu context chưa có
+            try:
+                payload = raw_bytes.decode("utf-8", errors="ignore")
 
-            # ✅ FIX: Use unquote_plus() to decode '+' as space
-            # unquote() does NOT decode '+' → ' '
-            # unquote_plus() DOES decode '+' → ' ' (for URL query strings)
-            # (unquote_plus imported at top of file)
-            
-            for _ in range(cls.MAX_DECODE_ITERATIONS):
-                decoded = unquote_plus(payload)
-                if decoded == payload:
-                    break
-                payload = decoded
+                # ✅ FIX: Use unquote_plus() to decode '+' as space
+                # unquote() does NOT decode '+' → ' '
+                # unquote_plus() DOES decode '+' → ' ' (for URL query strings)
+                # (unquote_plus imported at top of file)
+                
+                for _ in range(cls.MAX_DECODE_ITERATIONS):
+                    decoded = unquote_plus(payload)
+                    if decoded == payload:
+                        break
+                    payload = decoded
 
-            # ✅ NEW: Decode Base64 encoded content
-            payload = cls._try_base64_decode(payload)
+                # ✅ NEW: Decode Base64 encoded content
+                payload = cls._try_base64_decode(payload)
 
-            payload = html.unescape(payload)
-            payload = unicodedata.normalize("NFKC", payload)
-            
-            # ✅ FIX: Normalize Unicode quotes to ASCII equivalents
-            # Many browsers/apps use "smart quotes" that evade detection
-            QUOTE_MAP = {
-                '\u2018': "'",  # '
-                '\u2019': "'",  # '
-                '\u201A': "'",  # ‚
-                '\u201B': "'",  # ‛
-                '\u201C': '"',  # "
-                '\u201D': '"',  # "
-                '\u201E': '"',  # „
-                '\u201F': '"',  # ‟
-                '\u00B4': "'",  # ´ acute accent
-                '\u2032': "'",  # ′ prime
-                '\u2033': '"',  # ″ double prime
-                '\u0060': "'",  # ` grave → single quote for consistency
-            }
-            for uc, asc in QUOTE_MAP.items():
-                payload = payload.replace(uc, asc)
-            
-            payload = payload.replace("\x00", "")
-            payload = cls._collapse_whitespace(payload)
-            payload = payload.lower()
-            return payload
-        except Exception:
-            return ""
+                payload = html.unescape(payload)
+                payload = unicodedata.normalize("NFKC", payload)
+                
+                # ✅ FIX: Normalize Unicode quotes to ASCII equivalents
+                # Many browsers/apps use "smart quotes" that evade detection
+                QUOTE_MAP = {
+                    '\u2018': "'",  # '
+                    '\u2019': "'",  # '
+                    '\u201A': "'",  # ‚
+                    '\u201B': "'",  # ‛
+                    '\u201C': '"',  # "
+                    '\u201D': '"',  # "
+                    '\u201E': '"',  # „
+                    '\u201F': '"',  # ‟
+                    '\u00B4': "'",  # ´ acute accent
+                    '\u2032': "'",  # ′ prime
+                    '\u2033': '"',  # ″ double prime
+                    '\u0060': "'",  # ` grave → single quote for consistency
+                }
+                for uc, asc in QUOTE_MAP.items():
+                    payload = payload.replace(uc, asc)
+                
+                payload = payload.replace("\x00", "")
+                payload = cls._collapse_whitespace(payload)
+                payload = payload.lower()
+                return payload
+            except Exception:
+                return ""
 
     @classmethod
     def _scan_for_patterns(cls, payload: str) -> float:

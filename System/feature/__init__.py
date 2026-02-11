@@ -1,4 +1,4 @@
-from .feature_flow import FlowFeatureCalculator
+from .calculator import FlowFeatureCalculator
 from .payload_context import PayloadContextScorer
 from .payload_features import PayloadFeatureExtractor
 
