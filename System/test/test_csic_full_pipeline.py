@@ -8,12 +8,12 @@ import pytest
 
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
-from feature.feature_flow import (
-    FlowFeatureCalculator,
-    FlowFeature11_SqliKeyword,
-    FlowFeature12_SqlSpecialChar,
-    FlowFeature13_XssKeyword,
-    FlowFeature14_XssSpecialChar,
+from feature.calculator import FlowFeatureCalculator
+from feature.calculators.payload_features import (
+    F11_SqliKeyword,
+    F12_SqlSpecialChar,
+    F13_XssKeyword,
+    F14_XssSpecialChar,
 )
 
 
@@ -47,7 +47,7 @@ class TestCSICFullPipeline:
 
         calc = FlowFeatureCalculator()
         features = calc.calculate_all(all_flows)
-        assert len(features) == 14
+        assert len(features) == 16
 
     def test_sqli_xss_detection(self, csic_csv_path):
         """Verify SQLi/XSS features are non-zero for attack traffic."""
@@ -72,10 +72,10 @@ class TestCSICFullPipeline:
 
         all_flows = fm.get_all_flows()
 
-        sqli_score = FlowFeature11_SqliKeyword().calculate(all_flows)
-        sqli_char = FlowFeature12_SqlSpecialChar().calculate(all_flows)
-        xss_score = FlowFeature13_XssKeyword().calculate(all_flows)
-        xss_char = FlowFeature14_XssSpecialChar().calculate(all_flows)
+        sqli_score = F11_SqliKeyword().calculate(all_flows)
+        sqli_char = F12_SqlSpecialChar().calculate(all_flows)
+        xss_score = F13_XssKeyword().calculate(all_flows)
+        xss_char = F14_XssSpecialChar().calculate(all_flows)
 
         total_indicators = sqli_score + sqli_char + xss_score + xss_char
         assert total_indicators > 0, "No SQLi/XSS indicators detected in attack flows"

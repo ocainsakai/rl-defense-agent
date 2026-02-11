@@ -14,13 +14,15 @@ from scapy.all import IP, TCP, UDP, Raw, Ether
 
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
-from feature.feature_flow import (
-    FlowFeature2_SynAckRatio,
-    FlowFeature4_RstRatio,
-    FlowFeature5_DistinctPorts,
-    FlowFeature11_SqliKeyword,
-    FlowFeature13_XssKeyword,
-    FlowFeatureCalculator,
+from feature.calculator import FlowFeatureCalculator
+from feature.calculators.network_features import (
+    F2_SynAckRatio,
+    F4_RstRatio,
+    F5_DistinctPorts,
+)
+from feature.calculators.payload_features import (
+    F11_SqliKeyword,
+    F13_XssKeyword,
 )
 
 
@@ -38,7 +40,7 @@ class TestF2SynAckRatio:
             flow_manager.process_packet(info)
 
         flows = flow_manager.get_all_flows()
-        ratio = FlowFeature2_SynAckRatio().calculate(flows)
+        ratio = F2_SynAckRatio().calculate(flows)
         assert ratio == 1.0
 
     def test_syn_flood_ratio(self, parser):
@@ -51,7 +53,7 @@ class TestF2SynAckRatio:
             fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        ratio = FlowFeature2_SynAckRatio().calculate(flows)
+        ratio = F2_SynAckRatio().calculate(flows)
         assert ratio == 10.0
 
 
@@ -79,7 +81,7 @@ class TestF4RstRatio:
             fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        ratio = FlowFeature4_RstRatio().calculate(flows)
+        ratio = F4_RstRatio().calculate(flows)
         assert abs(ratio - 0.4) < 0.1  # 2 RST / 5 responses
 
 
@@ -98,7 +100,7 @@ class TestF5DistinctPorts:
             fm.process_packet(info)
 
         flows = fm.get_flows_by_src("192.168.1.100")
-        distinct_ports = FlowFeature5_DistinctPorts().calculate(flows)
+        distinct_ports = F5_DistinctPorts().calculate(flows)
         assert distinct_ports == len(target_ports)
 
 
@@ -116,7 +118,7 @@ class TestF11SqliKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = FlowFeature11_SqliKeyword().calculate(flows)
+        score = F11_SqliKeyword().calculate(flows)
         assert score > 0
 
     def test_or_1_equals_1_detection(self, parser_http):
@@ -129,7 +131,7 @@ class TestF11SqliKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = FlowFeature11_SqliKeyword().calculate(flows)
+        score = F11_SqliKeyword().calculate(flows)
         assert score > 0
 
     def test_clean_payload_no_detection(self, parser_http):
@@ -142,7 +144,7 @@ class TestF11SqliKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = FlowFeature11_SqliKeyword().calculate(flows)
+        score = F11_SqliKeyword().calculate(flows)
         assert score == 0
 
 
@@ -160,7 +162,7 @@ class TestF13XssKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = FlowFeature13_XssKeyword().calculate(flows)
+        score = F13_XssKeyword().calculate(flows)
         assert score > 0
 
     def test_onerror_event_detection(self, parser):
@@ -173,16 +175,16 @@ class TestF13XssKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = FlowFeature13_XssKeyword().calculate(flows)
+        score = F13_XssKeyword().calculate(flows)
         assert score > 0
 
 
 @pytest.mark.unit
 class TestFeatureCalculatorIntegration:
-    """Integration test: Full 14 features"""
+    """Integration test: Full 16 features"""
 
-    def test_full_14_features(self, parser_http):
-        """calculate_all() returns 14 features"""
+    def test_full_16_features(self, parser_http):
+        """calculate_all() returns 16 features"""
         fm = FlowManager(window_size=60.0, flow_timeout=120.0, cleanup_interval=10000)
 
         packets = [
@@ -201,4 +203,4 @@ class TestFeatureCalculatorIntegration:
         calc = FlowFeatureCalculator()
         features = calc.calculate_all(flows)
 
-        assert len(features) == 14
+        assert len(features) == 16

@@ -8,7 +8,7 @@ import pytest
 
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
-from feature.feature_flow import FlowFeature11_SqliKeyword
+from feature.calculators.payload_features import F11_SqliKeyword
 
 
 @pytest.mark.integration
@@ -25,7 +25,7 @@ class TestSqliFullPipeline:
         assert len(records) > 0
 
         parser = PacketLayerExtractor(use_packet_time=False, enable_http_parsing=True)
-        f11_calc = FlowFeature11_SqliKeyword()
+        f11_calc = F11_SqliKeyword()
 
         true_positives = 0
         true_negatives = 0

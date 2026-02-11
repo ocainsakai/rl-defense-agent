@@ -11,7 +11,7 @@ from scapy.all import IP, TCP, UDP, Raw, Ether
 
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
-from feature.feature_flow import FlowFeatureCalculator
+from feature.calculator import FlowFeatureCalculator
 
 
 @pytest.mark.integration
@@ -113,7 +113,7 @@ class TestFullPipelineSQLiDetection:
 
         sqli_score = features[10]  # F11 = sqli_keyword
         assert sqli_score > 0
-        assert len(features) == 14
+        assert len(features) == 16
 
 
 @pytest.mark.integration

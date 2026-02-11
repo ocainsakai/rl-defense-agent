@@ -64,7 +64,7 @@ def flow_manager():
 @pytest.fixture
 def feature_calc():
     """FlowFeatureCalculator instance."""
-    from feature.feature_flow import FlowFeatureCalculator
+    from feature.calculator import FlowFeatureCalculator
     return FlowFeatureCalculator()
 
 
@@ -73,7 +73,7 @@ def pipeline():
     """Full pipeline: parser + flow_manager + feature_calc."""
     from core.packet_parser import PacketLayerExtractor
     from core.flow_manager import FlowManager
-    from feature.feature_flow import FlowFeatureCalculator
+    from feature.calculator import FlowFeatureCalculator
     return {
         'parser': PacketLayerExtractor(use_packet_time=True, enable_http_parsing=True),
         'fm': FlowManager(window_size=60.0, flow_timeout=120.0, cleanup_interval=10000),
