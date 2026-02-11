@@ -13,37 +13,42 @@ BIDIRECTIONAL:
 - Backward: Packet có src_ip = flow.dst_ip (đổi chiều)
 """
 
-from typing import Dict, Any, Optional, List, Set
+from typing import Dict, Any, Optional, List, Set, Union
 from collections import defaultdict
 import time
 
 from core.layer_info import LayerInfo
 from core.flow_state import FlowState
+from config.nids_config import NIDSConfig, DEFAULT_CONFIG
 
 
 class FlowManager:
     """
     Quản lý các network flows với BIDIRECTIONAL tracking.
     """
-    
+
     def __init__(
-        self, 
-        window_size: float = 1.0, 
-        flow_timeout: float = 30.0,
-        cleanup_interval: int = 100,
-        max_flows: int = 50000  # Giới hạn cứng số lượng flow
+        self,
+        config: Optional[NIDSConfig] = None,
+        *,
+        window_size: Optional[float] = None,
+        flow_timeout: Optional[float] = None,
+        cleanup_interval: Optional[int] = None,
+        max_flows: Optional[int] = None,
     ):
         """
         Args:
-            window_size: Kích thước sliding window cho mỗi flow (giây)
-            flow_timeout: Thời gian để coi 1 flow là expired (giây)
-            cleanup_interval: Sau bao nhiêu packets thì chạy cleanup
-            max_flows: Số lượng flow tối đa cho phép để bảo vệ RAM
+            config: NIDSConfig instance (ưu tiên). Nếu None thì dùng DEFAULT_CONFIG.
+            window_size: Override window_size từ config
+            flow_timeout: Override flow_timeout từ config
+            cleanup_interval: Override cleanup_interval từ config
+            max_flows: Override max_flows từ config
         """
-        self.window_size = window_size
-        self.flow_timeout = flow_timeout
-        self.cleanup_interval = cleanup_interval
-        self.max_flows = max_flows
+        cfg = config or DEFAULT_CONFIG
+        self.window_size = window_size if window_size is not None else cfg.DEFAULT_WINDOW_SIZE
+        self.flow_timeout = flow_timeout if flow_timeout is not None else cfg.FLOW_TIMEOUT_SECONDS
+        self.cleanup_interval = cleanup_interval if cleanup_interval is not None else cfg.CLEANUP_INTERVAL
+        self.max_flows = max_flows if max_flows is not None else cfg.MAX_FLOWS
         
         # Flow storage: {flow_key: FlowState}
         self.flows: Dict[tuple, FlowState] = {}
