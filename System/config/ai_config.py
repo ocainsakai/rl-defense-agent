@@ -79,3 +79,14 @@ def normalize_range(value: float, min_val: float, max_val: float) -> float:
 def normalize_context_score(value: float) -> float:
     """Chuẩn hóa Context Score từ [-1, 1] (SAFE/NEUTRAL/MALICIOUS) về [0, 1]."""
     return normalize_range(value, CONTEXT_SAFE, CONTEXT_MALICIOUS)
+
+
+# =============================================================================
+# 4. WAMM CLASSIFIER NORMALIZATION
+# =============================================================================
+
+# Feature 15: WAMM Attack Type (0=normal, 1=sqli, 2=xss)
+MAX_WAMM_ATTACK_TYPE = 2.0
+
+# Feature 16: WAMM Confidence (already [0, 1])
+MAX_WAMM_CONFIDENCE = 1.0

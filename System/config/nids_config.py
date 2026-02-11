@@ -18,7 +18,9 @@ Sử dụng:
 =============================================================================
 """
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, fields
+from typing import Any, Dict, Optional
 
 
 @dataclass(frozen=True)
@@ -65,37 +67,12 @@ class NIDSConfig:
     MAX_QUEUE_SIZE: int = 10000
     
     # =========================================================================
-    # FEATURE THRESHOLDS (Reference Values)
+    # PAYLOAD SCAN
     # =========================================================================
-    
-    # F1: Packet Rate - Ngưỡng nghi ngờ DDoS (packets/giây)
-    THRESHOLD_HIGH_PACKET_RATE: float = 1000.0
-    
-    # F2: SYN/ACK Ratio - Ngưỡng nghi ngờ SYN Flood
-    THRESHOLD_HIGH_SYN_RATIO: float = 10.0
-    
-    # F3: Distinct Ports - Ngưỡng nghi ngờ Port Scan
-    THRESHOLD_HIGH_DISTINCT_PORTS: int = 50
-    
-    # F4: Payload Length - MTU tiêu chuẩn (bytes)
-    STANDARD_MTU_SIZE: int = 1500
-    
-    # F5: Fail Rate - Ngưỡng nghi ngờ Brute Force
-    THRESHOLD_HIGH_FAIL_RATE: float = 0.7
-    
-    # =========================================================================
-    # CONTEXT SCORE (F6)
-    # =========================================================================
-    
-    # Context Score chỉ có 2 giá trị:
-    # - 0: NEUTRAL (bình thường, không phát hiện mẫu độc hại)
-    # - 1: MALICIOUS (phát hiện SQLi, XSS, Command Injection, etc.)
-    CONTEXT_NEUTRAL: float = 0.0
-    CONTEXT_MALICIOUS: float = 1.0
-    
+
     # Max payload size để scan (tránh memory issues)
     MAX_PAYLOAD_SCAN_SIZE: int = 65536
-    
+
     # =========================================================================
     # LOGGING
     # =========================================================================
@@ -112,6 +89,126 @@ class NIDSConfig:
     
     # Buffer size cho latency tracking
     LATENCY_BUFFER_SIZE: int = 1000
+    
+    # =========================================================================
+    # CLASS METHODS - Configuration Loaders
+    # =========================================================================
+    
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> 'NIDSConfig':
+        """
+        Tạo NIDSConfig từ dictionary.
+        
+        Args:
+            config_dict: Dictionary chứa config values
+        
+        Returns:
+            NIDSConfig instance với values từ dict
+        
+        Example:
+            >>> config = NIDSConfig.from_dict({
+            ...     'MAX_PACKETS_PER_FLOW': 5000,
+            ...     'FLOW_TIMEOUT_SECONDS': 60.0
+            ... })
+        """
+        # Lấy tên tất cả fields
+        field_names = {f.name for f in fields(cls)}
+        
+        # Filter chỉ các key hợp lệ
+        valid_kwargs = {
+            k: v for k, v in config_dict.items()
+            if k in field_names
+        }
+        
+        return cls(**valid_kwargs)
+    
+    @classmethod
+    def from_env(cls, prefix: str = 'NIDS_') -> 'NIDSConfig':
+        """
+        Tạo NIDSConfig từ environment variables.
+        
+        Environment variables được map theo pattern: {prefix}{FIELD_NAME}
+        Ví dụ: NIDS_MAX_PACKETS_PER_FLOW=5000
+        
+        Args:
+            prefix: Prefix cho environment variables (mặc định 'NIDS_')
+        
+        Returns:
+            NIDSConfig instance với values từ env vars
+        
+        Example:
+            >>> # Set env vars:
+            >>> # export NIDS_MAX_PACKETS_PER_FLOW=5000
+            >>> # export NIDS_FLOW_TIMEOUT_SECONDS=60.0
+            >>> config = NIDSConfig.from_env()
+        """
+        kwargs = {}
+        
+        for field in fields(cls):
+            env_var = f"{prefix}{field.name}"
+            value = os.getenv(env_var)
+            
+            if value is not None:
+                # Type conversion dựa vào field type
+                field_type = field.type
+                
+                try:
+                    if field_type == int:
+                        kwargs[field.name] = int(value)
+                    elif field_type == float:
+                        kwargs[field.name] = float(value)
+                    elif field_type == bool:
+                        # Parse bool từ string
+                        kwargs[field.name] = value.lower() in ('true', '1', 'yes', 'on')
+                    elif field_type == str:
+                        kwargs[field.name] = value
+                    else:
+                        # Default: giữ nguyên string
+                        kwargs[field.name] = value
+                        
+                except (ValueError, TypeError) as e:
+                    # Log warning nhưng không crash
+                    import warnings
+                    warnings.warn(
+                        f"Failed to parse {env_var}={value} as {field_type.__name__}: {e}",
+                        UserWarning
+                    )
+        
+        return cls(**kwargs)
+    
+    @classmethod
+    def merge(
+        cls,
+        base: Optional['NIDSConfig'] = None,
+        overrides: Optional[Dict[str, Any]] = None
+    ) -> 'NIDSConfig':
+        """
+        Merge config từ base config và overrides.
+        
+        Args:
+            base: Base config (mặc định là DEFAULT_CONFIG)
+            overrides: Dict chứa values muốn override
+        
+        Returns:
+            NIDSConfig instance đã merged
+        
+        Example:
+            >>> custom = NIDSConfig.merge(
+            ...     overrides={'MAX_PACKETS_PER_FLOW': 10000}
+            ... )
+        """
+        if base is None:
+            # Sử dụng default values
+            base_dict = {}
+        else:
+            # Convert base config thành dict
+            base_dict = {f.name: getattr(base, f.name) for f in fields(base)}
+        
+        # Merge với overrides
+        if overrides:
+            base_dict.update(overrides)
+        
+        return cls(**base_dict)
 
 
 # Default config instance
