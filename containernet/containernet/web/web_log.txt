@@ -1,0 +1,4 @@
+  File "/home/tringuyen/web/web.py", line 22
+    'cursorclass': pymysql.cursors.DictCursor,
+                 ^
+SyntaxError: invalid syntax
