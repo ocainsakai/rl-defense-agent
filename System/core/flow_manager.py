@@ -61,9 +61,9 @@ class FlowManager:
         self._last_packet_time: float = time.time()  # Track last packet time for cleanup
     
     def _make_flow_key(self, layer_info: LayerInfo) -> tuple:
-        """Tạo flow key từ 5-tuple"""
-        src_port = layer_info.tcp_sport or layer_info.udp_sport or 0
-        dst_port = layer_info.tcp_dport or layer_info.udp_dport or 0
+        """Tạo flow key từ 5-tuple (chỉ TCP)"""
+        src_port = layer_info.tcp_sport or 0
+        dst_port = layer_info.tcp_dport or 0
         
         return (
             layer_info.src_ip or '',

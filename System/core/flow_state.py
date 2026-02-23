@@ -17,9 +17,10 @@ from typing import Dict, Any, Set, List
 import time
 
 from core.layer_info import LayerInfo
+from core.iflow_state import IFlowState
 
 
-class FlowState:
+class FlowState(IFlowState):
     """
     Trạng thái của một flow dựa trên 5-tuple.
     
@@ -36,7 +37,8 @@ class FlowState:
         """
         self.flow_key = flow_key
         self.window_size = window_size
-        
+        self.analysis_window_size = window_size
+
         # BIDIRECTIONAL: Tách riêng forward và backward
         self.fwd_packets: deque = deque(maxlen=3000)  # src → dst
         self.bwd_packets: deque = deque(maxlen=3000)  # dst → src
@@ -167,20 +169,18 @@ class FlowState:
     
     def get_distinct_ports(self) -> Set[int]:
         """
-        Lấy distinct destination ports (từ forward packets).
-        
+        Lấy distinct destination ports (từ forward TCP packets).
+
         NOTE: Mỗi flow (5-tuple) theo định nghĩa chỉ có 1 dst_port cố định.
         Method này thực tế sẽ return set với 1 phần tử duy nhất = self.flow_key[3].
-        
-        Tuy nhiên, khi aggregate nhiều flows (trong Feature3), ta được tất cả
+
+        Tuy nhiên, khi aggregate nhiều flows (trong Feature5), ta được tất cả
         các ports khác nhau mà src_ip đã kết nối đến → Phát hiện Port Scanning.
         """
         ports = set()
         for pkt in self.fwd_packets:
             if pkt.has_tcp and pkt.tcp_dport:
                 ports.add(pkt.tcp_dport)
-            elif pkt.has_udp and pkt.udp_dport:
-                ports.add(pkt.udp_dport)
         return ports
     
     # =========================================================================
