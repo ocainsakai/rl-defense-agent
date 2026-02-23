@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from feature.behavioral_features import BehavioralFeatureExtractor
+from feature._archive.behavioral_features import BehavioralFeatureExtractor
 
 
 @pytest.mark.unit

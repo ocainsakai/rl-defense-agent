@@ -44,14 +44,14 @@ def parser_pcap():
 def parser_http():
     """PacketLayerExtractor with HTTP parsing enabled."""
     from core.packet_parser import PacketLayerExtractor
-    return PacketLayerExtractor(use_packet_time=False, enable_http_parsing=True)
+    return PacketLayerExtractor(use_packet_time=False)
 
 
 @pytest.fixture
 def parser_full():
-    """PacketLayerExtractor with PCAP timestamps + HTTP parsing."""
+    """PacketLayerExtractor with PCAP timestamps."""
     from core.packet_parser import PacketLayerExtractor
-    return PacketLayerExtractor(use_packet_time=True, enable_http_parsing=True)
+    return PacketLayerExtractor(use_packet_time=True)
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def pipeline():
     from core.flow_manager import FlowManager
     from feature.calculator import FlowFeatureCalculator
     return {
-        'parser': PacketLayerExtractor(use_packet_time=True, enable_http_parsing=True),
+        'parser': PacketLayerExtractor(use_packet_time=True),
         'fm': FlowManager(window_size=60.0, flow_timeout=120.0, cleanup_interval=10000),
         'calc': FlowFeatureCalculator(),
     }

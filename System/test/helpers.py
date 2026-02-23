@@ -44,20 +44,6 @@ def make_tcp_packet(src_ip="192.168.1.100", dst_ip="10.0.0.1",
     return pkt
 
 
-def make_udp_packet(src_ip="192.168.1.100", dst_ip="8.8.8.8",
-                    sport=12345, dport=53,
-                    payload=None, timestamp=None):
-    """Build a UDP packet with Scapy."""
-    pkt = Ether() / IP(src=src_ip, dst=dst_ip) / UDP(
-        sport=sport, dport=dport
-    )
-    if payload:
-        pkt = pkt / Raw(load=payload)
-    if timestamp is not None:
-        pkt.time = timestamp
-    return pkt
-
-
 def make_http_packet(payload_text, src_ip="192.168.1.100", dst_ip="10.0.0.1",
                      sport=5000, dport=80, seq_num=0, method="GET",
                      timestamp=None):

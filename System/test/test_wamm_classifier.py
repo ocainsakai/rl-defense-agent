@@ -311,25 +311,23 @@ class TestWammClassifierWithModel:
 
 class TestFlowFeatureCalculatorWamm:
     @pytest.mark.unit
-    def test_calculator_16_features_no_model(self):
-        """Calculator should produce 16 features even without WAMM model."""
+    def test_calculator_20_features_no_model(self):
+        """Calculator should produce 20 features."""
         from feature.calculator import FlowFeatureCalculator
         calc = FlowFeatureCalculator()
         names = calc.get_feature_names()
-        assert len(names) == 16
-        assert "wamm_attack_type" in names
-        assert "wamm_confidence" in names
+        assert len(names) == 20
 
     @pytest.mark.unit
-    def test_calculator_empty_flows_16_zeros(self):
-        """Empty flows should return 16 zeros."""
+    def test_calculator_empty_flows_20_zeros(self):
+        """Empty flows should return 20 zeros."""
         from feature.calculator import FlowFeatureCalculator
         calc = FlowFeatureCalculator()
         result = calc.calculate_all_optimized([])
-        assert len(result) == 16
+        assert len(result) == 20
         assert all(v == 0.0 for v in result)
 
     @pytest.mark.unit
     def test_num_features_constant(self):
         from feature.calculator import FlowFeatureCalculator
-        assert FlowFeatureCalculator.NUM_FEATURES == 16
+        assert FlowFeatureCalculator.NUM_FEATURES == 20

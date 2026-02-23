@@ -70,20 +70,6 @@ class TestFlowManagerWithScapy:
         assert flow1 is not flow2
         assert len(flow_manager.flows) == 2
 
-    def test_udp_flow(self, parser, flow_manager):
-        """UDP packets cũng được gom flow bidirectional"""
-        pkt1 = Ether() / IP(src="192.168.1.100", dst="8.8.8.8") / UDP(sport=12345, dport=53) / Raw(b"\x00\x01")
-        pkt2 = Ether() / IP(src="8.8.8.8", dst="192.168.1.100") / UDP(sport=53, dport=12345) / Raw(b"\x00\x02")
-
-        info1 = parser.extract(pkt1, 1)
-        info2 = parser.extract(pkt2, 2)
-
-        flow1 = flow_manager.process_packet(info1)
-        flow2 = flow_manager.process_packet(info2)
-
-        assert flow1 is flow2
-        assert flow1.protocol == 17
-
     def test_port_scan_detection_setup(self, parser, flow_manager):
         """Attacker scan nhiều ports -> nhiều flows"""
         target_ports = [22, 80, 443, 8080, 3306, 5432, 6379, 27017, 9200, 11211]

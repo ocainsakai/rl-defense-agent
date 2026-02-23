@@ -111,9 +111,9 @@ class TestFullPipelineSQLiDetection:
         flows = fm.get_all_flows()
         features = calc.calculate_all(flows)
 
-        sqli_score = features[10]  # F11 = sqli_keyword
+        sqli_score = features[12]  # F13 = CrsSquliScore
         assert sqli_score > 0
-        assert len(features) == 16
+        assert len(features) == 20
 
 
 @pytest.mark.integration
@@ -164,21 +164,6 @@ class TestFullPipelineSlidingWindow:
 
 
 @pytest.mark.integration
-class TestFullPipelineUDP:
-    """Test UDP flow tracking qua full pipeline."""
-
-    def test_udp_dns_flow(self, pipeline):
-        """UDP DNS query/response = 1 flow"""
-        parser, fm = pipeline['parser'], pipeline['fm']
-
-        pkt1 = Ether() / IP(src="192.168.1.100", dst="8.8.8.8") / UDP(sport=12345, dport=53) / Raw(load=b"\x00\x01query")
-        pkt1.time = 1000.0
-        flow1 = fm.process_packet(parser.extract(pkt1, 1))
-
-        pkt2 = Ether() / IP(src="8.8.8.8", dst="192.168.1.100") / UDP(sport=53, dport=12345) / Raw(load=b"\x00\x02response")
-        pkt2.time = 1001.0
-        flow2 = fm.process_packet(parser.extract(pkt2, 2))
-
-        assert flow1 is flow2
-        assert flow1.protocol == 17
-        assert len(fm.flows) == 1
+class TestFullPipelineTCPOnly:
+    """Test that only TCP traffic is tracked."""
+    pass

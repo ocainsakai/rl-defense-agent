@@ -9,12 +9,8 @@ import pytest
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
 from feature.calculator import FlowFeatureCalculator
-from feature.calculators.payload_features import (
-    F11_SqliKeyword,
-    F12_SqlSpecialChar,
-    F13_XssKeyword,
-    F14_XssSpecialChar,
-)
+from feature.calculators.sqli_features import F12_SqlSpecialChar, F13_CrsSquliScore
+from feature.calculators.xss_features import F18_CrsXssScore
 
 
 @pytest.mark.integration
@@ -29,7 +25,7 @@ class TestCSICFullPipeline:
         records = load_csic_csv(csic_csv_path, limit=100)
         assert len(records) > 0
 
-        parser = PacketLayerExtractor(use_packet_time=False, enable_http_parsing=True)
+        parser = PacketLayerExtractor(use_packet_time=False)
         fm = FlowManager(window_size=60.0, flow_timeout=120.0, cleanup_interval=10000)
 
         for i, record in enumerate(records):
@@ -47,7 +43,7 @@ class TestCSICFullPipeline:
 
         calc = FlowFeatureCalculator()
         features = calc.calculate_all(all_flows)
-        assert len(features) == 16
+        assert len(features) == 20
 
     def test_sqli_xss_detection(self, csic_csv_path):
         """Verify SQLi/XSS features are non-zero for attack traffic."""
@@ -57,7 +53,7 @@ class TestCSICFullPipeline:
         attack_records = [r for r in records if r.is_attack]
         assert len(attack_records) > 0, "No attack records in balanced sample"
 
-        parser = PacketLayerExtractor(use_packet_time=False, enable_http_parsing=True)
+        parser = PacketLayerExtractor(use_packet_time=False)
         fm = FlowManager(window_size=60.0, flow_timeout=120.0, cleanup_interval=10000)
 
         for i, record in enumerate(attack_records[:50]):
@@ -72,10 +68,9 @@ class TestCSICFullPipeline:
 
         all_flows = fm.get_all_flows()
 
-        sqli_score = F11_SqliKeyword().calculate(all_flows)
+        sqli_score = F13_CrsSquliScore().calculate(all_flows)
         sqli_char = F12_SqlSpecialChar().calculate(all_flows)
-        xss_score = F13_XssKeyword().calculate(all_flows)
-        xss_char = F14_XssSpecialChar().calculate(all_flows)
+        xss_score = F18_CrsXssScore().calculate(all_flows)
 
-        total_indicators = sqli_score + sqli_char + xss_score + xss_char
+        total_indicators = sqli_score + sqli_char + xss_score
         assert total_indicators > 0, "No SQLi/XSS indicators detected in attack flows"

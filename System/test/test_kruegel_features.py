@@ -12,7 +12,7 @@ Verify all 6 models work correctly:
 
 import pytest
 
-from feature.kruegel_features import (
+from feature._archive.kruegel_features import (
     KruegelFeatureExtractor,
     AttributeLengthModel,
     CharDistributionModel,

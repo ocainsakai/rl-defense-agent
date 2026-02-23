@@ -20,10 +20,8 @@ from feature.calculators.network_features import (
     F4_RstRatio,
     F5_DistinctPorts,
 )
-from feature.calculators.payload_features import (
-    F11_SqliKeyword,
-    F13_XssKeyword,
-)
+from feature.calculators.sqli_features import F13_CrsSquliScore
+from feature.calculators.xss_features import F18_CrsXssScore
 
 
 @pytest.mark.unit
@@ -105,8 +103,8 @@ class TestF5DistinctPorts:
 
 
 @pytest.mark.unit
-class TestF11SqliKeyword:
-    """Test F11: SQLi Keyword Detection"""
+class TestF13CrsSquliScore:
+    """Test F13: CRS SQLi Score Detection"""
 
     def test_union_select_detection(self, parser_http):
         """Detect UNION SELECT SQLi"""
@@ -118,7 +116,7 @@ class TestF11SqliKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = F11_SqliKeyword().calculate(flows)
+        score = F13_CrsSquliScore().calculate(flows)
         assert score > 0
 
     def test_or_1_equals_1_detection(self, parser_http):
@@ -131,7 +129,7 @@ class TestF11SqliKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = F11_SqliKeyword().calculate(flows)
+        score = F13_CrsSquliScore().calculate(flows)
         assert score > 0
 
     def test_clean_payload_no_detection(self, parser_http):
@@ -144,13 +142,13 @@ class TestF11SqliKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = F11_SqliKeyword().calculate(flows)
+        score = F13_CrsSquliScore().calculate(flows)
         assert score == 0
 
 
 @pytest.mark.unit
-class TestF13XssKeyword:
-    """Test F13: XSS Keyword Detection"""
+class TestF18CrsXssScore:
+    """Test F18: CRS XSS Score Detection"""
 
     def test_script_tag_detection(self, parser):
         """Detect <script> tag XSS"""
@@ -162,7 +160,7 @@ class TestF13XssKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = F13_XssKeyword().calculate(flows)
+        score = F18_CrsXssScore().calculate(flows)
         assert score > 0
 
     def test_onerror_event_detection(self, parser):
@@ -175,16 +173,16 @@ class TestF13XssKeyword:
         fm.process_packet(info)
 
         flows = fm.get_all_flows()
-        score = F13_XssKeyword().calculate(flows)
+        score = F18_CrsXssScore().calculate(flows)
         assert score > 0
 
 
 @pytest.mark.unit
 class TestFeatureCalculatorIntegration:
-    """Integration test: Full 16 features"""
+    """Integration test: Full 20 features"""
 
-    def test_full_16_features(self, parser_http):
-        """calculate_all() returns 16 features"""
+    def test_full_20_features(self, parser_http):
+        """calculate_all() returns 20 features"""
         fm = FlowManager(window_size=60.0, flow_timeout=120.0, cleanup_interval=10000)
 
         packets = [
@@ -203,4 +201,4 @@ class TestFeatureCalculatorIntegration:
         calc = FlowFeatureCalculator()
         features = calc.calculate_all(flows)
 
-        assert len(features) == 16
+        assert len(features) == 20

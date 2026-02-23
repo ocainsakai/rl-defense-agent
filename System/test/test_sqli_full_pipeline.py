@@ -8,7 +8,7 @@ import pytest
 
 from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
-from feature.calculators.payload_features import F11_SqliKeyword
+from feature.calculators.sqli_features import F13_CrsSquliScore
 
 
 @pytest.mark.integration
@@ -24,8 +24,8 @@ class TestSqliFullPipeline:
         records = load_sqli_csv(sqli_csv_path, limit=200)
         assert len(records) > 0
 
-        parser = PacketLayerExtractor(use_packet_time=False, enable_http_parsing=True)
-        f11_calc = F11_SqliKeyword()
+        parser = PacketLayerExtractor(use_packet_time=False)
+        f11_calc = F13_CrsSquliScore()
 
         true_positives = 0
         true_negatives = 0
