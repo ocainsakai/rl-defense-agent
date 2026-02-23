@@ -111,7 +111,7 @@ class NginxCompareManager:
 # ============================================================================
 
 # Setup
-parser = PacketLayerExtractor(enable_http_parsing=True)
+parser = PacketLayerExtractor()
 before_manager = NginxCompareManager(window_size=30.0)
 after_manager = NginxCompareManager(window_size=30.0)
 

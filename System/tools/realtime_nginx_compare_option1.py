@@ -14,7 +14,7 @@ from core.packet_parser import PacketLayerExtractor
 from core.layer_info import LayerInfo
 
 # Setup parser
-parser = PacketLayerExtractor(enable_http_parsing=True)
+parser = PacketLayerExtractor()
 
 # ✅ Dùng LayerInfo (consistent data structure)
 before_buffer: Dict[str, LayerInfo] = {}  # IP|Path → LayerInfo
