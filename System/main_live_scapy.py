@@ -89,7 +89,7 @@ class RealTimeNIDS:
         
         # 1. Khởi tạo các thành phần cốt lõi
         self.packet_queue = PacketQueue(max_size=10000)  # Giới hạn 10k packets để bảo vệ RAM
-        self.parser = PacketLayerExtractor(enable_http_parsing=True)
+        self.parser = PacketLayerExtractor()
         self.flow_manager = FlowManager(window_size=window_size)
         self.feature_calc = FlowFeatureCalculator()
         self.sniffer = NetworkSniffer() # Tách biệt logic sniffer
@@ -187,8 +187,8 @@ class RealTimeNIDS:
         # IMPORTANT: Set window_size for F1 calculation
         flow.analysis_window_size = self.window_size
         
-        # Raw Features (14 features) cho CSV export
-        features_raw = self.feature_calc.calculate_all_raw([flow])
+        # Raw Features (20 features) cho CSV export
+        features_raw = self.feature_calc.calculate_all([flow])
 
         # Export CSV
         if self.csv_writer:
@@ -197,10 +197,6 @@ class RealTimeNIDS:
                 src = flow.src_ip
                 dst = flow.dst_ip
                 proto = "TCP"
-                if flow.fwd_packets:
-                    p = flow.fwd_packets[0]
-                    if hasattr(p, 'has_udp') and p.has_udp: proto = "UDP"
-                    elif hasattr(p, 'has_icmp') and p.has_icmp: proto = "ICMP"
 
                 row = [timestamp, src, dst, proto] + \
                       [f"{v:.4f}" for v in features_raw]

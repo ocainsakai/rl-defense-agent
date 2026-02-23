@@ -117,7 +117,7 @@ class RealTimeSlidingNIDS:
         
         # Core components
         self.packet_queue = PacketQueue(max_size=10000)
-        self.parser = PacketLayerExtractor(enable_http_parsing=True)
+        self.parser = PacketLayerExtractor()
         # FlowManager: Quản lý packet-to-flow mapping
         # LƯU Ý: Cleanup được quản lý bởi slide_window_packets() trong _process_window()
         # Không dùng internal cleanup của FlowManager (để tránh xung đột logic)
@@ -226,29 +226,13 @@ class RealTimeSlidingNIDS:
     def _export_features(self, src_ip: str, flows_list: list):
         """Export raw features for a Source IP to JSON.
 
-        16 Features:
-            F1:  packet_rate          packets/s
-            F2:  syn_ack_ratio        ratio
-            F3:  iat                  seconds (inter-arrival time)
-            F4:  rst_ratio            ratio [0,1]
-            F5:  distinct_ports       count
-            F6:  url_concentration    ratio [0,1]
-            F7:  auth_fail_rate       ratio [0,1]
-            F8:  server_error_rate    ratio [0,1]
-            F9:  payload_len          bytes
-            F10: payload_entropy      bits [0,8]
-            F11: sqli_keyword         weighted score
-            F12: sql_special_char_ratio  ratio [0,1]
-            F13: xss_keyword          weighted score
-            F14: xss_special_char_ratio  ratio [0,1]
-            F15: wamm_attack_type     0=normal, 1=sqli, 2=xss
-            F16: wamm_confidence      [0,1]
+        20 Features matching FEATURE_ORDER (F1-F20) from data_params.py.
         """
         # Set window_size for F1 calculation
         for flow in flows_list:
             flow.analysis_window_size = self.window_size
 
-        # Calculate raw features
+        # Calculate raw features (20 values)
         features_raw = self.feature_calc.calculate_all(flows_list)
 
         # Skip rows with packet_rate = 0 (empty windows / no actual data)
@@ -267,30 +251,15 @@ class RealTimeSlidingNIDS:
 
         # Write JSON line
         if self.output_fd:
+            feature_names = FlowFeatureCalculator.get_feature_names()
             json_row = {
                 "timestamp": round(self.current_window_end, 6),
                 "src_ip": src_ip,
-                # Network & Timing (F1-F5)
-                "packet_rate": round(packet_rate, 4),
-                "syn_ack_ratio": round(float(features_raw[1]), 4),
-                "iat": round(float(features_raw[2]), 6),
-                "rst_ratio": round(float(features_raw[3]), 4),
-                "distinct_ports": int(features_raw[4]),
-                # Application Behavior (F6-F8)
-                "url_concentration": round(float(features_raw[5]), 4),
-                "auth_fail_rate": round(float(features_raw[6]), 4),
-                "server_error_rate": round(float(features_raw[7]), 4),
-                # Payload Analysis (F9-F14)
-                "payload_len": round(float(features_raw[8]), 4),
-                "payload_entropy": round(float(features_raw[9]), 4),
-                "sqli_keyword": round(float(features_raw[10]), 4),
-                "sql_special_char_ratio": round(float(features_raw[11]), 4),
-                "xss_keyword": round(float(features_raw[12]), 4),
-                "xss_special_char_ratio": round(float(features_raw[13]), 4),
-                # WAMM ML Classification (F15-F16)
-                "wamm_attack_type": int(features_raw[14]),
-                "wamm_confidence": round(float(features_raw[15]), 4),
             }
+
+            # Add all 20 features dynamically
+            for idx, name in enumerate(feature_names):
+                json_row[name] = round(float(features_raw[idx]), 4)
 
             # Add X-Real-IP info if present
             if x_real_ip:

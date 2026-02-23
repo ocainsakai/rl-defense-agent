@@ -144,8 +144,7 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
     
     # Parser: Dùng packet timestamp từ PCAP
     parser = PacketLayerExtractor(
-        enable_http_parsing=True,  # Enable để detect HTTP status codes cho F5
-        use_packet_time=True       # QUAN TRỌNG: Dùng timestamp từ PCAP, KHÔNG dùng thời gian máy
+        use_packet_time=True  # QUAN TRỌNG: Dùng timestamp từ PCAP, KHÔNG dùng thời gian máy
     )
     
     print("[✓] PacketLayerExtractor configured:")
@@ -224,45 +223,26 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
     flows_by_src = group_flows_by_src_ip(all_flows)
     print(f"[+] Unique source IPs: {len(flows_by_src)}")
     
-    # CSV Headers
+    # CSV Headers — 20 features matching FEATURE_ORDER (F1-F20)
+    feature_names = FlowFeatureCalculator.get_feature_names()
+    feature_headers = [f"{name}_RAW" for name in feature_names]
+
     headers = [
         # Source IP Identification (1 row per src_ip)
         "Src_IP",
         "DateTime",              # Human-readable timestamp (first packet)
         "Total_Flows",           # Số flows từ src_ip này
         "Total_Unique_Dst_IPs",  # Số dst_ip khác nhau
-        
+
         # Aggregated Statistics (tổng hợp từ tất cả flows)
         "Total_Fwd_Pkts",
         "Total_Bwd_Pkts",
         "Total_Pkts",
         "Total_Duration",
-        
+
         # TCP Flags Summary (from forward packets)
         "TCP_Flags",             # Format: "SYN:10,ACK:20,RST:5,FIN:2"
-        
-        # 16 RAW Features (aggregated across all flows from src_ip)
-        # Network & Timing (F1-F5)
-        "F1_PacketRate_RAW",
-        "F2_SynRatio_RAW",
-        "F3_IAT_RAW",
-        "F4_RstRatio_RAW",
-        "F5_DistinctPorts_RAW",
-        # Application Behavior (F6-F8)
-        "F6_URLConcentration_RAW",
-        "F7_AuthFailRate_RAW",
-        "F8_ServerErrorRate_RAW",
-        # Payload Analysis (F9-F14)
-        "F9_PayloadLen_RAW",
-        "F10_PayloadEntropy_RAW",
-        "F11_SQLiKeyword_RAW",
-        "F12_SQLSpecialCharRatio_RAW",
-        "F13_XSSKeyword_RAW",
-        "F14_XSSSpecialCharRatio_RAW",
-        # WAMM ML Classification (F15-F16)
-        "F15_WammAttackType_RAW",
-        "F16_WammConfidence_RAW",
-    ]
+    ] + feature_headers
     
     rows = []
     
@@ -311,18 +291,13 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
         if not tcp_flags_str:
             tcp_flags_str = "NONE"
         
-        # Calculate 16 features RAW VALUES
-        # Truyền TẤT CẢ flows từ src_ip này → Features được tính đúng!
+        # Calculate 20 features RAW VALUES
         features = feature_calc.calculate_all(flows_list)
 
         if features is None:
             continue
 
-        # Unpack 16 features
-        (f1, f2, f3, f4, f5, f6, f7, f8,
-         f9, f10, f11, f12, f13, f14, f15, f16) = features
-
-        # Tạo row
+        # Build row with metadata + feature values
         row = {
             "Src_IP": src_ip_out,
             "Dst_Ports": dst_ports_str,
@@ -334,27 +309,12 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
             "Total_Pkts": total_pkts,
             "Total_Duration": f"{total_duration:.6f}",
             "TCP_Flags": tcp_flags_str,
-            # Network & Timing (F1-F5)
-            "F1_PacketRate_RAW": f"{f1:.4f}",
-            "F2_SynRatio_RAW": f"{f2:.4f}",
-            "F3_IAT_RAW": f"{f3:.6f}",
-            "F4_RstRatio_RAW": f"{f4:.4f}",
-            "F5_DistinctPorts_RAW": f"{f5:.0f}",
-            # Application Behavior (F6-F8)
-            "F6_URLConcentration_RAW": f"{f6:.4f}",
-            "F7_AuthFailRate_RAW": f"{f7:.4f}",
-            "F8_ServerErrorRate_RAW": f"{f8:.4f}",
-            # Payload Analysis (F9-F14)
-            "F9_PayloadLen_RAW": f"{f9:.4f}",
-            "F10_PayloadEntropy_RAW": f"{f10:.4f}",
-            "F11_SQLiKeyword_RAW": f"{f11:.4f}",
-            "F12_SQLSpecialCharRatio_RAW": f"{f12:.4f}",
-            "F13_XSSKeyword_RAW": f"{f13:.4f}",
-            "F14_XSSSpecialCharRatio_RAW": f"{f14:.4f}",
-            # WAMM ML Classification (F15-F16)
-            "F15_WammAttackType_RAW": f"{f15:.0f}",
-            "F16_WammConfidence_RAW": f"{f16:.4f}",
         }
+
+        # Add all 20 features dynamically
+        for idx, name in enumerate(feature_names):
+            row[f"{name}_RAW"] = f"{features[idx]:.4f}"
+
         rows.append(row)
 
         # Verbose output
@@ -364,23 +324,9 @@ def analyze_pcap(pcap_file: str, output_csv: str, verbose: bool = False):
             print(f"Flows: {len(flows_list)}, Dst IPs: {unique_dst_ips}")
             print(f"Packets: {total_pkts} (Fwd: {total_fwd}, Bwd: {total_bwd})")
             print(f"Duration: {total_duration:.3f}s, Flags: {tcp_flags_str}")
-            print(f"Features:")
-            print(f"  F1_PacketRate:     {f1:.2f} pkts/s")
-            print(f"  F2_SynRatio:       {f2:.4f}")
-            print(f"  F3_IAT:            {f3:.6f}s")
-            print(f"  F4_RstRatio:       {f4:.4f}")
-            print(f"  F5_DistinctPorts:  {f5:.0f}")
-            print(f"  F6_URLConc:        {f6:.4f}")
-            print(f"  F7_AuthFail:       {f7:.4f}")
-            print(f"  F8_ServerErr:      {f8:.4f}")
-            print(f"  F9_PayloadLen:     {f9:.2f} bytes")
-            print(f"  F10_Entropy:       {f10:.4f}")
-            print(f"  F11_SQLiKW:        {f11:.4f}")
-            print(f"  F12_SQLSpecChar:   {f12:.4f}")
-            print(f"  F13_XSSKW:         {f13:.4f}")
-            print(f"  F14_XSSSpecChar:   {f14:.4f}")
-            print(f"  F15_WammAttack:    {f15:.0f}")
-            print(f"  F16_WammConf:      {f16:.4f}")
+            print(f"Features ({len(features)}):")
+            for idx, name in enumerate(feature_names):
+                print(f"  {name}: {features[idx]:.4f}")
 
     print(f"\n[*] Writing output to {output_csv}...")
     

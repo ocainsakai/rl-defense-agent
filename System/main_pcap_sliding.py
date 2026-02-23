@@ -143,7 +143,6 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
     # ========================================================================
     
     parser = PacketLayerExtractor(
-        enable_http_parsing=True,
         use_packet_time=True  # QUAN TRỌNG: Dùng timestamp từ PCAP, KHÔNG dùng thời gian máy
     )
     
@@ -151,7 +150,10 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
     print("    - use_packet_time=True → Timestamps từ PCAP file")
     print("    - Timestamps phản ánh thời gian ghi trong PCAP, KHÔNG phải thời gian hiện tại\n")
     
-    # CSV Headers
+    # CSV Headers — 20 features matching FEATURE_ORDER (F1-F20)
+    feature_names = FlowFeatureCalculator.get_feature_names()
+    feature_headers = [f"{name}_RAW" for name in feature_names]
+
     headers = [
         # Time Window
         "Window_Start",          # PCAP timestamp (epoch seconds)
@@ -171,26 +173,7 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
 
         # TCP Flags Summary (from forward packets)
         "TCP_Flags",             # Format: "SYN:10,ACK:20,RST:5,FIN:2"
-
-        # 14 RAW Features (F1 adjusted for sliding window)
-        # Network & Timing (F1-F5)
-        "F1_PacketRate_RAW",
-        "F2_SynRatio_RAW",
-        "F3_IAT_RAW",
-        "F4_RstRatio_RAW",
-        "F5_DistinctPorts_RAW",
-        # Application Behavior (F6-F8)
-        "F6_URLConcentration_RAW",
-        "F7_AuthFailRate_RAW",
-        "F8_ServerErrorRate_RAW",
-        # Payload Analysis (F9-F14)
-        "F9_PayloadLen_RAW",
-        "F10_PayloadEntropy_RAW",
-        "F11_SQLiKeyword_RAW",
-        "F12_SQLSpecialCharRatio_RAW",
-        "F13_XSSKeyword_RAW",
-        "F14_XSSSpecialCharRatio_RAW",
-    ]
+    ] + feature_headers
     
     # Open CSV file for writing
     csv_file = open(output_csv, 'w', newline='', encoding='utf-8')
@@ -253,17 +236,13 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
             # Convert timestamp to human-readable DateTime
             dt_str = datetime.fromtimestamp(current_window_start).strftime('%Y-%m-%d %H:%M:%S')
             
-            # Calculate features với window_size adjustment
+            # Calculate features with window_size adjustment
             features = calculate_features_with_window_size(flows_list, window_size)
 
             if features is None:
                 continue
 
-            # Unpack 14 features
-            (f1, f2, f3, f4, f5, f6, f7, f8,
-             f9, f10, f11, f12, f13, f14) = features
-
-            # Write row
+            # Build row with metadata + all 20 features
             row = {
                 "Window_Start": f"{current_window_start:.6f}",
                 "Window_End": f"{current_window_end:.6f}",
@@ -276,30 +255,18 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
                 "Total_Pkts": total_pkts,
                 "Total_Duration": f"{total_duration:.6f}",
                 "TCP_Flags": tcp_flags_str,
-                # Network & Timing (F1-F5)
-                "F1_PacketRate_RAW": f"{f1:.4f}",
-                "F2_SynRatio_RAW": f"{f2:.4f}",
-                "F3_IAT_RAW": f"{f3:.6f}",
-                "F4_RstRatio_RAW": f"{f4:.4f}",
-                "F5_DistinctPorts_RAW": f"{f5:.0f}",
-                # Application Behavior (F6-F8)
-                "F6_URLConcentration_RAW": f"{f6:.4f}",
-                "F7_AuthFailRate_RAW": f"{f7:.4f}",
-                "F8_ServerErrorRate_RAW": f"{f8:.4f}",
-                # Payload Analysis (F9-F14)
-                "F9_PayloadLen_RAW": f"{f9:.4f}",
-                "F10_PayloadEntropy_RAW": f"{f10:.4f}",
-                "F11_SQLiKeyword_RAW": f"{f11:.4f}",
-                "F12_SQLSpecialCharRatio_RAW": f"{f12:.4f}",
-                "F13_XSSKeyword_RAW": f"{f13:.4f}",
-                "F14_XSSSpecialCharRatio_RAW": f"{f14:.4f}",
             }
+
+            # Add all 20 features dynamically
+            for idx, name in enumerate(feature_names):
+                row[f"{name}_RAW"] = f"{features[idx]:.4f}"
+
             writer.writerow(row)
             total_rows_written += 1
 
             if verbose:
-                print(f"    └─ {src_ip}: Flows={len(flows_list)}, "
-                      f"F1={f1:.1f}, F5={f5:.0f} ports, Flags={tcp_flags_str}")
+                print(f"    \u2514\u2500 {src_ip}: Flows={len(flows_list)}, "
+                      f"F1={features[0]:.1f}, F5={features[4]:.0f} ports, Flags={tcp_flags_str}")
     
     # ========================================================================
     # ĐỌC PCAP VÀ XỬ LÝ THEO WINDOWS
