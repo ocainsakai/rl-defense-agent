@@ -36,7 +36,7 @@ from feature.context import FeatureContext
 
 @register_feature(FeatureMetadata(
     name="PayloadLength",
-    code="F9",
+    code="FX9",
     description="Total payload size - detects abnormal/large payloads",
     category="payload",
     depends_on=None
@@ -75,7 +75,7 @@ class F9_PayloadLength(FeatureBase):
 
 @register_feature(FeatureMetadata(
     name="PayloadEntropy",
-    code="F10",
+    code="FX10",
     description="Shannon entropy - detects obfuscation/encryption",
     category="payload",
     depends_on=None
@@ -128,7 +128,7 @@ class F10_PayloadEntropy(FeatureBase):
 
 @register_feature(FeatureMetadata(
     name="SqliKeyword",
-    code="F11",
+    code="FX11",
     description="SQLi weighted scoring - keyword and pattern detection",
     category="payload",
     depends_on=["PayloadContextScorer"]
@@ -211,7 +211,7 @@ class F12_SqlSpecialChar(FeatureBase):
 
 @register_feature(FeatureMetadata(
     name="XssKeyword",
-    code="F13",
+    code="FX13",
     description="XSS weighted scoring - keyword and pattern detection",
     category="payload",
     depends_on=["PayloadContextScorer"]
@@ -249,7 +249,7 @@ class F13_XssKeyword(FeatureBase):
 
 @register_feature(FeatureMetadata(
     name="XssSpecialChar",
-    code="F14",
+    code="FX14",
     description="XSS special character ratio",
     category="payload",
     depends_on=None
