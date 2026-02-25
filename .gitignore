@@ -208,3 +208,48 @@ __marimo__/
 
 # Containernet submodule
 containernet/containernet
+
+# ===========================================================
+# Large / Heavy Files (không track, không LFS)
+# ===========================================================
+
+# Virtual environments (rất nặng, không cần track)
+.venv/
+venv/
+containernet/**/venv/
+
+# Network captures thô (dùng LFS nếu cần giữ, ignore nếu chỉ local)
+# *.pcapng
+# *.pcap
+
+# Model checkpoints trung gian (chỉ giữ bản final qua LFS)
+checkpoints/
+runs/
+wandb/
+mlruns/
+*.ckpt
+*.safetensors
+
+# Dataset thô / trung gian (lớn, chỉ giữ processed qua LFS)
+data/raw/
+data/interim/
+data/processed/
+*.db
+*.sqlite
+
+# Archives & compressed
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.rar
+*.7z
+
+# Các file output nặng sinh tự động
+outputs/
+results/
+logs/
+*.log
+
+# Node modules (nếu có frontend)
+node_modules/
