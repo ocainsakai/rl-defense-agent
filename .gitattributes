@@ -1,0 +1,78 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python source files
+*.py text eol=lf
+*.pyw text eol=lf
+*.pyx text eol=lf
+
+# Jupyter Notebooks
+*.ipynb text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.conf text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Markup and documentation
+*.md text eol=lf
+*.rst text eol=lf
+*.txt text eol=lf
+
+# Data files
+*.csv text eol=lf
+*.tsv text eol=lf
+
+# Web files
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Git files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Binary files - no diff, no merge
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.pkl binary
+*.pickle binary
+*.npy binary
+*.npz binary
+*.h5 binary
+*.hdf5 binary
+*.pt binary
+*.pth binary
+*.bin binary
+*.model binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.xz binary
+
+# Jupyter notebook diff (show as text, but use nbdime if available)
+*.ipynb diff=jupyternotebook
+
+# Large data files - mark as binary to avoid diff noise
+*.parquet binary
+*.feather binary
+
+# Windows batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
