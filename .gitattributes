@@ -1,6 +1,41 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# ===========================================================
+# Git LFS - Large File Storage
+# ===========================================================
+
+# PDF documents
+*.pdf filter=lfs diff=lfs merge=lfs -text
+
+# Network capture files
+*.pcap filter=lfs diff=lfs merge=lfs -text
+*.pcapng filter=lfs diff=lfs merge=lfs -text
+*.cap filter=lfs diff=lfs merge=lfs -text
+
+# Large dataset files
+*.xlsx filter=lfs diff=lfs merge=lfs -text
+*.xls filter=lfs diff=lfs merge=lfs -text
+
+# SQL dumps
+*.sql filter=lfs diff=lfs merge=lfs -text
+
+# ML model files
+*.pkl filter=lfs diff=lfs merge=lfs -text
+*.pickle filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.hdf5 filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+
+# Numpy/data arrays
+*.npy filter=lfs diff=lfs merge=lfs -text
+*.npz filter=lfs diff=lfs merge=lfs -text
+*.parquet filter=lfs diff=lfs merge=lfs -text
+*.feather filter=lfs diff=lfs merge=lfs -text
+
 # Python source files
 *.py text eol=lf
 *.pyw text eol=lf
