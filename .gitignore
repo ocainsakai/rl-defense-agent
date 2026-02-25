@@ -222,6 +222,9 @@ containernet/**/venv/
 # *.pcapng
 # *.pcap
 
+# Raw capture dataset L1_Cap (pcapng, csv, xlsx, sql...)
+L1_Cap*
+
 # Model checkpoints trung gian (chỉ giữ bản final qua LFS)
 checkpoints/
 runs/
