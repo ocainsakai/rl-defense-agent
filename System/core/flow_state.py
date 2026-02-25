@@ -76,24 +76,24 @@ class FlowState(IFlowState):
         """
         cutoff = current_time - self.window_size
         
-        # Cleanup forward - validate timestamp before comparison
+        # Dọn dẹp forward - kiểm tra timestamp trước khi so sánh
         while self.fwd_packets:
             pkt = self.fwd_packets[0]
-            # Skip packets with invalid timestamp
+            # Bỏ qua gói tin có timestamp không hợp lệ
             if pkt.timestamp is None or pkt.timestamp >= cutoff:
                 break
             self.fwd_packets.popleft()
-        
-        # Cleanup backward - validate timestamp before comparison
+
+        # Dọn dẹp backward - kiểm tra timestamp trước khi so sánh
         while self.bwd_packets:
             pkt = self.bwd_packets[0]
-            # Skip packets with invalid timestamp
+            # Bỏ qua gói tin có timestamp không hợp lệ
             if pkt.timestamp is None or pkt.timestamp >= cutoff:
                 break
             self.bwd_packets.popleft()
     
     # =========================================================================
-    # PACKET COUNTS
+    # SỐ LƯỢNG GÓI TIN
     # =========================================================================
     
     def get_fwd_packet_count(self) -> int:
@@ -116,7 +116,7 @@ class FlowState(IFlowState):
         return len(self.fwd_packets) == 0 and len(self.bwd_packets) == 0
     
     # =========================================================================
-    # PACKET LISTS
+    # DANH SÁCH GÓI TIN
     # =========================================================================
     
     def get_fwd_packets(self) -> List[LayerInfo]:
@@ -132,7 +132,7 @@ class FlowState(IFlowState):
         return list(self.fwd_packets) + list(self.bwd_packets)
     
     # =========================================================================
-    # TCP FLAGS - Tách riêng forward/backward
+    # CỜ TCP - Tách riêng forward/backward
     # =========================================================================
     
     def get_fwd_tcp_flags_count(self) -> Dict[str, int]:
@@ -164,7 +164,7 @@ class FlowState(IFlowState):
         return counts
     
     # =========================================================================
-    # PORTS
+    # CỔNG
     # =========================================================================
     
     def get_distinct_ports(self) -> Set[int]:
@@ -184,7 +184,7 @@ class FlowState(IFlowState):
         return ports
     
     # =========================================================================
-    # PAYLOADS
+    # TẢI TRỌNG (PAYLOADS)
     # =========================================================================
     
     def get_fwd_payload_lengths(self) -> List[int]:
@@ -212,7 +212,7 @@ class FlowState(IFlowState):
         return self.get_fwd_payloads() + self.get_bwd_payloads()
     
     # =========================================================================
-    # LAZY REASSEMBLY - Nối payload để phát hiện tấn công bị phân mảnh
+    # GHÉP NỐI PAYLOAD - Nối payload để phát hiện tấn công bị phân mảnh
     # =========================================================================
     
     def get_reassembled_fwd_payload(self) -> bytes:
@@ -248,7 +248,7 @@ class FlowState(IFlowState):
         return b''.join(self.get_payloads())
     
     # =========================================================================
-    # UTILITY METHODS
+    # PHƯƠNG THỨC TIỆN ÍCH
     # =========================================================================
     
     def is_expired(self, current_time: float, timeout: float) -> bool:

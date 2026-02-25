@@ -1,21 +1,18 @@
-"""Flow Feature Calculator - Aggregator for all 20 features.
+"""Flow Feature Calculator - Bộ tổng hợp 20 features.
 
-This module provides the main calculator class that computes all 20 features
-using the new plugin architecture with FeatureRegistry.
+Module này cung cấp class calculator chính để tính tất cả 20 features
+sử dụng kiến trúc plugin với FeatureRegistry.
 
-Usage:
+Cách sử dụng:
     from feature.calculator import FlowFeatureCalculator
 
     calculator = FlowFeatureCalculator()
     features = calculator.calculate_all(flows)
-    # features = [f1, f2, ..., f20]  — in FEATURE_ORDER from data_params.py
+    # features = [f1, f2, ..., f20]  — theo FEATURE_ORDER từ data_params.py
 
-    # With feature names:
+    # Với tên features:
     feature_dict = calculator.calculate_dict(flows)
     # {'packet_rate': 100.5, 'syn_ack_ratio': 1.2, ...}
-
-Author: NIDS Team
-Date: 2024
 """
 
 import logging
@@ -24,8 +21,8 @@ from core.flow_state import FlowState
 from feature.base import FeatureRegistry
 from config.data_params import FEATURE_ORDER
 
-# Import all feature calculators to trigger @register_feature decorators
-# This ensures FeatureRegistry is populated before instantiation
+# Import tất cả feature calculators để kích hoạt @register_feature decorators
+# Đảm bảo FeatureRegistry được điền trước khi khởi tạo
 import feature.calculators
 
 logger = logging.getLogger(__name__)
@@ -35,55 +32,54 @@ from feature.context import FeatureContext
 
 
 class FlowFeatureCalculator:
-    """
-Aggregator class để tính tất cả 20 features từ flows.
+    """Lớp tổng hợp để tính tất cả 20 features từ flows.
 
-    Uses FeatureRegistry to automatically discover and instantiate all
-    registered features. Feature order follows FEATURE_ORDER from data_params.py.
+    Sử dụng FeatureRegistry để tự động khám phá và khởi tạo tất cả
+    features đã đăng ký. Thứ tự theo FEATURE_ORDER từ data_params.py.
 
-    20 FEATURES (RAW VALUES) — grouped by layer:
+    20 FEATURES (GIÁ TRỊ THÔ) — phân nhóm theo layer:
         Network [0-10]:
-          F1:  PacketRate              packets/second
-          F2:  SynAckRatio             ratio
-          F3:  InterArrivalTime        seconds
-          F4:  RstRatio                ratio [0,1]
-          F5:  DistinctPorts           count
-          F6:  URLConcentration        ratio [0,1]
-          F7:  AuthFailureRate         ratio [0,1] (401+403)
-          F8:  ServerErrorRate         ratio [0,1] (5xx)
+          F1:  PacketRate              gói/giây
+          F2:  SynAckRatio             tỷ lệ
+          F3:  InterArrivalTime        giây
+          F4:  RstRatio                tỷ lệ [0,1]
+          F5:  DistinctPorts           số lượng
+          F6:  URLConcentration        tỷ lệ [0,1]
+          F7:  AuthFailureRate         tỷ lệ [0,1] (401+403)
+          F8:  ServerErrorRate         tỷ lệ [0,1] (5xx)
           F9:  AvgPayloadSize          bytes
-          F10: FwdBwdRatio             ratio
-          F11: PacketsPerPort          ratio
+          F10: FwdBwdRatio             tỷ lệ
+          F11: PacketsPerPort          tỷ lệ
         SQLi [11-16]:
-          F12: SqlSpecialChar          ratio [0,1]
-          F13: CrsSquliScore           count (0-N)
-          F14: SqlUnionSelect          binary 0/1
-          F15: SqlComment              binary 0/1
-          F16: SqlStackedQuery         binary 0/1
-          F17: SqlSelectCount          count
+          F12: SqlSpecialChar          tỷ lệ [0,1]
+          F13: CrsSquliScore           số lượng (0-N)
+          F14: SqlUnionSelect          nhị phân 0/1
+          F15: SqlComment              nhị phân 0/1
+          F16: SqlStackedQuery         nhị phân 0/1
+          F17: SqlSelectCount          số lượng
         XSS [17-19]:
-          F18: CrsXssScore             count (0-N)
-          F19: JsFunctionCall          binary 0/1
-          F20: HtmlEventHandler        binary 0/1
+          F18: CrsXssScore             số lượng (0-N)
+          F19: JsFunctionCall          nhị phân 0/1
+          F20: HtmlEventHandler        nhị phân 0/1
 
-    Note: All features return RAW VALUES (not normalized).
+    Lưu ý: Tất cả features trả về GIÁ TRỊ THÔ (chưa chuẩn hóa).
     """
 
-    # Feature codes in canonical FEATURE_ORDER (20 features)
+    # Mã features theo thứ tự FEATURE_ORDER (20 features)
     FEATURE_CODES = FEATURE_ORDER
 
     NUM_FEATURES = len(FEATURE_ORDER)  # 20
 
     def __init__(self, config=None, wamm_classifier=None):
-        """Initialize calculator with all registered features.
+        """Khởi tạo calculator với tất cả features đã đăng ký.
 
         Args:
-            config: Optional NIDSConfig instance (passed to features)
-            wamm_classifier: Unused (kept for backward compatibility).
+            config: NIDSConfig instance (tùy chọn, truyền cho features)
+            wamm_classifier: Không sử dụng (giữ lại để tương thích ngược).
         """
         self.config = config
 
-        # Instantiate all features using FeatureRegistry
+        # Khởi tạo tất cả features bằng FeatureRegistry
         self.calculators = []
         for code in self.FEATURE_CODES:
             try:
@@ -93,18 +89,18 @@ Aggregator class để tính tất cả 20 features từ flows.
                 )
                 self.calculators.append(calculator)
             except KeyError:
-                # Feature not registered yet - log warning and use None placeholder
-                logger.warning(f"Feature {code} not registered, using 0.0 default")
+                # Feature chưa đăng ký - ghi cảnh báo và dùng placeholder None
+                logger.warning(f"Feature {code} chưa đăng ký, dùng mặc định 0.0")
                 self.calculators.append(None)
 
     def calculate_all(self, flows: List[FlowState]) -> List[float]:
-        """Calculate all 20 features.
+        """Tính tất cả 20 features.
 
         Args:
-            flows: List of FlowState objects from same source IP
+            flows: Danh sách FlowState từ cùng source IP
 
         Returns:
-            list: 20 raw values in FEATURE_ORDER
+            list: 20 giá trị thô theo FEATURE_ORDER
         """
         if not flows:
             return [0.0] * self.NUM_FEATURES
@@ -124,22 +120,22 @@ Aggregator class để tính tất cả 20 features từ flows.
         return results
 
     def calculate_all_optimized(self, flows: List[FlowState]) -> List[float]:
-        """Calculate all 20 features with caching optimization.
+        """Tính tất cả 20 features với tối ưu caching.
 
-        Uses FeatureContext to:
-        - Compute normalized payloads once
-        - Cache results for pattern-based features
+        Sử dụng FeatureContext để:
+        - Tính normalized payloads một lần duy nhất
+        - Cache kết quả cho các features dựa trên pattern
 
         Args:
-            flows: List of FlowState objects from same source IP
+            flows: Danh sách FlowState từ cùng source IP
 
         Returns:
-            list: 20 raw values in FEATURE_ORDER
+            list: 20 giá trị thô theo FEATURE_ORDER
         """
         if not flows:
             return [0.0] * self.NUM_FEATURES
 
-        # Create context with cached normalization
+        # Tạo context với caching chuẩn hóa
         ctx = FeatureContext(flows)
 
         results = []
@@ -148,7 +144,7 @@ Aggregator class để tính tất cả 20 features từ flows.
                 results.append(0.0)
             else:
                 try:
-                    # Pass context to enable caching
+                    # Truyền context để bật caching
                     value = calc.calculate(flows, context=ctx)
                     results.append(value)
                 except Exception as e:
@@ -158,19 +154,19 @@ Aggregator class để tính tất cả 20 features từ flows.
         return results
 
     def calculate_all_with_flags(self, flows: List[FlowState]) -> Tuple[List[float], List[int]]:
-        """Calculate features and track missing data.
+        """Tính features và theo dõi dữ liệu thiếu.
 
         Args:
-            flows: List of FlowState objects
+            flows: Danh sách FlowState objects
 
         Returns:
             tuple: (features_list, missing_indices_list)
-            - features_list: 20 raw values
-            - missing_indices_list: [0, 3, ...] (indices of missing features)
+            - features_list: 20 giá trị thô
+            - missing_indices_list: [0, 3, ...] (chỉ số các features thiếu)
 
-        Missing data cases:
-            - Empty flows list → all features missing
-            - Feature calculation error → mark as missing
+        Các trường hợp thiếu dữ liệu:
+            - Danh sách flows rỗng → tất cả features thiếu
+            - Lỗi tính toán feature → đánh dấu là thiếu
         """
         if not flows:
             default_vector = [0.0] * self.NUM_FEATURES
@@ -196,10 +192,10 @@ Aggregator class để tính tất cả 20 features từ flows.
         return (features, missing_indices)
 
     def calculate_all_with_flags_optimized(self, flows: List[FlowState]) -> Tuple[List[float], List[int]]:
-        """Calculate features with optimization and track missing data.
+        """Tính features với tối ưu hóa và theo dõi dữ liệu thiếu.
 
         Args:
-            flows: List of FlowState objects
+            flows: Danh sách FlowState objects
 
         Returns:
             tuple: (features_list, missing_indices_list)
@@ -217,11 +213,11 @@ Aggregator class để tính tất cả 20 features từ flows.
             return self.calculate_all_with_flags(flows)
 
     def calculate_dict(self, flows: List[FlowState], optimized: bool = True) -> Dict[str, float]:
-        """Calculate all features and return as dictionary.
+        """Tính tất cả features và trả về dạng dictionary.
 
         Args:
-            flows: List of FlowState objects
-            optimized: Use optimized calculation (default True)
+            flows: Danh sách FlowState objects
+            optimized: Dùng tính toán tối ưu (mặc định True)
 
         Returns:
             dict: {'packet_rate': 100.5, 'syn_ack_ratio': 1.2, ...}
@@ -236,10 +232,10 @@ Aggregator class để tính tất cả 20 features từ flows.
 
     @staticmethod
     def get_feature_names() -> List[str]:
-        """Return list of 20 feature names (matching FEATURE_ORDER).
+        """Trả về danh sách 20 tên feature (tương ứng FEATURE_ORDER).
 
         Returns:
-            list: 20 snake_case names in canonical order
+            list: 20 tên snake_case theo thứ tự chuẩn
         """
         return [
             # Network [0-10]
@@ -269,7 +265,7 @@ Aggregator class để tính tất cả 20 features từ flows.
 
     @staticmethod
     def get_feature_count() -> int:
-        """Return total number of features.
+        """Trả về tổng số features.
 
         Returns:
             int: 20
@@ -277,7 +273,6 @@ Aggregator class để tính tất cả 20 features từ flows.
         return FlowFeatureCalculator.NUM_FEATURES
 
 
-# Backward compatibility: Export old name
 __all__ = [
     'FlowFeatureCalculator',
 ]

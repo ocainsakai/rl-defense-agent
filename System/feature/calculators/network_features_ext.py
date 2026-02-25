@@ -1,11 +1,11 @@
-"""Network-level extended features (F9-F11) - SYN Flood & Port Scan detection.
+"""Đặc trưng mạng mở rộng (F9-F11) - Phát hiện SYN Flood & Port Scan.
 
-Features:
-- F9:  AvgPayloadSize - Average forward payload size (SYN Flood = 0)
-- F10: FwdBwdRatio - Forward/Backward packet ratio (SYN Flood >> 1)
-- F11: PacketsPerPort - Packets per distinct port (Port Scan ~ 1)
+Đặc trưng:
+- F9:  AvgPayloadSize - Kích thước payload chiều xuôi trung bình (SYN Flood = 0)
+- F10: FwdBwdRatio - Tỷ lệ gói tin chiều xuôi/ngược (SYN Flood >> 1)
+- F11: PacketsPerPort - Số gói tin mỗi cổng duy nhất (Port Scan ~ 1)
 
-Source: Handcrafted based on network attack characteristics.
+Nguồn: Thiết kế thủ công dựa trên đặc điểm tấn công mạng.
 """
 
 import logging
@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 @register_feature(FeatureMetadata(
     name="AvgPayloadSize",
     code="F9",
-    description="Average forward payload size - SYN Flood packets have no payload",
+    description="Kích thước payload chiều xuôi trung bình - gói SYN Flood không có payload",
     category="network",
     depends_on=None
 ))
 class F9_AvgPayloadSize(FeatureBase):
     """
-    F9: AVERAGE PAYLOAD SIZE
+    F9: KÍCH THƯỚC PAYLOAD TRUNG BÌNH
 
     Công thức: sum(fwd_payload_lengths) / max(fwd_packet_count, 1)
 
@@ -35,7 +35,7 @@ class F9_AvgPayloadSize(FeatureBase):
     - Brute Force: Payload nhỏ nhưng > 0
 
     Returns:
-        Raw value (bytes), NOT normalized
+        Giá trị thô (byte), chưa chuẩn hóa
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -55,13 +55,13 @@ class F9_AvgPayloadSize(FeatureBase):
 @register_feature(FeatureMetadata(
     name="FwdBwdRatio",
     code="F10",
-    description="Forward/Backward packet ratio - SYN Flood has high ratio",
+    description="Tỷ lệ gói tin chiều xuôi/ngược - SYN Flood có tỷ lệ cao",
     category="network",
     depends_on=None
 ))
 class F10_FwdBwdRatio(FeatureBase):
     """
-    F10: FORWARD/BACKWARD PACKET RATIO
+    F10: TỶ LỆ GÓI TIN CHIỀU XUÔI/NGƯỢC
 
     Công thức: fwd_pkts / max(bwd_pkts, 1)
 
@@ -71,7 +71,7 @@ class F10_FwdBwdRatio(FeatureBase):
     - Port Scan: Tùy loại, SYN scan có ratio cao
 
     Returns:
-        Raw ratio, NOT normalized
+        Giá trị thô, chưa chuẩn hóa
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -91,23 +91,23 @@ class F10_FwdBwdRatio(FeatureBase):
 @register_feature(FeatureMetadata(
     name="PacketsPerPort",
     code="F11",
-    description="Packets per distinct port - Port Scan has ratio ~1",
+    description="Số gói tin mỗi cổng duy nhất - Port Scan có tỷ lệ ~1",
     category="network",
     depends_on=None
 ))
 class F11_PacketsPerPort(FeatureBase):
     """
-    F11: PACKETS PER PORT
+    F11: SỐ GÓI TIN MỖI CỔNG
 
     Công thức: fwd_pkts / max(distinct_ports, 1)
 
     Ứng dụng:
-    - Port Scan: Quét nhiều port, mỗi port 1-2 packets → ratio ≈ 1
-    - Normal: Nhiều packets trên ít ports (web: 80, 443) → ratio cao
-    - SYN Flood: Nhiều packets trên 1 port → ratio rất cao
+    - Port Scan: Quét nhiều cổng, mỗi cổng 1-2 packets → ratio ≈ 1
+    - Normal: Nhiều packets trên ít cổng (web: 80, 443) → ratio cao
+    - SYN Flood: Nhiều packets trên 1 cổng → ratio rất cao
 
     Returns:
-        Raw ratio, NOT normalized
+        Giá trị thô, chưa chuẩn hóa
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:

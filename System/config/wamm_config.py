@@ -1,29 +1,29 @@
 """config/wamm_config.py
 
-Configuration for WAMM (Web Application Multiclass Model) classifier.
-Based on: arxiv 2512.23610 - Enhanced Web Payload Classification Using WAMM
+Cấu hình cho WAMM (Web Application Multiclass Model) classifier.
+Dựa trên: arxiv 2512.23610 - Enhanced Web Payload Classification Using WAMM
 
-This module is independent from the existing NIDS config.
+Module này độc lập với cấu hình NIDS hiện có.
 """
 
 import os
 
 # =============================================================================
-# ATTACK TYPE ENCODING
+# MÃ HÓA LOẠI TẤN CÔNG
 # =============================================================================
 WAMM_LABELS = {"normal": 0, "sqli": 1, "xss": 2}
 WAMM_LABELS_INV = {0: "normal", 1: "sqli", 2: "xss"}
 NUM_CLASSES = 3
 
 # =============================================================================
-# TF-IDF VECTORIZER CONFIG (Section III-B of paper)
+# CẤU HÌNH TF-IDF VECTORIZER (Mục III-B của bài báo)
 # =============================================================================
 TFIDF_MAX_FEATURES = 2000
 TFIDF_ANALYZER = "char"
 TFIDF_NGRAM_RANGE = (1, 2)
 
 # =============================================================================
-# XGBOOST HYPERPARAMETERS
+# SIÊU THAM SỐ XGBOOST
 # =============================================================================
 XGB_PARAMS = {
     "n_estimators": 300,
@@ -38,7 +38,7 @@ XGB_PARAMS = {
 }
 
 # =============================================================================
-# MODEL PATHS
+# ĐƯỜNG DẪN MODEL
 # =============================================================================
 _SYSTEM_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(_SYSTEM_DIR, "models", "wamm")
@@ -47,7 +47,7 @@ TFIDF_VECTORIZER_PATH = os.path.join(MODEL_DIR, "tfidf_vectorizer.pkl")
 TRAINING_REPORT_PATH = os.path.join(MODEL_DIR, "training_report.json")
 
 # =============================================================================
-# DATASET PATHS
+# ĐƯỜNG DẪN DATASET
 # =============================================================================
 DATASET_DIR = os.path.join(_SYSTEM_DIR, "dataset")
 SQLI_DATASET_PATH = os.path.join(DATASET_DIR, "sqli.csv")
@@ -55,13 +55,13 @@ XSS_DATASET_PATH = os.path.join(DATASET_DIR, "XSS_dataset.csv")
 CSIC_DATASET_PATH = os.path.join(DATASET_DIR, "csic_database.csv")
 
 # =============================================================================
-# INFERENCE CONFIG
+# CẤU HÌNH SUY LUẬN
 # =============================================================================
-MAX_PAYLOAD_LENGTH = 65536      # Max bytes to process (matches PayloadContextScorer)
-CONFIDENCE_THRESHOLD = 0.5      # Below this -> classify as normal
+MAX_PAYLOAD_LENGTH = 65536      # Số byte tối đa để xử lý (khớp với PayloadContextScorer)
+CONFIDENCE_THRESHOLD = 0.5      # Dưới ngưỡng này → phân loại là normal
 
 # =============================================================================
-# HANDCRAFTED FEATURE NAMES (8 features, Section III-B)
+# TÊN ĐẶC TRƯNG THỦ CÔNG (8 đặc trưng, Mục III-B)
 # =============================================================================
 HANDCRAFTED_FEATURE_NAMES = [
     "payload_length",

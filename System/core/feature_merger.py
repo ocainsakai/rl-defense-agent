@@ -1,16 +1,16 @@
-"""Feature Merger - Merge network and log features into 20-feature vector.
+"""Feature Merger - Ghép network và log features thành vector 20 features.
 
 Kết hợp kết quả từ NetworkSensor (F1-F11) và NginxLogSensor
 (F6-F8, F12-F20) thành một vector 20 features hoàn chỉnh.
 
-Correlation:
+Tương quan:
 - Merge theo src_ip (IP khớp tự nhiên giữa Scapy và nginx $remote_addr)
 - Thời gian đồng bộ qua window boundaries chung
 
-Missing data:
+Dữ liệu thiếu:
 - Nếu chỉ có network features: log features = 0.0
 - Nếu chỉ có log features: network features = 0.0
-- Cả hai missing: vector toàn 0.0
+- Cả hai thiếu: vector toàn 0.0
 """
 
 from dataclasses import dataclass, field
@@ -20,7 +20,7 @@ from feature.calculator import FlowFeatureCalculator
 
 
 # =============================================================================
-# DATA CLASSES
+# LỚP DỮ LIỆU
 # =============================================================================
 
 @dataclass
@@ -40,7 +40,7 @@ class MergedFeatureVector:
 # FEATURE MERGER
 # =============================================================================
 
-# Feature assignment
+# Phân bổ features
 NETWORK_FEATURES: Set[str] = {'F1', 'F2', 'F3', 'F4', 'F5', 'F9', 'F10', 'F11'}
 LOG_FEATURES: Set[str] = {
     'F6', 'F7', 'F8',
@@ -51,13 +51,13 @@ LOG_FEATURES: Set[str] = {
 
 
 class FeatureMerger:
-    """Merge NetworkSensor và NginxLogSensor results.
+    """Ghép kết quả NetworkSensor và NginxLogSensor.
 
-    Assemble 20 features theo thứ tự FlowFeatureCalculator.FEATURE_CODES.
-    Missing features default to 0.0.
+    Lắp ráp 20 features theo thứ tự FlowFeatureCalculator.FEATURE_CODES.
+    Features thiếu mặc định 0.0.
     """
 
-    FEATURE_ORDER = FlowFeatureCalculator.FEATURE_CODES  # 20 features in FEATURE_ORDER
+    FEATURE_ORDER = FlowFeatureCalculator.FEATURE_CODES  # 20 features theo thứ tự
     FEATURE_NAMES = FlowFeatureCalculator.get_feature_names()
 
     def merge(self, network_features: Optional[Dict[str, float]],
@@ -65,18 +65,18 @@ class FeatureMerger:
               window_end: float, src_ip: str,
               packet_count: int = 0,
               request_count: int = 0) -> MergedFeatureVector:
-        """Merge partial feature sets into one 20-feature vector.
+        """Ghép các tập feature thành một vector 20 features.
 
         Args:
-            network_features: Dict {feature_code: value} from NetworkSensor
-            log_features: Dict {feature_code: value} from NginxLogSensor
-            window_end: Timestamp of window end
-            src_ip: Source IP address
-            packet_count: Total packets from NetworkSensor
-            request_count: Total requests from NginxLogSensor
+            network_features: Dict {feature_code: value} từ NetworkSensor
+            log_features: Dict {feature_code: value} từ NginxLogSensor
+            window_end: Timestamp kết thúc window
+            src_ip: Địa chỉ IP nguồn
+            packet_count: Tổng packets từ NetworkSensor
+            request_count: Tổng requests từ NginxLogSensor
 
         Returns:
-            MergedFeatureVector with 21 features in FEATURE_ORDER
+            MergedFeatureVector với 20 features theo FEATURE_ORDER
         """
         feature_map: Dict[str, float] = {}
 
@@ -86,7 +86,7 @@ class FeatureMerger:
         if log_features:
             feature_map.update(log_features)
 
-        # Assemble in FEATURE_ORDER (20 features)
+        # Lắp ráp theo FEATURE_ORDER (20 features)
         features = [feature_map.get(code, 0.0) for code in self.FEATURE_ORDER]
 
         return MergedFeatureVector(
@@ -103,15 +103,15 @@ class FeatureMerger:
     def merge_all(self, network_results: Dict[str, dict],
                   log_results: Dict[str, dict],
                   window_end: float) -> List[MergedFeatureVector]:
-        """Merge results from both sensors for all src_ips.
+        """Ghép kết quả từ cả hai sensors cho tất cả src_ip.
 
         Args:
             network_results: {src_ip: NetworkFeatureResult}
             log_results: {src_ip: LogFeatureResult}
-            window_end: Timestamp of window end
+            window_end: Timestamp kết thúc window
 
         Returns:
-            List of MergedFeatureVector, one per src_ip
+            Danh sách MergedFeatureVector, mỗi src_ip một vector
         """
         all_src_ips = set()
         if network_results:
@@ -142,7 +142,7 @@ class FeatureMerger:
         return vectors
 
     def to_dict(self, vector: MergedFeatureVector) -> dict:
-        """Convert MergedFeatureVector to JSON-serializable dict."""
+        """Chuyển MergedFeatureVector thành dict có thể serialize JSON."""
         result = {
             'timestamp': vector.timestamp,
             'src_ip': vector.src_ip,
@@ -152,7 +152,7 @@ class FeatureMerger:
             'log_available': vector.log_available,
         }
 
-        # Add features with names
+        # Thêm features kèm tên
         for name, value in zip(self.FEATURE_NAMES, vector.features):
             result[name] = value
 

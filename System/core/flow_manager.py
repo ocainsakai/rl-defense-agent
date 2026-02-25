@@ -50,15 +50,15 @@ class FlowManager:
         self.cleanup_interval = cleanup_interval if cleanup_interval is not None else cfg.CLEANUP_INTERVAL
         self.max_flows = max_flows if max_flows is not None else cfg.MAX_FLOWS
         
-        # Flow storage: {flow_key: FlowState}
+        # Lưu trữ flow: {flow_key: FlowState}
         self.flows: Dict[tuple, FlowState] = {}
         
-        # Index: {src_ip: set of flow_keys}
+        # Chỉ mục: {src_ip: tập flow_keys}
         self.flows_by_src: Dict[str, Set[tuple]] = defaultdict(set)
         
-        # Counter
+        # Bộ đếm
         self._packet_counter: int = 0
-        self._last_packet_time: float = time.time()  # Track last packet time for cleanup
+        self._last_packet_time: float = time.time()  # Theo dõi thời gian gói tin cuối cho cleanup
     
     def _make_flow_key(self, layer_info: LayerInfo) -> tuple:
         """Tạo flow key từ 5-tuple (chỉ TCP)"""
@@ -135,7 +135,7 @@ class FlowManager:
             self.flows_by_src[flow_key[0]].add(flow_key)
             is_forward = True
         
-        # Add packet theo direction
+        # Thêm gói tin theo chiều
         if is_forward:
             flow.add_forward_packet(layer_info)
         else:
@@ -167,20 +167,20 @@ class FlowManager:
             if flow.is_expired(current_time, self.flow_timeout):
                 expired_keys.append(flow_key)
         
-        # CRITICAL FIX: Cleanup expired flows AND remove empty src_ip entries
+        # Dọn dẹp flow hết hạn VÀ xóa src_ip rỗng
         for flow_key in expired_keys:
             src_ip = flow_key[0]
             self.flows_by_src[src_ip].discard(flow_key)
             del self.flows[flow_key]
             
-            # Remove empty src_ip set to prevent memory leak
+            # Xóa tập src_ip rỗng để tránh rò rỉ bộ nhớ
             if not self.flows_by_src[src_ip]:
                 del self.flows_by_src[src_ip]
         
         return len(expired_keys)
     
     # =========================================================================
-    # QUERY METHODS
+    # PHƯƠNG THỨC TRUY VẤN
     # =========================================================================
     
     def get_flow(self, flow_key: tuple) -> Optional[FlowState]:
@@ -205,7 +205,7 @@ class FlowManager:
         return list(self.flows_by_src.keys())
     
     # =========================================================================
-    # UTILITY METHODS
+    # PHƯƠNG THỨC TIỆN ÍCH
     # =========================================================================
     
     def get_stats(self) -> Dict[str, int]:
@@ -228,16 +228,16 @@ class FlowManager:
         1. Xóa packets cũ hơn window_size trong tất cả các flows.
         2. Nếu flow rỗng sau khi xóa -> Xóa flow.
         """
-        # 1. Cleanup old packets in each flow
+        # 1. Dọn dẹp gói tin cũ trong mỗi flow
         for flow in self.flows.values():
             flow._cleanup_old_packets(current_time)
             
-        # 2. Cleanup empty flows
+        # 2. Dọn dẹp flow rỗng
         expired_keys = [k for k, f in self.flows.items() if f.is_empty()]
         
         for flow_key in expired_keys:
             del self.flows[flow_key]
-            # Clean index
+            # Dọn dẹp chỉ mục
             src_ip = flow_key[0]
             if src_ip in self.flows_by_src:
                 self.flows_by_src[src_ip].discard(flow_key)

@@ -1,15 +1,15 @@
-"""Nginx Log Sensor - Parse nginx access log and compute application features.
+"""Nginx Log Sensor - Parse nginx access log và tính toán application features.
 
-Đọc nginx access log (lab_detail format) theo chế độ tail, extract HTTP
-information, và tính toán features F6-F30 thông qua LogFlowState adapter.
+Đọc nginx access log (lab_detail format) theo chế độ tail, extract thông tin HTTP,
+và tính toán features F6-F8, F12-F20 thông qua LogFlowState adapter.
 
-Components:
+Thành phần:
 - NidsLogEntry: Dataclass cho một dòng log
 - NidsLogParser: Compiled regex parser cho lab_detail format
-- LogFeatureCalculator: Subset calculator cho features liên quan đến HTTP
+- LogFeatureCalculator: Subset calculator cho features liên quan đến HTTP
 - NginxLogSensor: Tail-mode log reader + feature computation
 
-Performance:
+Hiệu năng:
 - Batch reading: đọc tất cả dòng mới mỗi iteration
 - FeatureContext caching: mỗi payload normalize 1 lần
 - Pre-compiled regex: O(1) pattern lookup
@@ -103,7 +103,7 @@ class NidsLogParser:
         r'(?P<extra>.*)'
     )
 
-    # Sub-patterns cho extra fields (compiled once)
+    # Sub-pattern cho các trường extra (compile một lần)
     _RT_PATTERN = re.compile(r'rt=([\d.]+)')
     _URT_PATTERN = re.compile(r'urt=([\d.]+)')
     _UADDR_PATTERN = re.compile(r'uaddr="([^"]*)"')
@@ -137,17 +137,17 @@ class NidsLogParser:
         except (ValueError, TypeError):
             entry.timestamp = time.time()
 
-        # Parse request line: "METHOD /path?q=attack payload HTTP/1.1"
-        # URI can contain spaces (attack payloads), so split carefully:
-        # - Split from left for METHOD (first space)
-        # - Split from right for HTTP/x.x (last space)
+        # Parse dòng request: "METHOD /path?q=attack payload HTTP/1.1"
+        # URI có thể chứa khoảng trắng (payload tấn công), nên chia cẩn thận:
+        # - Chia từ trái để lấy METHOD (khoảng trắng đầu tiên)
+        # - Chia từ phải để lấy HTTP/x.x (khoảng trắng cuối cùng)
         request_str = match.group('request')
-        # Split off HTTP version from the right
+        # Tách phiên bản HTTP từ phía phải
         right_parts = request_str.rsplit(' ', 1)
         if len(right_parts) == 2 and right_parts[1].startswith('HTTP/'):
             method_and_path = right_parts[0]
             entry.http_version = right_parts[1]
-            # Split off METHOD from the left
+            # Tách METHOD từ phía trái
             first_space = method_and_path.find(' ')
             if first_space > 0:
                 entry.method = method_and_path[:first_space]
@@ -156,7 +156,7 @@ class NidsLogParser:
                 entry.method = method_and_path
                 entry.path = ''
         else:
-            # Fallback: simple split
+            # Fallback: chia đơn giản
             req_parts = request_str.split(' ', 2)
             if len(req_parts) >= 2:
                 entry.method = req_parts[0]
@@ -167,7 +167,7 @@ class NidsLogParser:
         entry.status = int(match.group('status'))
         entry.body_bytes_sent = int(match.group('body_bytes_sent'))
 
-        # Parse extra fields
+        # Parse các trường extra
         extra = match.group('extra')
         if extra:
             cls._parse_extra(entry, extra)
@@ -243,25 +243,24 @@ class NidsLogParser:
 # LOG FEATURE CALCULATOR
 # =============================================================================
 
-# Feature codes computed from nginx log (22 features)
+# Mã đặc trưng được tính từ nginx log (12 đặc trưng)
 LOG_FEATURE_CODES = [
-    'F6', 'F7', 'F8',                                      # Application
-    'F9', 'F10', 'F11', 'F12', 'F13', 'F14',              # Payload
-    'F18', 'F19', 'F20', 'F21', 'F22', 'F23', 'F24',      # SQLi
-    'F25', 'F26', 'F27', 'F28', 'F29', 'F30',             # XSS
+    'F6', 'F7', 'F8',                          # Ứng dụng
+    'F12', 'F13', 'F14', 'F15', 'F16', 'F17',  # SQLi
+    'F18', 'F19', 'F20',                        # XSS
 ]
 
 
 class LogFeatureCalculator:
-    """Tính F6-F30 từ LogFlowState objects.
+    """Tính F6-F8, F12-F20 từ LogFlowState objects.
 
-    Dùng FeatureRegistry để instantiate chỉ 22 calculators cần thiết.
+    Dùng FeatureRegistry để instantiate chỉ 12 calculators cần thiết.
     Dùng FeatureContext để cache normalized payloads (performance).
     """
 
     def __init__(self, config=None):
         from feature.base import FeatureRegistry
-        import feature.calculators  # noqa: F401 - trigger @register_feature
+        import feature.calculators  # noqa: F401 - kích hoạt @register_feature
 
         self.calculators = []
         for code in LOG_FEATURE_CODES:
@@ -269,23 +268,23 @@ class LogFeatureCalculator:
                 calc = FeatureRegistry.instantiate(code, config=config)
                 self.calculators.append((code, calc))
             except KeyError:
-                logger.warning(f"Feature {code} not registered, skipping")
+                logger.warning(f"Feature {code} chưa được đăng ký, bỏ qua")
 
     def calculate(self, log_flows: List[LogFlowState],
                   context=None) -> Dict[str, float]:
-        """Calculate F6-F30 features from LogFlowState objects.
+        """Tính các đặc trưng F6-F8, F12-F20 từ LogFlowState objects.
 
         Args:
-            log_flows: List of LogFlowState (adapter objects)
-            context: Optional FeatureContext for caching
+            log_flows: Danh sách LogFlowState (adapter objects)
+            context: FeatureContext tùy chọn để cache
 
         Returns:
-            Dict mapping feature code to raw value
+            Dict ánh xạ mã đặc trưng sang giá trị thô
         """
         if not log_flows:
             return {code: 0.0 for code, _ in self.calculators}
 
-        # Create FeatureContext for caching if not provided
+        # Tạo FeatureContext để cache nếu chưa có
         if context is None:
             from feature.context import FeatureContext
             context = FeatureContext(log_flows)
@@ -295,7 +294,7 @@ class LogFeatureCalculator:
             try:
                 results[code] = calc.calculate(log_flows, context=context)
             except Exception as e:
-                logger.debug(f"Feature {code} failed on log data: {e}")
+                logger.debug(f"Feature {code} thất bại trên dữ liệu log: {e}")
                 results[code] = 0.0
 
         return results
@@ -314,7 +313,7 @@ class NginxLogSensor:
     - Buffer entries theo src_ip
     - flush_window(): convert buffer → features → clear
 
-    Thread-safety: _entries_lock protects _entries_buffer
+    Thread-safety: _entries_lock bảo vệ _entries_buffer
     """
 
     def __init__(self, log_path: str, window_size: float = 1.0, config=None):
@@ -326,24 +325,24 @@ class NginxLogSensor:
         self._entries_buffer: Dict[str, List[NidsLogEntry]] = defaultdict(list)
         self._entries_lock = threading.Lock()
 
-        # File reading state
+        # Trạng thái đọc file
         self._file_pos = 0
         self._file_inode = None
 
     def start_tail(self) -> None:
-        """Seek to end of file (skip existing content)."""
+        """Seek đến cuối file (bỏ qua nội dung hiện có)."""
         if not os.path.exists(self.log_path):
-            logger.warning(f"Log file not found: {self.log_path}")
+            logger.warning(f"Không tìm thấy log file: {self.log_path}")
             return
 
         try:
             stat = os.stat(self.log_path)
             self._file_inode = getattr(stat, 'st_ino', None)
             self._file_pos = stat.st_size
-            logger.info(f"NginxLogSensor: tailing {self.log_path} "
+            logger.info(f"NginxLogSensor: đang tail {self.log_path} "
                         f"(pos={self._file_pos})")
         except OSError as e:
-            logger.error(f"Cannot stat log file: {e}")
+            logger.error(f"Không thể stat log file: {e}")
 
     def read_new_entries(self) -> int:
         """Đọc tất cả dòng mới từ log file (batch read).
@@ -356,17 +355,17 @@ class NginxLogSensor:
 
         count = 0
         try:
-            # Check for log rotation (inode change)
+            # Kiểm tra xoay vòng log (thay đổi inode)
             stat = os.stat(self.log_path)
             current_inode = getattr(stat, 'st_ino', None)
             if self._file_inode and current_inode != self._file_inode:
-                logger.info("Log file rotated, resetting position")
+                logger.info("Log file bị xoay vòng, reset vị trí")
                 self._file_pos = 0
                 self._file_inode = current_inode
 
-            # File shrunk (truncated)
+            # File bị rút ngắn (truncated)
             if stat.st_size < self._file_pos:
-                logger.info("Log file truncated, resetting position")
+                logger.info("Log file bị rút ngắn, reset vị trí")
                 self._file_pos = 0
 
             with open(self.log_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -385,16 +384,16 @@ class NginxLogSensor:
                         count += 1
 
         except OSError as e:
-            logger.error(f"Error reading log: {e}")
+            logger.error(f"Lỗi đọc log: {e}")
 
         return count
 
     def flush_window(self, window_start: float = 0.0,
                      window_end: float = 0.0) -> Dict[str, LogFeatureResult]:
-        """Convert buffered entries → LogFlowState → features → clear buffer.
+        """Convert buffered entries → LogFlowState → features → xóa buffer.
 
         Returns:
-            Dict mapping src_ip to LogFeatureResult
+            Dict ánh xạ src_ip sang LogFeatureResult
         """
         with self._entries_lock:
             buffer_snapshot = dict(self._entries_buffer)
@@ -405,7 +404,7 @@ class NginxLogSensor:
             if not entries:
                 continue
 
-            # Convert entries to adapter objects
+            # Convert entries thành adapter objects
             fwd_packets = []
             bwd_packets = []
             for i, entry in enumerate(entries):
@@ -430,7 +429,7 @@ class NginxLogSensor:
                 )
                 bwd_packets.append(bwd)
 
-            # Create LogFlowState
+            # Tạo LogFlowState
             log_flow = LogFlowState(
                 src_ip=src_ip,
                 fwd_packets=fwd_packets,
@@ -438,7 +437,7 @@ class NginxLogSensor:
                 window_size=self.window_size,
             )
 
-            # Calculate features
+            # Tính toán đặc trưng
             features = self._calculator.calculate([log_flow])
 
             results[src_ip] = LogFeatureResult(

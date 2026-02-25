@@ -1,16 +1,13 @@
-"""Network-level features (F1-F5) - Refactored with plugin architecture.
+"""Đặc trưng cấp mạng (F1-F5) - Tái cấu trúc với kiến trúc plugin.
 
-Các features cấp mạng phát hiện network-level attacks như DDoS, SYN Flood, Port Scan.
+Các đặc trưng cấp mạng phát hiện tấn công tầng mạng như DDoS, SYN Flood, Port Scan.
 
-Features:
-- F1: PacketRate - Packets per second (detects DDoS, Flood)
-- F2: SynAckRatio - SYN/ACK ratio (detects SYN Flood)
-- F3: InterArrivalTime - Average time between packets (detects automated attacks)
-- F4: RstRatio - RST packet ratio (detects Port Scan, connection issues)
-- F5: DistinctPorts - Unique destination ports count (detects Port Scan)
-
-Author: NIDS Team
-Date: 2024
+Đặc trưng:
+- F1: PacketRate - Số gói tin mỗi giây (phát hiện DDoS, Flood)
+- F2: SynAckRatio - Tỷ lệ SYN/ACK (phát hiện SYN Flood)
+- F3: InterArrivalTime - Thời gian trung bình giữa các gói tin (phát hiện tấn công tự động)
+- F4: RstRatio - Tỷ lệ gói RST (phát hiện Port Scan, lỗi kết nối)
+- F5: DistinctPorts - Số cổng đích duy nhất (phát hiện Port Scan)
 """
 
 import logging
@@ -24,94 +21,94 @@ logger = logging.getLogger(__name__)
 @register_feature(FeatureMetadata(
     name="PacketRate",
     code="F1",
-    description="Packets per second - detects DDoS and Flood attacks",
+    description="Số gói tin mỗi giây - phát hiện DDoS và Flood",
     category="network",
     depends_on=None
 ))
 class F1_PacketRate(FeatureBase):
     """
-    F1: PACKET RATE (Packets per second)
+    F1: TỐC ĐỘ GÓI TIN (Packets per second)
     
     Công thức: total_packets / window_size
     
     Ứng dụng:
     - Phát hiện DDoS, Flood attacks
-    - Normal: 10-100 pkt/s
-    - Attack: 1000+ pkt/s
+    - Normal: 10-100 gói/giây
+    - Attack: 1000+ gói/giây
     
-    Priority logic:
-    1. Use 'analysis_window_size' (from sliding window tool)
-    2. Use 'window_size' (from FlowState)
-    3. Use total duration (static PCAP fallback)
+    Thứ tự ưu tiên logic:
+    1. Dùng 'analysis_window_size' (từ công cụ cửa sổ trượt)
+    2. Dùng 'window_size' (từ FlowState)
+    3. Dùng tổng thời gian (fallback cho PCAP tĩnh)
     
     Returns:
-        Raw value (packets/second), NOT normalized
+        Giá trị thô (gói/giây), chưa chuẩn hóa
     """
     
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Calculate packet rate - returns raw value (packets/second)."""
+        """Tính tốc độ gói tin - trả về giá trị thô (gói/giây)."""
         if not flows:
             return 0.0
 
-        # Calculate total packets from all flows
+        # Tính tổng gói tin từ tất cả flows
         total_packets = float(sum(f.get_packet_count() for f in flows))
         first_flow = flows[0]
         
-        # 1. Try analysis_window_size (set by sliding window tools)
+        # 1. Thử analysis_window_size (được đặt bởi công cụ cửa sổ trượt)
         window_size = getattr(first_flow, 'analysis_window_size', None)
         
-        # 2. Try window_size from FlowState (set by core/flow_manager.py)
+        # 2. Thử window_size từ FlowState (được đặt bởi core/flow_manager.py)
         if window_size is None or window_size <= 0:
             window_size = getattr(first_flow, 'window_size', None)
             
-        # Calculate rate if we have valid window_size
+        # Tính tốc độ nếu có window_size hợp lệ
         if window_size and window_size > 0:
             return total_packets / window_size
             
-        # 3. Fallback: Use flow duration (for static PCAP without window config)
+        # 3. Fallback: Dùng thời gian flow (cho PCAP tĩnh không có cấu hình window)
         start_times = [f.created_at for f in flows]
         end_times = [f.last_update for f in flows]
         
         if not start_times or not end_times:
             return 0.0
             
-        # Calculate actual duration from earliest start to latest end
+        # Tính thời gian thực tế từ bắt đầu sớm nhất đến kết thúc muộn nhất
         total_duration = max(end_times) - min(start_times)
         
         if total_duration > 0.000001:
             return float(total_packets) / total_duration
             
-        # If duration is practically 0 (e.g. single packet flow), return 0.0
+        # Nếu thời gian thực tế bằng 0 (ví dụ: flow 1 gói), trả về 0.0
         return 0.0
 
 
 @register_feature(FeatureMetadata(
     name="SynAckRatio",
     code="F2",
-    description="SYN/ACK ratio - detects SYN Flood attacks",
+    description="Tỷ lệ SYN/ACK - phát hiện SYN Flood",
     category="network",
     depends_on=None
 ))
 class F2_SynAckRatio(FeatureBase):
     """
-    F2: SYN/ACK RATIO
+    F2: TỶ LỆ SYN/ACK
     
     Công thức: SYN_count / max(ACK_count, 1)
     
     Ứng dụng:
     - Phát hiện SYN Flood attack
-    - Normal: SYN và ACK balanced (~1.0)
+    - Normal: SYN và ACK cân bằng (~1.0)
     - Attack: SYN >> ACK (ratio > 10)
     
     Returns:
-        Raw ratio, NOT normalized
-        - 0 = No TCP traffic
-        - 1 = SYN and ACK balanced
-        - >1 = More SYN than ACK (suspicious SYN Flood)
+        Giá trị thô, chưa chuẩn hóa
+        - 0 = Không có traffic TCP
+        - 1 = SYN và ACK cân bằng
+        - >1 = SYN nhiều hơn ACK (nghi ngờ SYN Flood)
     """
     
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Calculate SYN/ACK ratio - returns raw value."""
+        """Tính tỷ lệ SYN/ACK - trả về giá trị thô."""
         total_syn = 0
         total_ack = 0
         
@@ -120,10 +117,10 @@ class F2_SynAckRatio(FeatureBase):
             total_syn += flags['SYN']
             total_ack += flags['ACK']
         
-        # Avoid division by zero: if ACK=0, use 1
+        # Tránh chia cho 0: nếu ACK=0, dùng 1
         if total_ack == 0:
-            # If ACK=0 and SYN>0 => ratio = SYN (very high, sign of SYN Flood)
-            # If ACK=0 and SYN=0 => ratio = 0 (no TCP traffic)
+            # Nếu ACK=0 và SYN>0 → ratio = SYN (rất cao, dấu hiệu SYN Flood)
+            # Nếu ACK=0 và SYN=0 → ratio = 0 (không có traffic TCP)
             return float(total_syn)
         
         return float(total_syn) / float(total_ack)
@@ -132,27 +129,27 @@ class F2_SynAckRatio(FeatureBase):
 @register_feature(FeatureMetadata(
     name="InterArrivalTime",
     code="F3",
-    description="Average time between packets - detects automated attacks",
+    description="Thời gian trung bình giữa các gói tin - phát hiện tấn công tự động",
     category="network",
     depends_on=None
 ))
 class F3_InterArrivalTime(FeatureBase):
     """
-    F3: INTER-ARRIVAL TIME (IAT)
+    F3: THỜI GIAN GIỮA CÁC GÓI TIN (IAT)
     
-    Công thức: avg(timestamp[i+1] - timestamp[i]) for forward packets
+    Công thức: avg(timestamp[i+1] - timestamp[i]) cho các gói tin chiều xuôi
     
     Ứng dụng:
-    - Phát hiện automated attacks (very low, consistent IAT)
-    - Normal: ~0.1-1.0s (human behavior)
-    - Attack: ~0.001s (scripted attacks)
+    - Phát hiện tấn công tự động (IAT rất thấp và đều đặn)
+    - Normal: ~0.1-1.0 giây (hành vi người dùng)
+    - Attack: ~0.001 giây (tấn công có script)
     
     Returns:
-        Raw value (seconds), NOT normalized
+        Giá trị thô (giây), chưa chuẩn hóa
     """
     
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Calculate average inter-arrival time from forward packets."""
+        """Tính thời gian trung bình giữa các gói tin chiều xuôi."""
         timestamps = []
         
         for f in flows:
@@ -163,41 +160,41 @@ class F3_InterArrivalTime(FeatureBase):
         if len(timestamps) < 2:
             return 0.0
         
-        # Sort by time
+        # Sắp xếp theo thời gian
         timestamps.sort()
         
-        # Calculate delta between consecutive packets
+        # Tính delta giữa các gói tin liên tiếp
         deltas = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)]
         
-        # Return average
+        # Trả về trung bình
         return sum(deltas) / len(deltas) if deltas else 0.0
 
 
 @register_feature(FeatureMetadata(
     name="RstRatio",
     code="F4",
-    description="RST packet ratio - detects Port Scan and connection issues",
+    description="Tỷ lệ gói RST - phát hiện Port Scan và lỗi kết nối",
     category="network",
     depends_on=None
 ))
 class F4_RstRatio(FeatureBase):
     """
-    F4: RST RATIO
+    F4: TỶ LỆ RST
     
     Công thức: RST_count / max(total_bwd_packets, 1)
     
     Ứng dụng:
-    - Phát hiện Port Scan (server returns RST for closed ports)
-    - Phát hiện connection issues
-    - Normal: ~0 (connections established successfully)
-    - Attack Port Scan: > 0.5 (many closed ports return RST)
+    - Phát hiện Port Scan (server trả RST cho các cổng đóng)
+    - Phát hiện lỗi kết nối
+    - Normal: ~0 (kết nối được thiết lập thành công)
+    - Attack Port Scan: > 0.5 (nhiều cổng đóng trả RST)
     
     Returns:
-        Ratio [0, 1], NOT normalized
+        Ratio [0, 1], chưa chuẩn hóa
     """
     
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Calculate RST ratio from backward packets."""
+        """Tính tỷ lệ RST từ các gói tin chiều ngược."""
         total_rst = 0
         total_bwd = 0
         
@@ -215,34 +212,34 @@ class F4_RstRatio(FeatureBase):
 @register_feature(FeatureMetadata(
     name="DistinctPorts",
     code="F5",
-    description="Unique destination ports count - detects Port Scan",
+    description="Số cổng đích duy nhất - phát hiện Port Scan",
     category="network",
     depends_on=None
 ))
 class F5_DistinctPorts(FeatureBase):
     """
-    F5: DISTINCT DESTINATION PORTS
+    F5: SỐ CỔNG ĐÍCH DUY NHẤT
     
     Công thức: len(unique_dst_ports)
     
     Ứng dụng:
     - Phát hiện Port Scan attack
-    - Normal: 1-5 ports (web, email, etc.)
-    - Attack Port Scan: 50-1000+ ports
+    - Normal: 1-5 cổng (web, email, v.v.)
+    - Attack Port Scan: 50-1000+ cổng
     
     Returns:
-        Port count (integer as float), NOT normalized
+        Số cổng (số nguyên dạng float), chưa chuẩn hóa
     """
     
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Count unique destination ports from all flows."""
+        """Đếm số cổng đích duy nhất từ tất cả flows."""
         all_ports = set()
         for f in flows:
             all_ports.update(f.get_distinct_ports())
         return float(len(all_ports))
 
 
-# Export all features
+# Export tất cả đặc trưng
 __all__ = [
     'F1_PacketRate',
     'F2_SynAckRatio',

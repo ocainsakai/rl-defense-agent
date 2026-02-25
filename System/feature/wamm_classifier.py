@@ -1,20 +1,20 @@
 """feature/wamm_classifier.py
 
 WAMM - Web Application Multiclass Model
-Based on: arxiv 2512.23610
+Dựa trên: arxiv 2512.23610
 
-Independent module for multiclass web attack classification using XGBoost + TF-IDF.
-Runs alongside PayloadContextScorer (does NOT replace it).
+Module độc lập phân loại tấn công web đa lớp sử dụng XGBoost + TF-IDF.
+Chạy song song với PayloadContextScorer (KHÔNG thay thế nó).
 
-Output:
+Đầu ra:
     (attack_type: int, confidence: float)
     attack_type: 0=normal, 1=sqli, 2=xss
     confidence: 0.0 - 1.0
 
-Graceful Degradation:
-    - If model files not found -> returns (0, 0.0)
-    - If xgboost/sklearn not installed -> module disabled
-    - Never crashes the existing system
+Xử lý lỗi nhẹ nhàng:
+    - Nếu không tìm thấy file model → trả về (0, 0.0)
+    - Nếu chưa cài xgboost/sklearn → module bị vô hiệu hóa
+    - Không bao giờ làm crash hệ thống hiện có
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from collections import Counter
 
 logger = logging.getLogger("WAMM")
 
-# Optional dependencies - graceful import
+# Dependency tùy chọn - import nhẹ nhàng
 try:
     import numpy as np
     HAS_NUMPY = True
@@ -67,25 +67,25 @@ from config.wamm_config import (
 
 
 # =============================================================================
-# PAYLOAD NORMALIZATION - Delegate to PayloadNormalizer (single source of truth)
+# CHUẨN HÓA PAYLOAD - Ủy quyền cho PayloadNormalizer (nguồn duy nhất chân lý)
 # =============================================================================
 
 from feature.context import PayloadNormalizer
 
 
 def normalize_payload_text(raw_bytes: bytes) -> str:
-    """Normalize raw payload bytes to a clean string for analysis.
+    """Chuẩn hóa payload bytes thô thành chuỗi sạch để phân tích.
 
-    Delegates to PayloadNormalizer.normalize() - nguồn duy nhất chân lý.
+    Ủy quyền cho PayloadNormalizer.normalize() - nguồn duy nhất chân lý.
     """
     return PayloadNormalizer.normalize(raw_bytes)
 
 
 # =============================================================================
-# HANDCRAFTED FEATURE EXTRACTOR (Section III-B of paper)
+# TRÍCH XUẤT ĐẶC TRƯNG THỦ CÔNG (Mục III-B của bài báo)
 # =============================================================================
 
-# SQL keywords for binary indicator feature
+# Từ khóa SQL cho đặc trưng chỉ báo nhị phân
 _SQL_KEYWORDS = frozenset({
     "select", "union", "insert", "update", "delete", "drop",
     "truncate", "alter", "create", "replace", "information_schema",
@@ -94,61 +94,61 @@ _SQL_KEYWORDS = frozenset({
     "extractvalue", "updatexml",
 })
 
-# Special characters relevant to web attacks
+# Ký tự đặc biệt liên quan đến tấn công web
 _SPECIAL_CHARS = frozenset('<>"\'`;(){}[]$&|\\/-=#,')
 
-# Percent-encoded pattern
+# Pattern phần trăm mã hóa
 _PERCENT_PATTERN = re.compile(r'%[0-9a-fA-F]{2}')
 
 
 class WammFeatureExtractor:
-    """Extract 8 handcrafted features from a normalized payload string.
+    """Trích xuất 8 đặc trưng thủ công từ chuỗi payload đã chuẩn hóa.
 
-    Features (per paper Section III-B):
+    Đặc trưng (theo Mục III-B của bài báo):
         0. payload_length: len(payload)
-        1. special_char_count: count of <>"';() etc.
-        2. sql_keyword_binary: 1 if any SQL keyword present, else 0
-        3. numeric_char_count: count of digit characters
-        4. percent_encoded_count: count of %XX patterns
-        5. shannon_entropy: information entropy of payload
-        6. url_depth: count of '/' in payload
-        7. unique_char_count: number of distinct characters
+        1. special_char_count: số lượng <>"';() v.v.
+        2. sql_keyword_binary: 1 nếu có từ khóa SQL, ngược lại 0
+        3. numeric_char_count: số ký tự chữ số
+        4. percent_encoded_count: số pattern %XX
+        5. shannon_entropy: entropy thông tin của payload
+        6. url_depth: số lần xuất hiện '/' trong payload
+        7. unique_char_count: số ký tự duy nhất
     """
 
     def extract(self, normalized_payload: str) -> list[float]:
-        """Extract feature vector from normalized payload string.
+        """Trích xuất vector đặc trưng từ chuỗi payload đã chuẩn hóa.
 
         Args:
-            normalized_payload: Lowercased, decoded payload string.
+            normalized_payload: Chuỗi payload đã giải mã, chuyển thành chữ thường.
 
         Returns:
-            List of 8 float values.
+            Danh sách 8 giá trị float.
         """
         if not normalized_payload:
             return [0.0] * NUM_HANDCRAFTED_FEATURES
 
         length = float(len(normalized_payload))
 
-        # 1. Special char count
+        # 1. Số ký tự đặc biệt
         special_count = sum(1 for c in normalized_payload if c in _SPECIAL_CHARS)
 
-        # 2. SQL keyword binary
+        # 2. Nhị phân từ khóa SQL
         words = set(re.findall(r'[a-z_]+', normalized_payload))
         sql_binary = 1.0 if words & _SQL_KEYWORDS else 0.0
 
-        # 3. Numeric char count
+        # 3. Số ký tự chữ số
         numeric_count = sum(1 for c in normalized_payload if c.isdigit())
 
-        # 4. Percent-encoded count (on original before full decode)
+        # 4. Số lần mã hóa phần trăm (trên bản gốc trước khi giải mã đầy đủ)
         percent_count = len(_PERCENT_PATTERN.findall(normalized_payload))
 
-        # 5. Shannon entropy
+        # 5. Entropy Shannon
         entropy = self._shannon_entropy(normalized_payload)
 
-        # 6. URL depth
+        # 6. Độ sâu URL
         url_depth = float(normalized_payload.count('/'))
 
-        # 7. Unique char count
+        # 7. Số ký tự duy nhất
         unique_chars = float(len(set(normalized_payload)))
 
         return [
@@ -164,7 +164,7 @@ class WammFeatureExtractor:
 
     @staticmethod
     def _shannon_entropy(text: str) -> float:
-        """Calculate Shannon entropy of a string."""
+        """Tính entropy Shannon của một chuỗi."""
         if not text:
             return 0.0
         counter = Counter(text)
@@ -182,14 +182,14 @@ class WammFeatureExtractor:
 # =============================================================================
 
 class WammClassifier:
-    """Multiclass web attack classifier using XGBoost + TF-IDF.
+    """Bộ phân loại tấn công web đa lớp sử dụng XGBoost + TF-IDF.
 
-    Usage:
+    Sử dụng:
         classifier = WammClassifier()
         attack_type, confidence = classifier.predict(payload_bytes)
 
-    If model files are not found or dependencies are missing,
-    predict() returns (0, 0.0) = normal with zero confidence.
+    Nếu không tìm thấy file model hoặc thiếu dependency,
+    predict() trả về (0, 0.0) = normal với confidence bằng 0.
     """
 
     def __init__(self, model_dir: str | None = None):
@@ -208,7 +208,7 @@ class WammClassifier:
                 missing.append("xgboost")
             if not HAS_SKLEARN:
                 missing.append("scikit-learn")
-            logger.warning("WAMM disabled: missing dependencies: %s", missing)
+            logger.warning("WAMM bị vô hiệu hóa: thiếu dependency: %s", missing)
             return
 
         model_dir = model_dir or MODEL_DIR
@@ -217,8 +217,8 @@ class WammClassifier:
 
         if not os.path.exists(model_path) or not os.path.exists(vectorizer_path):
             logger.warning(
-                "WAMM disabled: model files not found in %s. "
-                "Run 'python System/tools/wamm_train.py' to train.",
+                "WAMM bị vô hiệu hóa: không tìm thấy file model trong %s. "
+                "Chạy 'python System/tools/wamm_train.py' để huấn luyện.",
                 model_dir,
             )
             return
@@ -229,25 +229,25 @@ class WammClassifier:
             with open(vectorizer_path, "rb") as f:
                 self._vectorizer = pickle.load(f)
             self._enabled = True
-            logger.info("WAMM classifier loaded from %s", model_dir)
+            logger.info("WAMM classifier đã tải từ %s", model_dir)
         except Exception as e:
-            logger.warning("WAMM disabled: failed to load model: %s", e)
+            logger.warning("WAMM bị vô hiệu hóa: không thể tải model: %s", e)
 
     @property
     def enabled(self) -> bool:
-        """Whether the classifier is ready for predictions."""
+        """Trả về True nếu classifier sẵn sàng dự đoán."""
         return self._enabled
 
     def predict(self, payload_bytes: bytes | None) -> tuple[int, float]:
-        """Classify a single HTTP payload.
+        """Phân loại một payload HTTP đơn lẻ.
 
         Args:
-            payload_bytes: Raw HTTP payload bytes.
+            payload_bytes: Payload HTTP bytes thô.
 
         Returns:
-            (attack_type, confidence) where:
+            (attack_type, confidence) trong đó:
                 attack_type: 0=normal, 1=sqli, 2=xss
-                confidence: probability of predicted class [0.0, 1.0]
+                confidence: xác suất của lớp dự đoán [0.0, 1.0]
         """
         if not self._enabled or not payload_bytes:
             return (0, 0.0)
@@ -259,44 +259,44 @@ class WammClassifier:
             return (0, 0.0)
 
         try:
-            # TF-IDF vectorization
+            # Vector hóa TF-IDF
             tfidf_vector = self._vectorizer.transform([normalized])
 
-            # Handcrafted features
+            # Đặc trưng thủ công
             handcrafted = self._feature_extractor.extract(normalized)
             handcrafted_matrix = csr_matrix([handcrafted])
 
-            # Combine features
+            # Kết hợp đặc trưng
             combined = sparse_hstack([tfidf_vector, handcrafted_matrix])
 
-            # Predict
+            # Dự đoán
             probas = self._model.predict_proba(combined)[0]
             predicted_class = int(np.argmax(probas))
             confidence = float(probas[predicted_class])
 
-            # Apply confidence threshold
+            # Áp dụng ngưỡng confidence
             if confidence < CONFIDENCE_THRESHOLD:
                 return (0, confidence)
 
             return (predicted_class, confidence)
 
         except Exception as e:
-            logger.debug("WAMM prediction error: %s", e)
+            logger.debug("Lỗi dự đoán WAMM: %s", e)
             return (0, 0.0)
 
     def predict_batch(self, payloads: list[bytes | None]) -> list[tuple[int, float]]:
-        """Classify multiple payloads at once for better throughput.
+        """Phân loại nhiều payload cùng lúc để tăng throughput.
 
         Args:
-            payloads: List of raw HTTP payload bytes.
+            payloads: Danh sách payload HTTP bytes thô.
 
         Returns:
-            List of (attack_type, confidence) tuples.
+            Danh sách các tuple (attack_type, confidence).
         """
         if not self._enabled or not payloads:
             return [(0, 0.0)] * len(payloads)
 
-        # Normalize all payloads
+        # Chuẩn hóa tất cả payload
         normalized_texts = []
         valid_indices = []
         results = [(0, 0.0)] * len(payloads)
@@ -313,19 +313,19 @@ class WammClassifier:
             return results
 
         try:
-            # Batch TF-IDF
+            # TF-IDF theo batch
             tfidf_matrix = self._vectorizer.transform(normalized_texts)
 
-            # Batch handcrafted features
+            # Đặc trưng thủ công theo batch
             handcrafted_list = [
                 self._feature_extractor.extract(text) for text in normalized_texts
             ]
             handcrafted_matrix = csr_matrix(handcrafted_list)
 
-            # Combine
+            # Kết hợp
             combined = sparse_hstack([tfidf_matrix, handcrafted_matrix])
 
-            # Batch predict
+            # Dự đoán theo batch
             all_probas = self._model.predict_proba(combined)
 
             for idx, probas in zip(valid_indices, all_probas):
@@ -340,9 +340,9 @@ class WammClassifier:
             return results
 
         except Exception as e:
-            logger.debug("WAMM batch prediction error: %s", e)
+            logger.debug("Lỗi dự đoán batch WAMM: %s", e)
             return results
 
     def get_label_name(self, attack_type: int) -> str:
-        """Convert attack type int to human-readable label."""
+        """Chuyển đổi số loại tấn công thành nhãn dễ đọc."""
         return WAMM_LABELS_INV.get(attack_type, "unknown")

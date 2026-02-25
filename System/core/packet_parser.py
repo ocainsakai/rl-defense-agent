@@ -24,29 +24,33 @@ from core.layer_info import LayerInfo
 
 
 class HttpPayloadExtractor:
-    """
-    Extract HTTP information and build composite payload for analysis.
+    """Trích xuất thông tin HTTP và xây dựng composite payload cho phân tích.
 
-    Responsibilities:
-    - Extract HTTP request/response from Scapy packet
-    - Build composite payload [URI + User-Agent + Body] for pattern matching
+    Trách nhiệm:
+    - Trích xuất HTTP request/response từ gói tin Scapy
+    - Xây dựng composite payload [URI + User-Agent + Body] cho pattern matching
 
-    Separation of Concerns:
-    - This class: Raw extraction (bytes, no transformation)
-    - PayloadContextScorer: Normalization for pattern matching
+    Phân tách trách nhiệm:
+    - Lớp này: Trích xuất thô (bytes, không biến đổi)
+    - PayloadContextScorer: Chuẩn hóa cho pattern matching
     """
+
+    # Các HTTP method cho fallback parse Raw layer
+    _HTTP_METHODS = {b'GET', b'POST', b'PUT', b'DELETE', b'PATCH', b'HEAD', b'OPTIONS'}
 
     @staticmethod
     def extract_http_info(packet, info: 'LayerInfo') -> bool:
-        """
-        Extract HTTP request/response into LayerInfo.
+        """Trích xuất HTTP request/response vào LayerInfo.
+
+        Thử Scapy HTTPRequest/HTTPResponse layer trước.
+        Fallback sang parse Raw layer dạng text HTTP nếu Scapy không tự phân tích.
 
         Returns:
-            bool: True if HTTP layer was found and extracted
+            bool: True nếu tìm thấy và trích xuất được HTTP layer
         """
         found_http = False
 
-        # HTTP Request
+        # HTTP Request (Scapy đã parse)
         if packet.haslayer(HTTPRequest):
             info.has_http = True
             http_req = packet[HTTPRequest]
@@ -55,11 +59,11 @@ class HttpPayloadExtractor:
             info.http_host = http_req.Host
             info.http_user_agent = http_req.User_Agent
 
-            # Extract X-Real-IP and X-Request-ID from headers (Nginx proxy headers)
+            # Trích xuất X-Real-IP và X-Request-ID từ headers (Nginx proxy headers)
             HttpPayloadExtractor._extract_proxy_headers(packet, info)
             found_http = True
 
-        # HTTP Response
+        # HTTP Response (Scapy đã parse)
         if packet.haslayer(HTTPResponse):
             info.has_http = True
             http_resp = packet[HTTPResponse]
@@ -69,8 +73,13 @@ class HttpPayloadExtractor:
                 info.http_status = None
             found_http = True
 
-        # Build composite payload từ HTTP (URI + User-Agent + Body)
-        if found_http:
+        # Fallback: parse Raw layer dạng text HTTP (cho gói tin tổng hợp / HTTP không được nhận diện)
+        if not found_http and packet.haslayer(Raw):
+            found_http = HttpPayloadExtractor._try_parse_raw_http(packet, info)
+
+        # Xây dựng composite payload từ HTTP (URI + User-Agent + Body)
+        # Bỏ qua nếu fallback đã xây dựng payload rồi
+        if found_http and not info.has_payload:
             composite = HttpPayloadExtractor.build_composite_payload_from_packet(packet, info)
             if composite:
                 info.has_payload = True
@@ -80,9 +89,90 @@ class HttpPayloadExtractor:
         return found_http
 
     @staticmethod
-    def _extract_proxy_headers(packet, info: 'LayerInfo'):
+    def _try_parse_raw_http(packet, info: 'LayerInfo') -> bool:
+        """Fallback: parse Raw layer dạng text HTTP request.
+
+        Xử lý các gói tin mà Scapy không tự phân tích HTTP
+        (gói tin test tổng hợp, một số file PCAP).
+
+        Xây dựng composite payload trực tiếp từ các thành phần đã parse
+        (URI + User-Agent + Body) để tránh trùng lặp Raw layer.
         """
-        Extract Nginx proxy headers (X-Real-IP, X-Request-ID) from raw payload.
+        try:
+            raw_data = bytes(packet[Raw].load)
+            # Kiểm tra nhanh: có bắt đầu bằng HTTP method không?
+            first_space = raw_data.find(b' ')
+            if first_space <= 0 or first_space > 7:
+                return False
+            method = raw_data[:first_space]
+            if method not in HttpPayloadExtractor._HTTP_METHODS:
+                return False
+
+            text = raw_data.decode('utf-8', errors='ignore')
+            lines = text.split('\r\n')
+            if not lines:
+                return False
+
+            # Parse dòng request: "METHOD /path HTTP/1.1"
+            request_line = lines[0]
+            parts = request_line.split(' ', 2)
+            if len(parts) < 2:
+                return False
+
+            info.has_http = True
+            info.http_method = parts[0]
+            info.http_uri = parts[1]
+
+            # Parse headers và body
+            header_end = False
+            body_parts = []
+            for line in lines[1:]:
+                if header_end:
+                    body_parts.append(line)
+                    continue
+                if line == '':
+                    header_end = True
+                    continue
+                lower = line.lower()
+                if lower.startswith('host:'):
+                    info.http_host = line.split(':', 1)[1].strip()
+                elif lower.startswith('user-agent:'):
+                    info.http_user_agent = line.split(':', 1)[1].strip()
+                elif lower.startswith('x-real-ip:'):
+                    info.x_real_ip = line.split(':', 1)[1].strip()
+                elif lower.startswith('x-request-id:'):
+                    info.x_request_id = line.split(':', 1)[1].strip()
+
+            # Build composite payload: [URI] + [User-Agent] + [Body]
+            composite_parts = []
+            if info.http_uri:
+                uri = info.http_uri
+                if isinstance(uri, str):
+                    composite_parts.append(uri.encode('utf-8', errors='ignore'))
+                else:
+                    composite_parts.append(uri)
+            if info.http_user_agent:
+                ua = info.http_user_agent
+                if isinstance(ua, str):
+                    composite_parts.append(ua.encode('utf-8', errors='ignore'))
+                else:
+                    composite_parts.append(ua)
+            body_text = '\r\n'.join(body_parts).strip()
+            if body_text:
+                composite_parts.append(body_text.encode('utf-8', errors='ignore'))
+
+            if composite_parts:
+                info.has_payload = True
+                info.payload_bytes = b' '.join(composite_parts)
+                info.payload_length = len(info.payload_bytes)
+
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _extract_proxy_headers(packet, info: 'LayerInfo'):
+        """Trích xuất Nginx proxy headers (X-Real-IP, X-Request-ID) từ raw payload.
 
         Scapy không tự parse các custom headers, nên cần parse thủ công từ Raw layer.
         """
@@ -111,18 +201,17 @@ class HttpPayloadExtractor:
                     info.x_real_ip = xff_value.split(',')[0].strip()
 
         except Exception:
-            pass  # Ignore parse errors
+            pass  # Bỏ qua lỗi parse
 
     @staticmethod
     def build_composite_payload_from_packet(packet, info: 'LayerInfo') -> bytes:
-        """
-        Build composite payload từ HTTP packet: [URI] + [User-Agent] + [Body]
+        """Xây dựng composite payload từ HTTP packet: [URI] + [User-Agent] + [Body]
 
         Trích xuất body trực tiếp từ Scapy Raw layer (HTTP body).
         """
         parts = []
 
-        # Header 1: URI (quan trọng cho SQLi/XSS qua GET params)
+        # Phần 1: URI (quan trọng cho SQLi/XSS qua GET params)
         uri = info.http_uri
         if uri:
             if isinstance(uri, str):
@@ -130,7 +219,7 @@ class HttpPayloadExtractor:
             elif isinstance(uri, bytes):
                 parts.append(uri)
 
-        # Header 2: User-Agent (vector tấn công phổ biến)
+        # Phần 2: User-Agent (vector tấn công phổ biến)
         ua = info.http_user_agent
         if ua:
             if isinstance(ua, str):
@@ -138,7 +227,7 @@ class HttpPayloadExtractor:
             elif isinstance(ua, bytes):
                 parts.append(ua)
 
-        # Body: Từ Raw layer (HTTP body cho POST requests)
+        # Phần 3: Body từ Raw layer (HTTP body cho POST requests)
         if packet.haslayer(Raw):
             body = bytes(packet[Raw].load)
             if body:
@@ -148,8 +237,7 @@ class HttpPayloadExtractor:
 
     @staticmethod
     def build_composite_payload(pkt) -> bytes:
-        """
-        Build composite payload từ LayerInfo object: [URI] + [User-Agent] + [Body]
+        """Xây dựng composite payload từ đối tượng LayerInfo: [URI] + [User-Agent] + [Body]
 
         Logic Fail-Fast:
         - Regex quét từ trái sang phải
@@ -157,10 +245,10 @@ class HttpPayloadExtractor:
         - Đặt Header trước Body → phát hiện sớm, tránh quét Body lớn
 
         Args:
-            pkt: LayerInfo object with HTTP attributes
+            pkt: Đối tượng LayerInfo với các thuộc tính HTTP
 
         Returns:
-            bytes: Composite payload for analysis
+            bytes: Composite payload cho phân tích
         """
         body = getattr(pkt, 'payload_bytes', None) or b''
 
@@ -169,7 +257,7 @@ class HttpPayloadExtractor:
 
         parts = []
 
-        # Header 1: URI
+        # Phần 1: URI
         uri = getattr(pkt, 'http_uri', None)
         if uri:
             if isinstance(uri, str):
@@ -177,7 +265,7 @@ class HttpPayloadExtractor:
             elif isinstance(uri, bytes):
                 parts.append(uri)
 
-        # Header 2: User-Agent
+        # Phần 2: User-Agent
         ua = getattr(pkt, 'http_user_agent', None)
         if ua:
             if isinstance(ua, str):
@@ -192,18 +280,17 @@ class HttpPayloadExtractor:
 
 
 class PacketLayerExtractor:
-    """
-    Extract all layers from packet in ONE pass
+    """Trích xuất tất cả layer từ gói tin trong MỘT lượt.
 
-    Responsibilities:
-    - Parse Scapy packet
-    - Extract IP + TCP + HTTP layer information
-    - Build HTTP composite payload cho feature extraction
-    - Handle malformed packets gracefully
+    Trách nhiệm:
+    - Parse gói tin Scapy
+    - Trích xuất thông tin IP + TCP + HTTP layer
+    - Xây dựng HTTP composite payload cho feature extraction
+    - Xử lý gói tin bị lỗi/hỏng một cách an toàn
 
-    Performance: O(1) per packet (single pass)
+    Hiệu năng: O(1) mỗi gói tin (single pass)
 
-    NOTE: HTTP parsing luôn được bật. Không hỗ trợ UDP/ICMP/raw payload.
+    LƯU Ý: HTTP parsing luôn được bật. Không hỗ trợ UDP/ICMP/raw payload.
     """
 
     def __init__(self, use_packet_time: bool = False):

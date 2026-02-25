@@ -1,17 +1,17 @@
-"""Log Flow Adapter - Adapts nginx log entries to FlowState/LayerInfo interface.
+"""Log Flow Adapter - Chuyển đổi log nginx sang giao diện FlowState/LayerInfo.
 
-Cho phép các feature calculators hiện tại (F6-F30) hoạt động với dữ liệu
+Cho phép các feature calculators hiện tại (F1-F20) hoạt động với dữ liệu
 từ nginx access log mà KHÔNG cần sửa đổi code calculator.
 
 Design Pattern: Adapter (GoF)
-- LogLayerInfo adapts log entry → LayerInfo interface (forward packet)
-- LogResponseLayerInfo adapts status code → LayerInfo interface (backward packet)
-- LogFlowState adapts grouped log entries → FlowState interface
+- LogLayerInfo: chuyển log entry → giao diện LayerInfo (gói tin forward)
+- LogResponseLayerInfo: chuyển status code → giao diện LayerInfo (gói tin backward)
+- LogFlowState: chuyển nhóm log entries → giao diện FlowState
 
-Compatibility:
+Tương thích:
 - HttpPayloadExtractor.build_composite_payload() dùng getattr() → tương thích
 - FeatureContext caching dùng id(pkt) → tương thích
-- Tất cả 22 calculators (F6-F30) dùng getattr() → tương thích
+- Tất cả 20 calculators (F1-F20) dùng getattr() → tương thích
 """
 
 from typing import List, Dict, Set, Optional
@@ -20,20 +20,20 @@ from core.iflow_state import IFlowState
 
 
 class LogLayerInfo:
-    """Adapts a log entry to look like a LayerInfo for feature calculators.
+    """Chuyển đổi log entry thành LayerInfo cho feature calculators.
 
-    Represents a FORWARD packet (client request) extracted from nginx log.
+    Đại diện gói tin FORWARD (request từ client) trích xuất từ nginx log.
     """
 
     def __init__(self, remote_addr: str, timestamp: float, method: str,
                  path: str, user_agent: str, host: str = "",
                  content_length: int = 0, request_id: str = "",
                  packet_number: int = 0):
-        # Metadata
+        # Siêu dữ liệu
         self.timestamp = timestamp
         self.packet_number = packet_number
 
-        # IP layer (minimal)
+        # Lớp IP (tối thiểu)
         self.has_ip = True
         self.ip_version = 4
         self.src_ip = remote_addr
@@ -42,7 +42,7 @@ class LogLayerInfo:
         self.ip_len = None
         self.protocol = 6  # TCP
 
-        # TCP layer (minimal - no flags from log)
+        # Lớp TCP (tối thiểu - log không có flags)
         self.has_tcp = True
         self.tcp_sport = 0
         self.tcp_dport = 443
@@ -51,21 +51,21 @@ class LogLayerInfo:
         self.tcp_ack = None
         self.tcp_window = None
 
-        # HTTP layer
+        # Lớp HTTP
         self.has_http = True
         self.http_method = method
         self.http_uri = path
         self.http_host = host
         self.http_user_agent = user_agent
-        self.http_status = None  # Status is on response, not request
+        self.http_status = None  # Status nằm ở response, không phải request
         self.x_real_ip = None
         self.x_request_id = request_id
 
-        # DNS layer
+        # Lớp DNS
         self.has_dns = False
         self.dns_query = None
 
-        # Payload: composite from URI + User-Agent
+        # Payload: ghép từ URI + User-Agent
         composite = self._build_composite(path, user_agent)
         self.has_payload = bool(composite)
         self.payload_bytes = composite
@@ -73,7 +73,7 @@ class LogLayerInfo:
 
     @staticmethod
     def _build_composite(path: str, user_agent: str) -> bytes:
-        """Build composite payload: [URI] + [User-Agent] (no body from log)."""
+        """Tạo payload ghép: [URI] + [User-Agent] (không có body từ log)."""
         parts = []
         if path:
             parts.append(path.encode('utf-8', errors='ignore'))
@@ -87,19 +87,19 @@ class LogLayerInfo:
 
 
 class LogResponseLayerInfo:
-    """Adapts response info from log for backward packet simulation.
+    """Chuyển đổi thông tin response từ log thành gói tin backward.
 
-    Represents a BACKWARD packet (server response) with HTTP status code.
-    Used by F7 (AuthFailureRate) and F8 (ServerErrorRate).
+    Đại diện gói tin BACKWARD (response từ server) với HTTP status code.
+    Dùng bởi F7 (AuthFailureRate) và F8 (ServerErrorRate).
     """
 
     def __init__(self, remote_addr: str, timestamp: float, status: int,
                  packet_number: int = 0):
-        # Metadata
+        # Siêu dữ liệu
         self.timestamp = timestamp
         self.packet_number = packet_number
 
-        # IP layer
+        # Lớp IP
         self.has_ip = True
         self.ip_version = 4
         self.src_ip = None
@@ -108,7 +108,7 @@ class LogResponseLayerInfo:
         self.ip_len = None
         self.protocol = 6
 
-        # TCP layer
+        # Lớp TCP
         self.has_tcp = True
         self.tcp_sport = 443
         self.tcp_dport = 0
@@ -117,7 +117,7 @@ class LogResponseLayerInfo:
         self.tcp_ack = None
         self.tcp_window = None
 
-        # HTTP layer - status code is the key value
+        # HTTP layer - status code là giá trị chính
         self.has_http = True
         self.http_method = None
         self.http_uri = None
@@ -127,11 +127,11 @@ class LogResponseLayerInfo:
         self.x_real_ip = None
         self.x_request_id = None
 
-        # DNS
+        # Lớp DNS
         self.has_dns = False
         self.dns_query = None
 
-        # No payload for response adapter
+        # Response adapter không có payload
         self.has_payload = False
         self.payload_bytes = None
         self.payload_length = 0
@@ -142,11 +142,10 @@ class LogResponseLayerInfo:
 
 
 class LogFlowState(IFlowState):
-    """Adapts grouped log entries to FlowState interface.
+    """Chuyển đổi nhóm log entries sang giao diện FlowState.
 
-    Groups NidsLogEntry objects by src_ip and exposes them through
-    the same interface as FlowState, allowing existing calculators
-    to work without modification.
+    Nhóm các NidsLogEntry theo src_ip và cung cấp qua giao diện
+    FlowState, cho phép các calculators hiện tại hoạt động không cần sửa đổi.
     """
 
     def __init__(self, src_ip: str, fwd_packets: List[LogLayerInfo],
@@ -164,7 +163,7 @@ class LogFlowState(IFlowState):
         self._x_real_ip = None
 
     # =========================================================================
-    # PACKET COUNTS
+    # SỐ LƯỢNG GÓI TIN
     # =========================================================================
 
     def get_fwd_packet_count(self) -> int:
@@ -180,7 +179,7 @@ class LogFlowState(IFlowState):
         return len(self._fwd_packets) == 0 and len(self._bwd_packets) == 0
 
     # =========================================================================
-    # PACKET LISTS
+    # DANH SÁCH GÓI TIN
     # =========================================================================
 
     def get_fwd_packets(self) -> list:
@@ -213,7 +212,7 @@ class LogFlowState(IFlowState):
         return {443}
 
     # =========================================================================
-    # PAYLOADS
+    # DỮ LIỆU TẢI
     # =========================================================================
 
     def get_fwd_payload_lengths(self) -> List[int]:
@@ -245,7 +244,7 @@ class LogFlowState(IFlowState):
         return self.get_reassembled_fwd_payload()
 
     # =========================================================================
-    # PROPERTIES
+    # THUỘC TÍNH
     # =========================================================================
 
     @property
@@ -286,7 +285,7 @@ class LogFlowState(IFlowState):
         return max(timestamps) - min(timestamps)
 
     # =========================================================================
-    # UTILITY
+    # TIỆN ÍCH
     # =========================================================================
 
     def is_expired(self, current_time: float, timeout: float) -> bool:

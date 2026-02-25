@@ -1,20 +1,18 @@
-"""XSS sub-features — CRS-powered Cross-Site Scripting detection.
+"""Đặc trưng phụ XSS — Phát hiện Cross-Site Scripting dựa trên CRS.
 
-Features:
-- F18: CrsXssScore      - Count of OWASP CRS 941 rules that fire (0 to N)
-- F19: JsFunctionCall   - Dangerous JS function calls (kept: tested F1=0.995)
-- F20: HtmlEventHandler - HTML event handlers (kept: tested F1=0.755)
+Đặc trưng:
+- F18: CrsXssScore      - Số rule OWASP CRS 941 bị kích hoạt (0 đến N)
+- F19: JsFunctionCall   - Gọi hàm JS nguy hiểm (giữ lại: F1=0.995 khi kiểm thử)
+- F20: HtmlEventHandler - HTML event handler (giữ lại: F1=0.755 khi kiểm thử)
 
-CRS Source: REQUEST-941-APPLICATION-ATTACK-XSS.conf (paranoia level 1)
-  Covers: script tags, event handlers, JS URI, NoScript injection,
-          IE XSS filters, JSFuck obfuscation, AngularJS SSTI,
-          node-validator blacklist keywords, ...
+Nguồn CRS: REQUEST-941-APPLICATION-ATTACK-XSS.conf (paranoia level 1)
+  Bao gồm: script tags, event handler, JS URI, NoScript injection,
+           IE XSS filter, obfuscation JSFuck, AngularJS SSTI,
+           từ khóa blacklist node-validator, ...
 
-Replaces (merged into F18_CrsXssScore):
-  OLD F18 HtmlTagInjection, F28 JsProtocolPresence,
+Thay thế (đã gộp vào F18_CrsXssScore):
+  F18 cũ HtmlTagInjection, F28 JsProtocolPresence,
       F29 HtmlEntityRatio, F30 DataUriPresence
-
-Backup of old hand-coded version: xss_features_old.py
 """
 
 import re
@@ -30,17 +28,17 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# CRS PATTERNS — loaded once at module import
+# PATTERN CRS — tải một lần khi import module
 # =============================================================================
 
-_CRS_XSS_PATTERNS = load_rx_patterns(CRS_XSS_CONF, paranoia_level=1)
-# List of (rule_id, msg, compiled_pattern) — 22 patterns at PL1
+_CRS_XSS_PATTERNS = load_rx_patterns(CRS_XSS_CONF, paranoia_level=2)
+# Danh sách (rule_id, msg, compiled_pattern) — các pattern ở PL2
 
 _CRS_XSS_PHRASES = load_pm_phrases(CRS_XSS_CONF)
-# List of lowercase strings — 9 phrases from @pm rules
-# e.g. ['document.cookie', 'document.write', '.innerhtml', 'window.location', ...]
+# Danh sách chuỗi chữ thường — 9 cụm từ từ các rule @pm
+# VD: ['document.cookie', 'document.write', '.innerhtml', 'window.location', ...]
 
-# F19: Dangerous JS function patterns (kept — tested: F1=0.995, FPR=0.0%)
+# F19: Pattern hàm JS nguy hiểm (giữ lại — đã kiểm thử: F1=0.995, FPR=0.0%)
 _JS_FUNCTION_PATTERNS = [
     re.compile(r"\balert\s*\(",         re.IGNORECASE),
     re.compile(r"\beval\s*\(",          re.IGNORECASE),
@@ -52,7 +50,7 @@ _JS_FUNCTION_PATTERNS = [
     re.compile(r"(?:inner|outer)html\s*=", re.IGNORECASE),
 ]
 
-# F20: HTML event handler patterns (kept — tested: F1=0.755, FPR=0.0%)
+# F20: Pattern event handler HTML (giữ lại — đã kiểm thử: F1=0.755, FPR=0.0%)
 _EVENT_HANDLER_PATTERNS = [
     re.compile(r"\bon(?:error|load|click|mouse(?:over|out|down|up)|focus|blur)\s*=",     re.IGNORECASE),
     re.compile(r"\bon(?:change|submit|reset|select|input|invalid)\s*=",                   re.IGNORECASE),
@@ -65,37 +63,37 @@ _EVENT_HANDLER_PATTERNS = [
 
 
 # =============================================================================
-# FEATURE CLASSES
+# CÁC LỚP ĐẶC TRƯNG
 # =============================================================================
 
 @register_feature(FeatureMetadata(
     name="CrsXssScore",
     code="F18",
     description=(
-        "OWASP CRS 941 anomaly score — count of XSS rules that fire. "
-        "Covers: script tags, event handlers, JS URI, NoScript injection, "
-        "IE XSS filters, JSFuck, AngularJS SSTI, node-validator keywords. "
-        f"Source: REQUEST-941-APPLICATION-ATTACK-XSS.conf PL1"
+        "Điểm bất thường OWASP CRS 941 — số rule XSS bị kích hoạt. "
+        "Bao gồm: script tag, event handler, JS URI, NoScript injection, "
+        "IE XSS filter, JSFuck, AngularJS SSTI, từ khóa node-validator. "
+        f"Nguồn: REQUEST-941-APPLICATION-ATTACK-XSS.conf PL1"
     ),
     category="xss",
 ))
 class F18_CrsXssScore(FeatureBase):
     """
-    F25: CRS XSS ANOMALY SCORE
+    F18: ĐIỂM BẤT THƯỜNG CRS XSS
 
-    Dem so rule CRS 941 bi kich hoat tren payload da normalize.
-    Bao gom ca @rx (regex) va @pm (phrase match) rules.
+    Đếm số rule CRS 941 bị kích hoạt trên payload đã chuẩn hóa.
+    Bao gồm cả rule @rx (regex) và @pm (phrase match).
 
-    Vi du:
-      score=0  → khong co dau hieu XSS
-      score=1  → 1 rule fire (dau hieu yeu)
-      score=8  → 8 rules fire (chac chan la tan cong)
+    Ví dụ:
+      score=0  → không có dấu hiệu XSS
+      score=1  → 1 rule kích hoạt (dấu hiệu yếu)
+      score=8  → 8 rule kích hoạt (chắc chắn là tấn công)
 
-    Thay the: F25(HtmlTagInjection), F28(JsProtocol),
+    Thay thế: F25(HtmlTagInjection), F28(JsProtocol),
               F29(HtmlEntityRatio), F30(DataUri)
 
     Returns:
-        float — tong so rule kich hoat (0.0 den len(_CRS_XSS_PATTERNS) + @pm)
+        float — tổng số rule kích hoạt (0.0 đến len(_CRS_XSS_PATTERNS) + @pm)
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -109,12 +107,12 @@ class F18_CrsXssScore(FeatureBase):
                 if not normalized:
                     continue
 
-                # @rx rules: each matching pattern = +1
+                # Rule @rx: mỗi pattern khớp = +1
                 for _rule_id, _msg, pattern in _CRS_XSS_PATTERNS:
                     if pattern.search(normalized):
                         total_score += 1.0
 
-                # @pm phrases: each matching phrase = +1
+                # Cụm từ @pm: mỗi cụm từ khớp = +1
                 for phrase in _CRS_XSS_PHRASES:
                     if phrase in normalized:
                         total_score += 1.0
@@ -125,17 +123,17 @@ class F18_CrsXssScore(FeatureBase):
 @register_feature(FeatureMetadata(
     name="JsFunctionCall",
     code="F19",
-    description="Dangerous JS function call — alert(), eval(), document.cookie (F1=0.995 on test)",
+    description="Gọi hàm JS nguy hiểm — alert(), eval(), document.cookie (F1=0.995 khi kiểm thử)",
     category="xss",
 ))
 class F19_JsFunctionCall(FeatureBase):
     """
-    F26: JS FUNCTION CALL
+    F19: GỌI HÀM JAVASCRIPT
 
-    Phat hien goi ham JavaScript nguy hiem.
+    Phát hiện gọi hàm JavaScript nguy hiểm.
     VD: alert(1), eval('code'), document.cookie, window.location
 
-    Giu nguyen vi: TPR=99.0%, FPR=0.0%, F1=0.995 tren test dataset.
+    Giữ nguyên vì: TPR=99.0%, FPR=0.0%, F1=0.995 trên test dataset.
 
     Returns:
         Binary 0.0 or 1.0
@@ -159,17 +157,17 @@ class F19_JsFunctionCall(FeatureBase):
 @register_feature(FeatureMetadata(
     name="HtmlEventHandler",
     code="F20",
-    description="HTML event handler injection — onerror=, onload=, onclick= (F1=0.755 on test)",
+    description="HTML event handler injection — onerror=, onload=, onclick= (F1=0.755 khi kiểm thử)",
     category="xss",
 ))
 class F20_HtmlEventHandler(FeatureBase):
     """
-    F27: HTML EVENT HANDLER
+    F20: EVENT HANDLER HTML
 
-    Phat hien su dung event handler HTML de trigger JavaScript.
+    Phát hiện sử dụng event handler HTML để kích hoạt JavaScript.
     VD: <img onerror=alert(1)>, <svg onload=alert(1)>
 
-    Giu nguyen vi: TPR=60.6%, FPR=0.0%, F1=0.755 tren test dataset.
+    Giữ nguyên vì: TPR=60.6%, FPR=0.0%, F1=0.755 trên test dataset.
 
     Returns:
         Binary 0.0 or 1.0

@@ -1,22 +1,17 @@
-"""SQLi sub-features — CRS-powered + granular SQL Injection detection.
+"""Đặc trưng phụ SQLi — Phát hiện SQL Injection mạnh mẽ dựa trên CRS.
 
-Features:
-- F13: CrsSquliScore  - OWASP CRS 942 anomaly score (0 to N) — broad coverage
-- F14: SqlUnionSelect - UNION SELECT injection — data extraction technique
-- F15: SqlComment     - SQL comment injection (--, #, /**/) — query truncation
-- F16: SqlStackedQuery - Stacked query injection (; DROP...) — destructive commands
-- F17: SqlSelectCount - Number of SELECT keywords — UNION chaining signal
+Đặc trưng:
+- F12: SqlSpecialChar   - Tỷ lệ ký tự đặc biệt SQL (', -, ;, #, =)
+- F13: CrsSquliScore    - Điểm bất thường OWASP CRS 942 (0 đến N) — phủ rộng
+- F14: SqlUnionSelect   - UNION SELECT injection — kỹ thuật trích xuất dữ liệu
+- F15: SqlComment       - SQL comment injection (--, #, /**/) — cắt query
+- F16: SqlStackedQuery  - Stacked query injection (; DROP...) — lệnh phá hoại
+- F17: SqlSelectCount   - Số lượng từ khóa SELECT — dấu hiệu UNION chaining
 
-CRS Source: REQUEST-942-APPLICATION-ATTACK-SQLI.conf (paranoia level 1)
-  F18 covers: DB names, SQL functions, blind SQLi (sleep/benchmark),
-              tautology, encoding evasion, error-based, boolean-based blind, ...
-  F14/F15/F16: granular standalone signals for specific high-risk techniques.
-
-Removed (not restored):
-  F21 SqlQuoteImbalance — FP rate too high (normal text has unbalanced quotes)
-  F24 SqlEncodingRatio  — overlap with F18 CRS encoding rules
-
-Backup of old hand-coded version: sqli_features_old.py
+Nguồn CRS: REQUEST-942-APPLICATION-ATTACK-SQLI.conf (paranoia level 1)
+  F13 bao gồm: tên DB, hàm SQL, blind SQLi (sleep/benchmark),
+               tautology, encoding evasion, error-based, boolean-based blind...
+  F14/F15/F16: dấu hiệu đơn lẻ chi tiết cho kỹ thuật rủi ro cao cụ thể.
 """
 
 import math
@@ -33,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# PATTERNS — loaded/compiled once at module import
+# PATTERN — tải/compile một lần khi import module
 # =============================================================================
 
-# F13: CRS 942 rules at PL1 — 19 patterns, broad SQLi coverage
-_CRS_SQLI_PATTERNS = load_rx_patterns(CRS_SQLI_CONF, paranoia_level=1)
+# F13: Rule CRS 942 ở PL2 — bao gồm tautology (OR 1=1), auth bypass, v.v.
+_CRS_SQLI_PATTERNS = load_rx_patterns(CRS_SQLI_CONF, paranoia_level=2)
 
 # F14: UNION-based injection
 _UNION_PATTERNS = [
@@ -45,7 +40,7 @@ _UNION_PATTERNS = [
     re.compile(r"\bunion\b\s+\ball\b\s+\bselect\b", re.IGNORECASE),
 ]
 
-# F15: SQL comment injection (FIXED: --(?:\s|$) catches admin'--)
+# F15: SQL comment injection (--(?:\s|$) bắt được admin'--)
 _COMMENT_PATTERNS = [
     re.compile(r"--(?:\s|$)", re.IGNORECASE),
     re.compile(r"#(?![0-9a-fA-F]{3,6}\b)", re.IGNORECASE),
@@ -53,34 +48,34 @@ _COMMENT_PATTERNS = [
     re.compile(r"/\*![0-9]*", re.IGNORECASE),
 ]
 
-# F16: Stacked query — semicolon followed by destructive DDL/DML
+# F16: Stacked query — dấu chấm phẩy theo sau là DDL/DML phá hoại
 _STACKED_QUERY_PATTERNS = [
     re.compile(r";\s*(?:drop|delete|insert|update|truncate|alter)\b", re.IGNORECASE),
 ]
 
-# F17: SELECT count
+# F17: Đếm SELECT
 _SELECT_PATTERN = re.compile(r"\bselect\b", re.IGNORECASE)
 
 
 # =============================================================================
-# FEATURE CLASSES
+# CÁC LỚP ĐẶC TRƯNG
 # =============================================================================
 
 @register_feature(FeatureMetadata(
     name="SqlSpecialChar",
     code="F12",
-    description="SQL special character ratio — proportion of ', -, ;, #, = in payload",
+    description="Tỷ lệ ký tự đặc biệt SQL — tỷ lệ ', -, ;, #, = trong payload",
     category="sqli",
 ))
 class F12_SqlSpecialChar(FeatureBase):
     """
-    F12: SQL SPECIAL CHARACTER RATIO
+    F12: TỶ LỆ KÝ TỰ ĐẶC BIỆT SQL
 
-    Ratio of SQL-significant characters in forward payloads.
-    Special chars: ' - ; # =
+    Tỷ lệ ký tự có nghĩa trong SQL so với payload chiều xuôi.
+    Ký tự đặc biệt: ' - ; # =
 
     Returns:
-        Ratio [0, 1], NOT normalized
+        Ratio [0, 1], chưa chuẩn hóa
     """
 
     SQLI_CHARS = set(b"'-;#=")
@@ -110,27 +105,27 @@ class F12_SqlSpecialChar(FeatureBase):
     name="CrsSquliScore",
     code="F13",
     description=(
-        "OWASP CRS 942 anomaly score — count of SQLi rules that fire. "
-        "Covers: DB names, SQL functions (sleep/benchmark), tautology, "
+        "Điểm bất thường OWASP CRS 942 — số rule SQLi bị kích hoạt. "
+        "Bao gồm: tên DB, hàm SQL (sleep/benchmark), tautology, "
         "encoding evasion, error-based, boolean blind. "
-        "Source: REQUEST-942-APPLICATION-ATTACK-SQLI.conf PL1"
+        "Nguồn: REQUEST-942-APPLICATION-ATTACK-SQLI.conf PL1"
     ),
     category="sqli",
 ))
 class F13_CrsSquliScore(FeatureBase):
     """
-    F13: CRS SQLi ANOMALY SCORE
+    F13: ĐIỂM BẤT THƯỜNG CRS SQLi
 
-    Dem so rule CRS 942 bi kich hoat tren payload da normalize.
-    Gia tri cang cao → cang nhieu chi dau SQLi → tin hieu manh hon cho RL.
+    Đếm số rule CRS 942 bị kích hoạt trên payload đã chuẩn hóa.
+    Giá trị càng cao → càng nhiều chỉ báo SQLi → tín hiệu mạnh hơn cho RL.
 
-    Vi du:
-      score=0  → khong co dau hieu SQLi
-      score=1  → 1 rule fire (dau hieu yeu, co the FP)
-      score=5  → 5 rules fire (rat co kha nang la tan cong)
+    Ví dụ:
+      score=0  → không có dấu hiệu SQLi
+      score=1  → 1 rule kích hoạt (dấu hiệu yếu, có thể FP)
+      score=5  → 5 rule kích hoạt (rất có khả năng là tấn công)
 
     Returns:
-        float — so rule kich hoat (0.0 den len(_CRS_SQLI_PATTERNS))
+        float — số rule kích hoạt (0.0 đến len(_CRS_SQLI_PATTERNS))
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -153,14 +148,14 @@ class F13_CrsSquliScore(FeatureBase):
 @register_feature(FeatureMetadata(
     name="SqlUnionSelect",
     code="F14",
-    description="UNION SELECT injection — extracts data from other tables (F19)",
+    description="UNION SELECT injection — trích xuất dữ liệu từ bảng khác",
     category="sqli",
 ))
 class F14_SqlUnionSelect(FeatureBase):
     """
     F14: SQL UNION-BASED INJECTION
 
-    Phat hien UNION injection: noi ket qua truy van de trich xuat du lieu.
+    Phát hiện UNION injection: nối kết quả truy vấn để trích xuất dữ liệu.
     VD: UNION SELECT username,password FROM users
         UNION ALL SELECT NULL,NULL,NULL--
 
@@ -186,17 +181,17 @@ class F14_SqlUnionSelect(FeatureBase):
 @register_feature(FeatureMetadata(
     name="SqlComment",
     code="F15",
-    description="SQL comment injection — --, #, /**/ truncate the original query (F20)",
+    description="SQL comment injection — --, #, /**/ cắt query gốc",
     category="sqli",
 ))
 class F15_SqlComment(FeatureBase):
     """
     F15: SQL COMMENT INJECTION
 
-    Phat hien comment injection: cat phan con lai cua truy van SQL goc.
+    Phát hiện comment injection: cắt phần còn lại của truy vấn SQL gốc.
     VD: admin'--   admin'#   ' OR 1=1/*
 
-    Note: pattern --(?:\\s|$) catches end-of-string case (admin'--)
+    Note: pattern --(?:\\s|$) bắt được trường hợp cuối chuỗi (admin'--)
 
     Returns:
         Binary 0.0 or 1.0
@@ -220,15 +215,15 @@ class F15_SqlComment(FeatureBase):
 @register_feature(FeatureMetadata(
     name="SqlStackedQuery",
     code="F16",
-    description="Stacked query injection — semicolon + DDL/DML command (F22)",
+    description="Stacked query injection — dấu chấm phẩy + lệnh DDL/DML",
     category="sqli",
 ))
 class F16_SqlStackedQuery(FeatureBase):
     """
     F16: SQL STACKED QUERY
 
-    Phat hien stacked query: chen lenh SQL thu 2 sau dau cham phay.
-    Day la ky thuat nguy hiem nhat — co the xoa database, them user, ...
+    Phát hiện stacked query: chèn lệnh SQL thứ 2 sau dấu chấm phẩy.
+    Đây là kỹ thuật nguy hiểm nhất — có thể xóa database, thêm user, ...
     VD: 1; DROP TABLE users--
         1; DELETE FROM sessions; --
 
@@ -254,20 +249,20 @@ class F16_SqlStackedQuery(FeatureBase):
 @register_feature(FeatureMetadata(
     name="SqlSelectCount",
     code="F17",
-    description="Count of SELECT statements — multiple SELECTs indicate UNION chaining (F1=0.766 on test)",
+    description="Số lượng câu lệnh SELECT — nhiều SELECT biểu thị UNION chaining (F1=0.766 khi kiểm thử)",
     category="sqli",
 ))
 class F17_SqlSelectCount(FeatureBase):
     """
-    F17: SQL SELECT COUNT
+    F17: ĐẾM SELECT
 
-    Dem so lan xuat hien SELECT: Nhieu SELECT = subquery injection hoac UNION chaining.
-    VD: SELECT * FROM users UNION SELECT * FROM passwords -> count = 2
+    Đếm số lần xuất hiện SELECT: Nhiều SELECT = subquery injection hoặc UNION chaining.
+    VD: SELECT * FROM users UNION SELECT * FROM passwords → count = 2
 
-    Giu nguyen vi: TPR=62.1%, FPR=0.0%, F1=0.766 tren test dataset.
+    Giữ nguyên vì: TPR=62.1%, FPR=0.0%, F1=0.766 trên test dataset.
 
     Returns:
-        Integer count as float, NOT normalized
+        Số nguyên dạng float, chưa chuẩn hóa
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
