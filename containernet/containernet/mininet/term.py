@@ -46,7 +46,8 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
         title += ' (root)'
     cmds = {
         'xterm': [ 'xterm', '-title', title, '-display' ],
-        'gterm': [ 'gnome-terminal', '--title', title, '--display' ]
+        'gterm': [ 'gnome-terminal', '--title', title, '--display' ],
+        'xfce4': [ 'xfce4-terminal', '--title', title, '--display' ]
     }
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
