@@ -320,6 +320,12 @@ class CLI( Cmd ):
            Usage: gterm node1 node2 ..."""
         self.do_xterm( line, term='gterm' )
 
+    def do_xfce4( self, line ):
+        """Spawn xfce4-terminal(s) for the given node(s).
+           Supports Ctrl+Shift+C/V for copy/paste.
+           Usage: xfce4 node1 node2 ..."""
+        self.do_xterm( line, term='xfce4' )
+
     def do_exit( self, _line ):
         "Exit"
         assert self  # satisfy pylint and allow override
