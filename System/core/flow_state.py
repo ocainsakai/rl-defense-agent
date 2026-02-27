@@ -17,10 +17,9 @@ from typing import Dict, Any, Set, List
 import time
 
 from core.layer_info import LayerInfo
-from core.iflow_state import IFlowState
 
 
-class FlowState(IFlowState):
+class FlowState:
     """
     Trạng thái của một flow dựa trên 5-tuple.
     
