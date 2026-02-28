@@ -38,7 +38,7 @@ from subprocess import check_output, call, Popen
 from tempfile import mkdtemp, NamedTemporaryFile
 from time import time, strftime, localtime
 import argparse
-from distutils.spawn import find_executable
+from shutil import which as find_executable
 import inspect
 from traceback import print_exc
 

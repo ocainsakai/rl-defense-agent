@@ -59,7 +59,7 @@ import signal
 import select
 import docker
 import json
-from distutils.version import StrictVersion
+from packaging.version import Version as StrictVersion
 from re import findall
 from subprocess import Popen, PIPE, check_output
 from sys import exit  # pylint: disable=redefined-builtin
