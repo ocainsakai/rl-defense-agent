@@ -14,7 +14,6 @@ Nguồn CRS: REQUEST-942-APPLICATION-ATTACK-SQLI.conf (paranoia level 1)
   F14/F15/F16: dấu hiệu đơn lẻ chi tiết cho kỹ thuật rủi ro cao cụ thể.
 """
 
-import math
 import re
 import logging
 from typing import List
@@ -35,22 +34,27 @@ logger = logging.getLogger(__name__)
 _CRS_SQLI_PATTERNS = load_rx_patterns(CRS_SQLI_CONF, paranoia_level=2)
 
 # F14: UNION-based injection
+# Pattern duy nhất bắt được cả "UNION SELECT" và "UNION ALL SELECT" (ALL < 50 chars)
 _UNION_PATTERNS = [
     re.compile(r"\bunion\b[\s\S]{0,50}\bselect\b", re.IGNORECASE),
-    re.compile(r"\bunion\b\s+\ball\b\s+\bselect\b", re.IGNORECASE),
 ]
 
-# F15: SQL comment injection (--(?:\s|$) bắt được admin'--)
+# F15: SQL comment injection
+# --(?:\s|$|[^a-zA-Z]) bắt được admin'--&pass=x nhưng loại trừ CSS --var-name
 _COMMENT_PATTERNS = [
-    re.compile(r"--(?:\s|$)", re.IGNORECASE),
+    re.compile(r"--(?:\s|$|[^a-zA-Z])", re.IGNORECASE),
     re.compile(r"#(?![0-9a-fA-F]{3,6}\b)", re.IGNORECASE),
     re.compile(r"/\*[\s\S]*?\*/", re.IGNORECASE),
     re.compile(r"/\*![0-9]*", re.IGNORECASE),
 ]
 
-# F16: Stacked query — dấu chấm phẩy theo sau là DDL/DML phá hoại
+# F16: Stacked query — dấu chấm phẩy theo sau là DDL/DML phá hoại hoặc lệnh hệ thống
 _STACKED_QUERY_PATTERNS = [
-    re.compile(r";\s*(?:drop|delete|insert|update|truncate|alter)\b", re.IGNORECASE),
+    re.compile(
+        r";\s*(?:drop|delete|insert|update|truncate|alter"
+        r"|exec(?:ute)?|call|grant|revoke|create|load\s+data|shutdown|xp_\w+)\b",
+        re.IGNORECASE
+    ),
 ]
 
 # F17: Đếm SELECT
@@ -78,7 +82,9 @@ class F12_SqlSpecialChar(FeatureBase):
         Ratio [0, 1], chưa chuẩn hóa
     """
 
-    SQLI_CHARS = set(b"'-;#=")
+    # Chỉ giữ ký tự hiếm trong normal web traffic: ' ; #
+    # Bỏ '=' (xuất hiện trong mọi GET query string) và '-' (UUID, headers, dates)
+    SQLI_CHARS = set("';#")
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
         total_len = 0
@@ -89,11 +95,12 @@ class F12_SqlSpecialChar(FeatureBase):
 
         for f in flows:
             for pkt in f.get_fwd_packets():
-                payload = ctx.get_raw_payload(pkt)
-                if not payload:
+                # Dùng get_normalized (URL decoded) để bắt %27 → '
+                normalized = ctx.get_normalized(pkt)
+                if not normalized:
                     continue
-                total_len += len(payload)
-                char_count += sum(1 for b in payload if b in self.SQLI_CHARS)
+                total_len += len(normalized)
+                char_count += sum(1 for c in normalized if c in self.SQLI_CHARS)
 
         if total_len == 0:
             return 0.0
@@ -105,7 +112,7 @@ class F12_SqlSpecialChar(FeatureBase):
     name="CrsSquliScore",
     code="F13",
     description=(
-        "Điểm bất thường OWASP CRS 942 — số rule SQLi bị kích hoạt. "
+        "Điểm CRS 942 trung bình mỗi HTTP request — số rule SQLi kích hoạt / số request. "
         "Bao gồm: tên DB, hàm SQL (sleep/benchmark), tautology, "
         "encoding evasion, error-based, boolean blind. "
         "Nguồn: REQUEST-942-APPLICATION-ATTACK-SQLI.conf PL1"
@@ -114,18 +121,17 @@ class F12_SqlSpecialChar(FeatureBase):
 ))
 class F13_CrsSquliScore(FeatureBase):
     """
-    F13: ĐIỂM BẤT THƯỜNG CRS SQLi
+    F13: ĐIỂM BẤT THƯỜNG CRS SQLi (bình quân mỗi request)
 
-    Đếm số rule CRS 942 bị kích hoạt trên payload đã chuẩn hóa.
-    Giá trị càng cao → càng nhiều chỉ báo SQLi → tín hiệu mạnh hơn cho RL.
+    Tổng số rule CRS 942 bị kích hoạt / số HTTP request trong window.
+    Normalize theo request count để tránh false positive do traffic volume cao.
 
     Ví dụ:
-      score=0  → không có dấu hiệu SQLi
-      score=1  → 1 rule kích hoạt (dấu hiệu yếu, có thể FP)
-      score=5  → 5 rule kích hoạt (rất có khả năng là tấn công)
+      60 request bình thường × 1 rule mỗi cái = 60/60 = 1.0  (trước: 60.0)
+      10 request SQLi × 4 rule mỗi cái        = 40/10 = 4.0  (phân biệt được)
 
     Returns:
-        float — số rule kích hoạt (0.0 đến len(_CRS_SQLI_PATTERNS))
+        float ≥ 0.0 — số rule trung bình mỗi HTTP request
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -133,16 +139,20 @@ class F13_CrsSquliScore(FeatureBase):
         ctx = context if context else FeatureContext(flows)
 
         total_score = 0.0
+        http_request_count = 0
         for f in flows:
             for pkt in f.get_fwd_packets():
                 normalized = ctx.get_normalized(pkt)
                 if not normalized:
                     continue
+                http_request_count += 1
                 for _rule_id, _msg, pattern in _CRS_SQLI_PATTERNS:
                     if pattern.search(normalized):
                         total_score += 1.0
 
-        return total_score
+        if http_request_count == 0:
+            return 0.0
+        return total_score / http_request_count
 
 
 @register_feature(FeatureMetadata(
