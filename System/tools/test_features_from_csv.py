@@ -198,6 +198,7 @@ def extract_features_from_csv(
     label: Optional[str] = None,
     max_rows: int = 0,
     precision: int = 2,
+    normalize: bool = False,
 ):
     with csv_path.open("r", encoding="utf-8", errors="ignore", newline="") as f:
         reader = csv.DictReader(f)
@@ -215,6 +216,8 @@ def extract_features_from_csv(
     packets.sort(key=lambda x: x.timestamp)
     calc = FlowFeatureCalculator()
     feature_names = calc.get_feature_names()
+    if normalize:
+        from config.data_params import normalize_feature_vector
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as out:
@@ -263,6 +266,8 @@ def extract_features_from_csv(
                     for flow in flows:
                         flow.analysis_window_size = window_size
                     values = calc.calculate_all_optimized(flows)
+                    if normalize:
+                        values = normalize_feature_vector(values)
 
                     fwd_packets_for_src = sum(f.get_fwd_packet_count() for f in flows)
                     bwd_packets_for_src = sum(f.get_bwd_packet_count() for f in flows)
@@ -317,6 +322,7 @@ def main():
     parser.add_argument("-l", "--label", default=None, help="Optional label column value (e.g., port_scanning)")
     parser.add_argument("--max-rows", type=int, default=0, help="Optional row cap for quick test (0 = all rows)")
     parser.add_argument("--precision", type=int, default=4, help="Decimal places for numeric output (default: 4)")
+    parser.add_argument("--normalize", action="store_true", help="Normalize feature values to [0,1] using FEATURE_CLIP_BOUNDS")
     args = parser.parse_args()
 
     if args.window <= 0:
@@ -336,6 +342,7 @@ def main():
         label=args.label,
         max_rows=args.max_rows,
         precision=args.precision,
+        normalize=args.normalize,
     )
     print(f"[OK] Features exported: {output_path}")
 
