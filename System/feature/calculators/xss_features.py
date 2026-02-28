@@ -70,7 +70,7 @@ _EVENT_HANDLER_PATTERNS = [
     name="CrsXssScore",
     code="F18",
     description=(
-        "Điểm bất thường OWASP CRS 941 — số rule XSS bị kích hoạt. "
+        "Điểm CRS 941 trung bình mỗi HTTP request — số rule XSS kích hoạt / số request. "
         "Bao gồm: script tag, event handler, JS URI, NoScript injection, "
         "IE XSS filter, JSFuck, AngularJS SSTI, từ khóa node-validator. "
         f"Nguồn: REQUEST-941-APPLICATION-ATTACK-XSS.conf PL1"
@@ -79,21 +79,22 @@ _EVENT_HANDLER_PATTERNS = [
 ))
 class F18_CrsXssScore(FeatureBase):
     """
-    F18: ĐIỂM BẤT THƯỜNG CRS XSS
+    F18: ĐIỂM BẤT THƯỜNG CRS XSS (bình quân mỗi request)
 
-    Đếm số rule CRS 941 bị kích hoạt trên payload đã chuẩn hóa.
+    Tổng số rule CRS 941 bị kích hoạt / số HTTP request trong window.
     Bao gồm cả rule @rx (regex) và @pm (phrase match).
+    Normalize theo request count để tránh false positive do traffic volume cao.
 
     Ví dụ:
       score=0  → không có dấu hiệu XSS
-      score=1  → 1 rule kích hoạt (dấu hiệu yếu)
-      score=8  → 8 rule kích hoạt (chắc chắn là tấn công)
+      score=1  → 1 rule kích hoạt trung bình mỗi request (dấu hiệu yếu)
+      score=8  → 8 rule kích hoạt trung bình mỗi request (chắc chắn là tấn công)
 
     Thay thế: F25(HtmlTagInjection), F28(JsProtocol),
               F29(HtmlEntityRatio), F30(DataUri)
 
     Returns:
-        float — tổng số rule kích hoạt (0.0 đến len(_CRS_XSS_PATTERNS) + @pm)
+        float ≥ 0.0 — số rule trung bình mỗi HTTP request
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -101,11 +102,14 @@ class F18_CrsXssScore(FeatureBase):
         ctx = context if context else FeatureContext(flows)
 
         total_score = 0.0
+        http_request_count = 0
         for f in flows:
             for pkt in f.get_fwd_packets():
                 normalized = ctx.get_normalized(pkt)
                 if not normalized:
                     continue
+
+                http_request_count += 1
 
                 # Rule @rx: mỗi pattern khớp = +1
                 for _rule_id, _msg, pattern in _CRS_XSS_PATTERNS:
@@ -117,7 +121,9 @@ class F18_CrsXssScore(FeatureBase):
                     if phrase in normalized:
                         total_score += 1.0
 
-        return total_score
+        if http_request_count == 0:
+            return 0.0
+        return total_score / http_request_count
 
 
 @register_feature(FeatureMetadata(
