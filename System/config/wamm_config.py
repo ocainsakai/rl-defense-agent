@@ -49,7 +49,7 @@ TRAINING_REPORT_PATH = os.path.join(MODEL_DIR, "training_report.json")
 # =============================================================================
 # ĐƯỜNG DẪN DATASET
 # =============================================================================
-DATASET_DIR = os.path.join(_SYSTEM_DIR, "dataset")
+DATASET_DIR = os.path.join(_SYSTEM_DIR, "dataset", "kaggle")
 SQLI_DATASET_PATH = os.path.join(DATASET_DIR, "sqli.csv")
 XSS_DATASET_PATH = os.path.join(DATASET_DIR, "XSS_dataset.csv")
 CSIC_DATASET_PATH = os.path.join(DATASET_DIR, "csic_database.csv")

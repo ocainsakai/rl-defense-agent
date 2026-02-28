@@ -53,8 +53,8 @@ FEATURE_ORDER: list = [
     'F4',   #  3  RstRatio          — RST/total,           Port Scan
     'F5',   #  4  DistinctPorts     — unique dst ports,    Port Scan
     'F6',   #  5  URLConcentration  — max_url/total,       Brute Force / L7 DDoS
-    'F7',   #  6  AuthFailureRate   — 401+403/total,       Brute Force login
-    'F8',   #  7  ServerErrorRate   — 5xx/total,           Server crash / DoS
+    'F7',   #  6  HttpIatUniformity     — 1/(1+CV) HTTP IAT,        Brute Force bot timing
+    'F8',   #  7  RequestSizeUniformity — 1/(1+CV) payload sizes,  Brute Force payload
     'F9',   #  8  AvgPayloadSize    — avg bytes/pkt,       SYN flood (no payload)
     'F10',  #  9  FwdBwdRatio       — fwd/bwd pkts,        Traffic asymmetry
     'F11',  # 10  PacketsPerPort    — pkts/port,           Port Scan density
