@@ -105,9 +105,16 @@ def _tcp_flags_from_row(row: Dict[str, str]) -> str:
 
 
 def _row_to_layer_info(row: Dict[str, str]) -> Optional[LayerInfo]:
-    ts = _to_float(row.get("Frame Time (Epoch)"))
-    if ts is None:
+    epoch_raw = (row.get("Frame Time (Epoch)") or "").strip()
+    if "." in epoch_raw:
+        # Float epoch — sub-second precision có sẵn, dùng trực tiếp
+        ts = _to_float(epoch_raw)
+    else:
+        # Integer epoch — mất sub-second precision; dùng Time (relative) thay thế
+        # Time là thời gian tương đối từ packet đầu, giữ đúng IAT sub-second
         ts = _to_float(row.get("Time"))
+        if ts is None:
+            ts = _to_float(epoch_raw)  # fallback: integer epoch (IAT = 0)
     if ts is None:
         return None
 
@@ -118,7 +125,10 @@ def _row_to_layer_info(row: Dict[str, str]) -> Optional[LayerInfo]:
     has_ip = bool(src_ip and dst_ip)
 
     protocol_name = (row.get("Protocol") or "").strip().upper()
-    protocol = PROTO_MAP.get(protocol_name)
+    # Dùng "IP Protocol" (L4 thực: TCP/UDP) thay vì "Protocol" (Wireshark display name: HTTP/SSDP/DNS...)
+    # để tránh tạo flow thừa khi cùng connection có cả TCP và HTTP packet
+    ip_proto_name = (row.get("IP Protocol") or "").strip().upper()
+    protocol = PROTO_MAP.get(ip_proto_name) or PROTO_MAP.get(protocol_name)
 
     tcp_sport = _to_int(row.get("TCP Source Port"))
     tcp_dport = _to_int(row.get("TCP Destination Port"))
@@ -136,11 +146,12 @@ def _row_to_layer_info(row: Dict[str, str]) -> Optional[LayerInfo]:
         return None
 
     tcp_len = _to_int(row.get("TCP Length"), 0) or 0
-    payload_text_parts = [p for p in [http_uri, http_user_agent] if p]
-    payload_text = " ".join(payload_text_parts)
-    payload_bytes = payload_text.encode("utf-8", errors="ignore") if payload_text else None
-    payload_len = len(payload_bytes) if payload_bytes else tcp_len
-    has_payload = payload_len > 0
+    # Không pre-build payload_bytes từ URI+UA ở đây — build_composite_payload()
+    # sẽ tự reconstruct từ http_uri + http_user_agent khi feature calculator gọi.
+    # Pre-building ở đây gây duplication: composite = [URI, UA, URI+UA].
+    payload_bytes = None
+    payload_len = tcp_len
+    has_payload = has_http or (payload_len > 0)
 
     li = LayerInfo(
         timestamp=ts,
@@ -212,11 +223,17 @@ def extract_features_from_csv(
             "window_start",
             "window_end",
             "src_ip",
+            "src_port",
+            "dst_ip",
+            "dst_port",
+            "distinct_src_ports",
             "packets_in_window",
             "total_flows_in_window",
             "flows_for_src",
             "fwd_packets_for_src",
             "bwd_packets_for_src",
+            "fwd_syn_count",
+            "bwd_rst_count",
         ] + feature_names
         if label is not None:
             fieldnames.append("label")
@@ -250,16 +267,36 @@ def extract_features_from_csv(
                     fwd_packets_for_src = sum(f.get_fwd_packet_count() for f in flows)
                     bwd_packets_for_src = sum(f.get_bwd_packet_count() for f in flows)
 
+                    # Tìm IP/port phổ biến nhất và TCP flag counts
+                    from collections import Counter
+                    src_port_counter = Counter(f.src_port for f in flows)
+                    dst_ip_counter = Counter(f.dst_ip for f in flows)
+                    dst_port_counter = Counter(f.dst_port for f in flows)
+                    top_src_port = src_port_counter.most_common(1)[0][0] if src_port_counter else ""
+                    top_dst_ip = dst_ip_counter.most_common(1)[0][0] if dst_ip_counter else ""
+                    top_dst_port = dst_port_counter.most_common(1)[0][0] if dst_port_counter else ""
+                    distinct_src_ports = len(set(f.src_port for f in flows))
+
+                    # TCP flag counts — context cho SYN Flood analysis
+                    fwd_syn_count = sum(f.get_fwd_tcp_flags_count()['SYN'] for f in flows)
+                    bwd_rst_count = sum(f.get_bwd_tcp_flags_count()['RST'] for f in flows)
+
                     row_out = {
                         "window_index": window_index,
                         "window_start": f"{window_start:.{precision}f}",
                         "window_end": f"{window_end:.{precision}f}",
                         "src_ip": src_ip,
+                        "src_port": top_src_port,
+                        "dst_ip": top_dst_ip,
+                        "dst_port": top_dst_port,
+                        "distinct_src_ports": distinct_src_ports,
                         "packets_in_window": packets_in_window,
                         "total_flows_in_window": total_flows_in_window,
                         "flows_for_src": len(flows),
                         "fwd_packets_for_src": fwd_packets_for_src,
                         "bwd_packets_for_src": bwd_packets_for_src,
+                        "fwd_syn_count": fwd_syn_count,
+                        "bwd_rst_count": bwd_rst_count,
                     }
                     for i, name in enumerate(feature_names):
                         row_out[name] = f"{float(values[i]):.{precision}f}"
