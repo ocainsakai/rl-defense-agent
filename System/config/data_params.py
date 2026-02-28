@@ -9,6 +9,7 @@ Per review (2026-01): WINDOW_SIZE_SECONDS must be fixed to 1.0s.
 from __future__ import annotations
 
 import hashlib
+import math
 
 
 # Sliding/window duration used across the system (seconds)
@@ -38,12 +39,7 @@ def anonymize_src_ip(src_ip: str) -> str:
 #
 # Rule:  FEATURE_ORDER[i] = feature code at observation index i
 #        obs_vector[i]     = feature_values[FEATURE_ORDER[i]]
-#
-# Group layout:
-#   [0 -10]  Network layer  (11 features) — detect DDoS, SYN flood, Port scan
-#   [11-16]  SQLi layer     ( 6 features) — detect SQL Injection → redirect
-#   [17-19]  XSS layer      ( 3 features) — detect XSS           → redirect
-# =============================================================================
+=============================================================================
 
 FEATURE_ORDER: list = [
     # ── Network (indices 0-10) ────────────────────────────────────────────────
@@ -82,10 +78,12 @@ SQLI_SLICE    = slice(11, 17)  # indices 11-16
 XSS_SLICE     = slice(17, 20)  # indices 17-19
 
 # =============================================================================
-# NORMALIZATION CLIP BOUNDS — upper bounds for unbounded features
+# NORMALIZATION — clip bounds + scale method per feature
 # =============================================================================
 # Features không có trong dict đã là [0,1] hoặc binary — dùng trực tiếp.
-# Logic: normalized = min(raw_value, cap) / cap  → [0.0, 1.0]
+#
+# Log scale:  log(1 + min(raw, cap)) / log(1 + cap)  — range rộng, skewed
+# Linear:     min(raw, cap) / cap                     — range nhỏ, đều
 FEATURE_CLIP_BOUNDS: dict = {
     'F1':  500.0,   # packets/sec   — DDoS traffic ~100-500 pkt/s
     'F2':  100.0,   # SYN/ACK ratio — SYN flood
@@ -98,3 +96,35 @@ FEATURE_CLIP_BOUNDS: dict = {
     'F17':  10.0,   # SELECT count  — multiple SELECTs rare in legit traffic
     'F18':  32.0,   # CRS XSS rules — PL1 max ~31
 }
+
+# Features dùng log scale (range rộng, phân phối lệch)
+# Còn lại dùng linear scale
+FEATURE_LOG_SCALE: set = {'F1', 'F2', 'F3', 'F5', 'F10', 'F11'}
+
+
+def normalize_feature_vector(raw_vector: list) -> list:
+    """Chuẩn hóa vector 20 features thô → [0.0, 1.0].
+
+    - Log scale:    log(1 + min(raw, cap)) / log(1 + cap) — cho features skewed
+    - Linear:       min(raw, cap) / cap                    — cho features range nhỏ
+    - Pass-through: clamp [0,1]                            — cho ratio/binary
+
+    Args:
+        raw_vector: 20 giá trị thô theo thứ tự FEATURE_ORDER
+
+    Returns:
+        list: 20 giá trị đã chuẩn hóa về [0.0, 1.0]
+    """
+    result = []
+    for i, code in enumerate(FEATURE_ORDER):
+        raw = float(raw_vector[i])
+        cap = FEATURE_CLIP_BOUNDS.get(code)
+        if cap is not None and cap > 0.0:
+            clipped = min(raw, cap)
+            if code in FEATURE_LOG_SCALE:
+                result.append(math.log1p(clipped) / math.log1p(cap))
+            else:
+                result.append(clipped / cap)
+        else:
+            result.append(max(0.0, min(1.0, raw)))
+    return result
