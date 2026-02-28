@@ -226,6 +226,16 @@ class FlowFeatureCalculator:
 
         return (features, missing_indices)
 
+    def calculate_normalized(self, flows: List[FlowState]) -> List[float]:
+        """Tính và chuẩn hóa tất cả 20 features về [0.0, 1.0].
+
+        Returns:
+            list: 20 giá trị đã chuẩn hóa theo FEATURE_ORDER
+        """
+        from config.data_params import normalize_feature_vector
+        raw = self.calculate_all_optimized(flows)
+        return normalize_feature_vector(raw)
+
     def calculate_dict(self, flows: List[FlowState], optimized: bool = True) -> Dict[str, float]:
         """Tính tất cả features và trả về dạng dictionary.
 
