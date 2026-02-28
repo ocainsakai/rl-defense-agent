@@ -91,39 +91,50 @@ class F1_PacketRate(FeatureBase):
 ))
 class F2_SynAckRatio(FeatureBase):
     """
-    F2: TỶ LỆ SYN/ACK
-    
-    Công thức: SYN_count / max(ACK_count, 1)
-    
-    Ứng dụng:
-    - Phát hiện SYN Flood attack
-    - Normal: SYN và ACK cân bằng (~1.0)
-    - Attack: SYN >> ACK (ratio > 10)
-    
+    F2: TỶ LỆ SYN/SYN-ACK
+
+    Công thức: fwd_SYN / bwd_SYN
+    - fwd_SYN  : SYN packet từ client (muốn kết nối)
+    - bwd_SYN  : SYN-ACK packet từ server (phản hồi, có cả flag SYN+ACK)
+
+    TCP 3-way handshake bình thường:
+        Client → SYN        (fwd_SYN += 1)
+        Server ← SYN-ACK   (bwd_SYN += 1)
+        Client → ACK
+    → ratio ≈ 1.0
+
+    SYN Flood:
+        Client → SYN x10000  (fwd_SYN = 10000)
+        Server ← SYN-ACK x~  (bwd_SYN thấp vì server không kịp)
+    → ratio >> 1.0
+
+    Spoofed SYN Flood (IP giả):
+        Server gửi SYN-ACK đến IP giả → không về collector → bwd_SYN = 0
+    → trả về float(fwd_SYN) làm signal cường độ (unbounded)
+
     Returns:
         Giá trị thô, chưa chuẩn hóa
-        - 0 = Không có traffic TCP
-        - 1 = SYN và ACK cân bằng
-        - >1 = SYN nhiều hơn ACK (nghi ngờ SYN Flood)
+        - 0.0  = Không có TCP SYN (không có kết nối nào)
+        - ~1.0 = Bình thường (mỗi SYN đều có SYN-ACK)
+        - >1.0 = SYN Flood (server không kịp phản hồi)
     """
-    
+
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Tính tỷ lệ SYN/ACK - trả về giá trị thô."""
-        total_syn = 0
-        total_ack = 0
-        
+        """Tính tỷ lệ fwd_SYN / bwd_SYN - phản ánh đúng SYN Flood."""
+        total_fwd_syn = 0
+        total_bwd_syn = 0
+
         for f in flows:
-            flags = f.get_fwd_tcp_flags_count()
-            total_syn += flags['SYN']
-            total_ack += flags['ACK']
-        
-        # Tránh chia cho 0: nếu ACK=0, dùng 1
-        if total_ack == 0:
-            # Nếu ACK=0 và SYN>0 → ratio = SYN (rất cao, dấu hiệu SYN Flood)
-            # Nếu ACK=0 và SYN=0 → ratio = 0 (không có traffic TCP)
-            return float(total_syn)
-        
-        return float(total_syn) / float(total_ack)
+            fwd_flags = f.get_fwd_tcp_flags_count()
+            bwd_flags = f.get_bwd_tcp_flags_count()
+            total_fwd_syn += fwd_flags['SYN']
+            total_bwd_syn += bwd_flags['SYN']  # bwd SYN = SYN-ACK từ server
+
+        if total_bwd_syn == 0:
+            # Spoofed flood: không có phản hồi từ server → dùng fwd_SYN làm signal
+            return float(total_fwd_syn)
+
+        return float(total_fwd_syn) / float(total_bwd_syn)
 
 
 @register_feature(FeatureMetadata(
@@ -149,25 +160,22 @@ class F3_InterArrivalTime(FeatureBase):
     """
     
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Tính thời gian trung bình giữa các gói tin chiều xuôi."""
-        timestamps = []
-        
+        """Tính thời gian trung bình giữa các gói tin chiều xuôi (per-flow, rồi aggregate)."""
+        all_iats = []
+
         for f in flows:
-            for pkt in f.get_fwd_packets():
-                if pkt.timestamp:
-                    timestamps.append(pkt.timestamp)
-        
-        if len(timestamps) < 2:
-            return 0.0
-        
-        # Sắp xếp theo thời gian
-        timestamps.sort()
-        
-        # Tính delta giữa các gói tin liên tiếp
-        deltas = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)]
-        
-        # Trả về trung bình
-        return sum(deltas) / len(deltas) if deltas else 0.0
+            # Thu thập timestamps per-flow — cho phép timestamp=0.0
+            timestamps = [
+                pkt.timestamp for pkt in f.get_fwd_packets()
+                if pkt.timestamp is not None
+            ]
+            if len(timestamps) < 2:
+                continue
+            timestamps.sort()
+            flow_iats = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)]
+            all_iats.extend(flow_iats)
+
+        return sum(all_iats) / len(all_iats) if all_iats else 0.0
 
 
 @register_feature(FeatureMetadata(
@@ -180,33 +188,41 @@ class F3_InterArrivalTime(FeatureBase):
 class F4_RstRatio(FeatureBase):
     """
     F4: TỶ LỆ RST
-    
-    Công thức: RST_count / max(total_bwd_packets, 1)
-    
+
+    Công thức: (fwd_RST + bwd_RST) / total_packets
+
+    Đếm RST cả 2 chiều:
+    - bwd_RST: Server trả RST cho port đóng (SYN Scan, Connect Scan)
+    - fwd_RST: Client gửi RST sau scan (cleanup), hoặc Idle/Zombie scan
+
+    Dùng total_packets (fwd+bwd) làm mẫu số để:
+    - Tránh chia 0 khi Spoofed SYN Flood (bwd = 0)
+    - Chuẩn hóa đúng ratio trong [0, 1]
+
     Ứng dụng:
-    - Phát hiện Port Scan (server trả RST cho các cổng đóng)
-    - Phát hiện lỗi kết nối
-    - Normal: ~0 (kết nối được thiết lập thành công)
-    - Attack Port Scan: > 0.5 (nhiều cổng đóng trả RST)
-    
+    - Phát hiện Port Scan (RST từ closed ports)
+    - Normal: ~0 (kết nối thành công, ít RST)
+    - Port Scan: > 0.3 (nhiều cổng đóng trả RST)
+
     Returns:
         Ratio [0, 1], chưa chuẩn hóa
     """
-    
+
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Tính tỷ lệ RST từ các gói tin chiều ngược."""
+        """Tính tỷ lệ RST (cả fwd + bwd) / total_packets."""
         total_rst = 0
-        total_bwd = 0
-        
+        total_packets = 0
+
         for f in flows:
+            fwd_flags = f.get_fwd_tcp_flags_count()
             bwd_flags = f.get_bwd_tcp_flags_count()
-            total_rst += bwd_flags.get('RST', 0)
-            total_bwd += f.get_bwd_packet_count()
-        
-        if total_bwd == 0:
+            total_rst += fwd_flags.get('RST', 0) + bwd_flags.get('RST', 0)
+            total_packets += f.get_packet_count()
+
+        if total_packets == 0:
             return 0.0
-        
-        return float(total_rst) / float(total_bwd)
+
+        return float(total_rst) / float(total_packets)
 
 
 @register_feature(FeatureMetadata(
