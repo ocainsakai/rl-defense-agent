@@ -273,8 +273,9 @@ class HttpPayloadExtractor:
             elif isinstance(ua, bytes):
                 parts.append(ua)
 
-        # Body
-        parts.append(body)
+        # Body (chỉ thêm nếu không rỗng)
+        if body:
+            parts.append(body)
 
         return b' '.join(parts)
 

@@ -181,7 +181,7 @@ def handle_error(error: Exception, context: str = "", reraise: bool = True) -> N
     logger.error(message, exc_info=True)
     
     if reraise:
-        raise
+        raise error
 
 
 def validate_not_none(value, name: str, error_class=NIDSException) -> None:

@@ -38,6 +38,15 @@ _ID_RE  = re.compile(r'\bid:(\d+)')
 _MSG_RE = re.compile(r"msg:'([^']*)'")
 
 
+def _normalize_pcre_pattern(pattern: str) -> str:
+    """Chuyển một số escape PCRE không tương thích sang Python `re`.
+
+    Hiện tại xử lý:
+    - `\\z` (PCRE end-of-string tuyệt đối) -> `\\Z` (Python equivalent gần nhất)
+    """
+    return re.sub(r'(?<!\\)\\z', r'\\Z', pattern)
+
+
 def load_rx_patterns(
     conf_path: Path = None,
     paranoia_level: int = 1,
@@ -95,6 +104,7 @@ def load_rx_patterns(
             continue
 
         raw_pattern = rx_match.group(1)
+        normalized_pattern = _normalize_pcre_pattern(raw_pattern)
 
         # Trích xuất rule ID
         id_match = _ID_RE.search(block)
@@ -106,7 +116,7 @@ def load_rx_patterns(
 
         # Biên dịch pattern
         try:
-            compiled = re.compile(raw_pattern, re.IGNORECASE | re.DOTALL)
+            compiled = re.compile(normalized_pattern, re.IGNORECASE | re.DOTALL)
             results.append((rule_id, msg, compiled))
         except re.error as exc:
             logger.warning(f"CRS rule {rule_id} pattern biên dịch thất bại: {exc}")

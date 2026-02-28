@@ -5,6 +5,7 @@ Khi hàng đợi đầy, gói tin mới sẽ bị bỏ (không block) để trá
 """
 
 import queue
+import threading
 import time
 from typing import Optional
 
@@ -20,6 +21,7 @@ class PacketQueue:
     def __init__(self, max_size: int = 10000):
         self.queue = queue.Queue(maxsize=max_size)
         self.max_size = max_size
+        self._stats_lock = threading.Lock()
         self.dropped_packets = 0
         self.total_enqueued = 0
 
@@ -36,10 +38,12 @@ class PacketQueue:
         """
         try:
             self.queue.put(packet, block=block, timeout=timeout)
-            self.total_enqueued += 1
+            with self._stats_lock:
+                self.total_enqueued += 1
             return True
         except queue.Full:
-            self.dropped_packets += 1
+            with self._stats_lock:
+                self.dropped_packets += 1
             return False
 
     def get(self, block: bool = True, timeout: Optional[float] = None):

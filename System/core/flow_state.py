@@ -13,7 +13,7 @@ QUAN TRỌNG:
 """
 
 from collections import deque
-from typing import Dict, Any, Set, List
+from typing import Dict, Any, Optional, Set, List
 import time
 
 from core.layer_info import LayerInfo
@@ -47,7 +47,7 @@ class FlowState:
         self.last_update: float = time.time()
         
         # Nginx Proxy: X-Real-IP (IP gốc của client khi sniff sau Nginx)
-        self._x_real_ip: str = None
+        self._x_real_ip: Optional[str] = None
     
     def add_forward_packet(self, layer_info: LayerInfo) -> None:
         """Thêm packet FORWARD (src → dst)"""
@@ -75,19 +75,23 @@ class FlowState:
         """
         cutoff = current_time - self.window_size
         
-        # Dọn dẹp forward - kiểm tra timestamp trước khi so sánh
+        # Dọn dẹp forward - loại bỏ packets cũ và packets không có timestamp
         while self.fwd_packets:
             pkt = self.fwd_packets[0]
-            # Bỏ qua gói tin có timestamp không hợp lệ
-            if pkt.timestamp is None or pkt.timestamp >= cutoff:
+            if pkt.timestamp is None:
+                self.fwd_packets.popleft()
+                continue
+            if pkt.timestamp >= cutoff:
                 break
             self.fwd_packets.popleft()
 
-        # Dọn dẹp backward - kiểm tra timestamp trước khi so sánh
+        # Dọn dẹp backward - loại bỏ packets cũ và packets không có timestamp
         while self.bwd_packets:
             pkt = self.bwd_packets[0]
-            # Bỏ qua gói tin có timestamp không hợp lệ
-            if pkt.timestamp is None or pkt.timestamp >= cutoff:
+            if pkt.timestamp is None:
+                self.bwd_packets.popleft()
+                continue
+            if pkt.timestamp >= cutoff:
                 break
             self.bwd_packets.popleft()
     
@@ -178,7 +182,7 @@ class FlowState:
         """
         ports = set()
         for pkt in self.fwd_packets:
-            if pkt.has_tcp and pkt.tcp_dport:
+            if pkt.has_tcp and pkt.tcp_dport is not None:
                 ports.add(pkt.tcp_dport)
         return ports
     
