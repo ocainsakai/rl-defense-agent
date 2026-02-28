@@ -18,10 +18,24 @@ OUTPUT FORMAT (JSONL - one JSON object per line):
         "src_ip": "<source_ip>",
         "packet_rate": <F1>,
         "syn_ack_ratio": <F2>,
-        "distinct_ports": <F3>,
-        "payload_len": <F4>,
-        "conn_fail_rate": <F5>,
-        "context_score": <F6>
+        "inter_arrival_time": <F3>,
+        "rst_ratio": <F4>,
+        "distinct_ports": <F5>,
+        "url_concentration": <F6>,
+        "http_iat_uniformity": <F7>,
+        "request_size_uniformity": <F8>,
+        "avg_payload_size": <F9>,
+        "fwd_bwd_ratio": <F10>,
+        "packets_per_port": <F11>,
+        "sql_special_char": <F12>,
+        "crs_sqli_score": <F13>,
+        "sql_union_select": <F14>,
+        "sql_comment": <F15>,
+        "sql_stacked_query": <F16>,
+        "sql_select_count": <F17>,
+        "crs_xss_score": <F18>,
+        "js_function_call": <F19>,
+        "html_event_handler": <F20>
     }
 =============================================================================
 """
@@ -274,14 +288,16 @@ class RealTimeSlidingNIDS:
         """Stop the system."""
         self.is_running = False
         self.sniffer.stop()
-        
-        # Process remaining flows
-        if self.flow_manager.get_all_flows():
+
+        # Process remaining flows (thread-safe)
+        with self._flow_lock:
+            remaining = self.flow_manager.get_all_flows()
+        if remaining:
             self._process_window()
-        
+
         if self.output_fd:
             self.output_fd.close()
-        
+
         time.sleep(1)
         logger.info("System stopped.")
     
@@ -313,9 +329,9 @@ class RealTimeSlidingNIDS:
                 
                 current_time = time.time()
                 
-                if current_time >= self.current_window_end:
+                while current_time >= self.current_window_end:
                     self._process_window()
-                    
+
                     # TRUE SLIDING WINDOW: Slide by step, not window_size
                     self.current_window_start += self.slide_step
                     self.current_window_end = self.current_window_start + self.window_size

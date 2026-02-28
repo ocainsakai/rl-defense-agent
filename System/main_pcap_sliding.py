@@ -25,7 +25,7 @@ OUTPUT FORMAT:
     - Window_Start, Window_End (timestamps)
     - Src_IP
     - Aggregated statistics (flows, packets, duration)
-    - 6 RAW Features (F1-F6)
+    - 20 RAW Features (F1-F20)
     
 FEATURE F1 IN SLIDING MODE:
     F1 = Total_Packets / window_size (cố định)
@@ -46,6 +46,9 @@ from core.packet_parser import PacketLayerExtractor
 from core.flow_manager import FlowManager
 from core.flow_state import FlowState
 from feature.calculator import FlowFeatureCalculator
+
+# Shared calculator instance — tránh tạo mới mỗi window
+_shared_calc = FlowFeatureCalculator()
 
 
 def group_flows_by_src_ip(flows: list) -> dict:
@@ -81,13 +84,13 @@ def calculate_features_with_window_size(flows: List[FlowState], window_size: flo
         window_size: Kích thước window (seconds)
     
     Returns:
-        list: [f1_adjusted, f2, f3, f4, f5, f6]
+        list: 20 giá trị raw [f1_adjusted, f2, ..., f20]
     """
     if not flows:
         return None
-    
-    # Tính F2-F6 bình thường
-    calc = FlowFeatureCalculator()
+
+    # Tính F2-F6 bình thường (dùng shared calculator nếu có)
+    calc = _shared_calc
     features = calc.calculate_all(flows)
     
     if features is None:
@@ -319,6 +322,7 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
                         sys.stdout.flush()
                         
                 except Exception as e:
+                    logger.warning(f"Packet processing error: {type(e).__name__}: {e}")
                     continue
         
         # Xử lý window cuối cùng
@@ -352,8 +356,8 @@ def analyze_pcap_sliding(pcap_file: str, output_csv: str, window_size: float = 1
     
     print("[+] CÁCH SỬ DỤNG OUTPUT:")
     print("    1. Mỗi row = 1 src_ip trong 1 time window")
-    print("    2. F3_DistinctPorts cho thấy port scan theo thời gian")
-    print("    3. F1_PacketRate = packets/window_size (chuẩn hóa)")
+    print("    2. F5_distinct_ports cho thấy port scan theo thời gian")
+    print("    3. F1_packet_rate = packets/window_size (chuẩn hóa)")
     print("    4. Có thể vẽ biểu đồ time-series từ Window_Start")
     print("")
 
@@ -378,8 +382,8 @@ Ví dụ:
 Output:
     CSV file với time-series features:
     - Mỗi row = 1 src_ip trong 1 time window
-    - F1 = packets/window_size (chuẩn hóa theo window)
-    - F3 cho thấy port scanning theo thời gian
+    - F1 (packet_rate) = packets/window_size (chuẩn hóa theo window)
+    - F5 (distinct_ports) cho thấy port scanning theo thời gian
         """
     )
     

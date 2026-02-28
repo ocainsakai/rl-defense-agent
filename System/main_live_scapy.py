@@ -4,6 +4,7 @@ import sys
 import csv
 import logging
 from datetime import datetime
+from collections import Counter
 from scapy.all import sniff, conf
 
 # TỐI ƯU HÓA SCAPY CORE
@@ -70,16 +71,11 @@ class RealTimeNIDS:
             self.csv_file = open(self.output_file, mode='w', newline='', encoding='utf-8')
             self.csv_writer = csv.writer(self.csv_file)
             # Write Header
-            headers = [
-                "Timestamp", "SrcIP", "DstIP", "Protocol",
-                # 14 RAW Features
-                "F1_PktRate_Raw", "F2_SynRatio_Raw", "F3_IAT_Raw",
-                "F4_RstRatio_Raw", "F5_DistPorts_Raw",
-                "F6_URLConc_Raw", "F7_AuthFail_Raw", "F8_SrvErr_Raw",
-                "F9_PayloadLen_Raw", "F10_Entropy_Raw",
-                "F11_SQLiKW_Raw", "F12_SQLSpecChar_Raw",
-                "F13_XSSKW_Raw", "F14_XSSSpecChar_Raw",
+            feature_names = FlowFeatureCalculator.get_feature_names()
+            feature_headers = [
+                f"F{i+1:02d}_{name}_Raw" for i, name in enumerate(feature_names)
             ]
+            headers = ["Timestamp", "SrcIP", "DstIP", "Protocol"] + feature_headers  # 20 RAW Features
             self.csv_writer.writerow(headers)
             self.csv_file.flush()
         except Exception as e:
@@ -94,13 +90,8 @@ class RealTimeNIDS:
         self.feature_calc = FlowFeatureCalculator()
         self.sniffer = NetworkSniffer() # Tách biệt logic sniffer
         
-        # Thống kê hiệu năng
-        self.stats = {
-            'captured': 0,
-            'processed': 0,
-            'dropped': 0,
-            'alerts': 0
-        }
+        # Thống kê hiệu năng (thread-safe Counter)
+        self.stats = Counter(captured=0, processed=0, dropped=0, alerts=0)
 
     def _capture_loop(self):
         """
@@ -208,11 +199,13 @@ class RealTimeNIDS:
                 logger.error(f"[CSV] Error writing row: {e}")
 
         # --- RULE-BASED DETECTION (DEMO) ---
-        # F1: Packet Rate, F2: SYN/ACK Ratio, F11: SQLi Keyword
-        f1_pkt_rate = features_raw[0]
-        f2_syn_ratio = features_raw[1]
-        f11_sqli = features_raw[10]
-        f13_xss = features_raw[12]
+        # Index theo FEATURE_ORDER (0-based):
+        #   [0]  F1  packet_rate        [1]  F2  syn_ack_ratio
+        #   [12] F13 crs_sqli_score     [17] F18 crs_xss_score
+        f1_pkt_rate  = features_raw[0]   # packet_rate
+        f2_syn_ratio = features_raw[1]   # syn_ack_ratio
+        f13_sqli     = features_raw[12]  # crs_sqli_score  (F13)
+        f18_xss      = features_raw[17]  # crs_xss_score   (F18)
 
         # 1. Phát hiện DoS/Flood (F1 > 2400 pkts/s = 80% of MAX_PACKET_RATE 3000)
         if f1_pkt_rate > 2400:
@@ -222,13 +215,13 @@ class RealTimeNIDS:
         if f2_syn_ratio > 0.9:
             self._alert(flow.src_ip, "SYN Flood Detected", f"SYN Ratio={f2_syn_ratio:.2f}")
 
-        # 3. Phát hiện SQLi (F11 > 0)
-        if f11_sqli > 0:
-            self._alert(flow.src_ip, "SQLi Detected", f"SQLi Keywords={f11_sqli:.0f}")
+        # 3. Phát hiện SQLi (F13 crs_sqli_score > 0)
+        if f13_sqli > 0:
+            self._alert(flow.src_ip, "SQLi Detected", f"CRS SQLi Score={f13_sqli:.0f}")
 
-        # 4. Phát hiện XSS (F13 > 0)
-        if f13_xss > 0:
-            self._alert(flow.src_ip, "XSS Detected", f"XSS Keywords={f13_xss:.0f}")
+        # 4. Phát hiện XSS (F18 crs_xss_score > 0)
+        if f18_xss > 0:
+            self._alert(flow.src_ip, "XSS Detected", f"CRS XSS Score={f18_xss:.0f}")
 
     def _alert(self, src_ip, alert_type, details):
         """Ghi cảnh báo"""

@@ -55,7 +55,12 @@ def log_and_print(message: str):
 
 def print_packet(pkt, packet_num):
     """In thông tin packet giống Wireshark"""
-    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    # Dùng timestamp thật của packet (từ PCAP hoặc capture time)
+    pkt_time = getattr(pkt, 'time', None)
+    if pkt_time:
+        timestamp = datetime.fromtimestamp(float(pkt_time)).strftime("%H:%M:%S.%f")[:-3]
+    else:
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
     
     # Header
     log_and_print(f"\n{'='*70}")
