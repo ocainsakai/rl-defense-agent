@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/\")",
+      "Bash(head -3 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/Port Scanning/6.csv\")",
+      "Bash(head -3 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/SQL Injection.csv\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/XSS/XSS-1.csv\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DOS/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DDOS RAW/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DDOS icmp/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SSH Brute Force/\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DOS/DOS_csvvvv.csv\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DDOS icmp/DDOS ICMP.csv\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DDOS RAW/DDOSRAW.csv\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DDOS-UDP/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/ARP-spoof/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/syn flood/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/Fuzzing/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/Remote Code Execution/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/FTP Brute Force/\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/ARP-spoof/MITM-ARP Spoofing.csv\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/DDOS-UDP/3.csv\")",
+      "Bash(head -2 \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/ICMP Flood/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/ICMP Flood/\")",
+      "Bash(ls \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/\")",
+      "Bash(wc -l \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/SQL Injection.csv\" \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/SQL-Injection2.csv\" \"c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/SQLinjection-UPDATED.csv\")",
+      "Bash(python -c \":*)",
+      "Bash(python tools/test_features_from_csv.py -i \"dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/SQL-Injection2.csv\" -o \"dataset/test_output_sqli2.csv\" -w 1.0 -l \"sql_injection\" --precision 4)",
+      "Bash(python tools/test_features_from_csv.py -i \"dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/SQL injection/SQLinjection-UPDATED.csv\" -o \"dataset/test_output_sqli3.csv\" -w 1.0 -l \"sql_injection\" --precision 4)",
+      "Bash(ls c:/Users/VyVa/Documents/GitHub/rl-defense-agent/System/dataset/*.csv)"
+    ]
+  }
+}

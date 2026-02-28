@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import sys; [print\\(l.encode\\(''ascii'', errors=''replace''\\).decode\\(\\)\\) for l in sys.stdin]\")",
+      "Bash(chcp 65001)",
+      "Bash(PYTHONUTF8=1 python main_pcap_sliding.py -p \"Cap_1_10VM_1Apache/L1_100packets.pcap\" -o test_output.csv -w 1.0 --verbose)",
+      "Bash(PYTHONUTF8=1 python -c \":*)",
+      "Read(//c/Program Files/Wireshark/**)",
+      "Bash(PYTHONUTF8=1 \"/c/Program Files/Wireshark/capinfos.exe\" \"c:\\\\Users\\\\VyVa\\\\Documents\\\\GitHub\\\\rl-defense-agent\\\\System\\\\Cap_1_10VM_1Apache\\\\L1_Cap_10PC_1S.pcapng\")",
+      "Bash(PYTHONUTF8=1 python tools/pcap_slicer.py -i Cap_1_10VM_1Apache/L1_100packets.pcap --dry-run)",
+      "Bash(PYTHONUTF8=1 python tools/pcap_slicer.py -i Cap_1_10VM_1Apache/L1_100packets.pcap -o /tmp/slices_test --mode time --size 1.0)",
+      "Bash(grep -r \"calculate_all\\\\|get_flows_by_src\\\\|calculate\\(flows\" /c/Users/VyVa/Documents/GitHub/rl-defense-agent/System/*.py)",
+      "Read(//c/Users/VyVa/.claude/plans/**)",
+      "Bash(grep -r \"def test_\\\\|class Test\" /c/Users/VyVa/Documents/GitHub/rl-defense-agent/System/test/*.py --include=\"*.py\")",
+      "Bash(grep -r \"def test_\\\\|class Test\" /c/Users/VyVa/Documents/GitHub/rl-defense-agent/System/test/test_*.py)",
+      "Bash(wc -l /c/Users/VyVa/Documents/GitHub/rl-defense-agent/System/test/test_*.py)",
+      "Bash(python tools/test_features_from_csv.py -i \"dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/XSS/XSS-1.csv\" -o \"dataset/output/out_xss1.csv\" -w 1.0 -l xss --precision 4)",
+      "Bash(python tools/test_features_from_csv.py -i \"dataset/LSNM2024 Dataset/Dataset-Ready \\(Use This\\)/Malicious/XSS/9.csv\" -o \"dataset/output/out_xss9.csv\" -w 1.0 -l xss --precision 4)"
+    ]
+  }
+}
