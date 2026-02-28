@@ -45,8 +45,8 @@ class FlowFeatureCalculator:
           F4:  RstRatio                tỷ lệ [0,1]
           F5:  DistinctPorts           số lượng
           F6:  URLConcentration        tỷ lệ [0,1]
-          F7:  AuthFailureRate         tỷ lệ [0,1] (401+403)
-          F8:  ServerErrorRate         tỷ lệ [0,1] (5xx)
+          F7:  HttpIatUniformity       1/(1+CV) HTTP IAT, Brute Force bot
+          F8:  RequestSizeUniformity   1/(1+CV) payload sizes, Brute Force
           F9:  AvgPayloadSize          bytes
           F10: FwdBwdRatio             tỷ lệ
           F11: PacketsPerPort          tỷ lệ
@@ -205,12 +205,26 @@ class FlowFeatureCalculator:
             missing_indices = list(range(self.NUM_FEATURES))
             return (default_vector, missing_indices)
 
-        try:
-            features = self.calculate_all_optimized(flows)
-            return (features, [])
-        except Exception as e:
-            logger.error(f"Optimized calculation failed: {e}, falling back to standard")
-            return self.calculate_all_with_flags(flows)
+        # Tạo context với caching chuẩn hóa
+        ctx = FeatureContext(flows)
+
+        features = []
+        missing_indices = []
+
+        for idx, calc in enumerate(self.calculators):
+            if calc is None:
+                features.append(0.0)
+                missing_indices.append(idx)
+            else:
+                try:
+                    value = calc.calculate(flows, context=ctx)
+                    features.append(value)
+                except Exception as e:
+                    logger.error(f"Feature {calc.metadata.code} failed: {e}")
+                    features.append(0.0)
+                    missing_indices.append(idx)
+
+        return (features, missing_indices)
 
     def calculate_dict(self, flows: List[FlowState], optimized: bool = True) -> Dict[str, float]:
         """Tính tất cả features và trả về dạng dictionary.
@@ -245,8 +259,8 @@ class FlowFeatureCalculator:
             'rst_ratio',            # F4
             'distinct_ports',       # F5
             'url_concentration',    # F6
-            'auth_fail_rate',       # F7
-            'server_error_rate',    # F8
+            'http_iat_uniformity',  # F7
+            'request_size_uniformity',  # F8
             'avg_payload_size',     # F9
             'fwd_bwd_ratio',        # F10
             'packets_per_port',     # F11
