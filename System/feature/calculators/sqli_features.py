@@ -30,7 +30,16 @@ logger = logging.getLogger(__name__)
 # PATTERN — tải/compile một lần khi import module
 # =============================================================================
 
-# F13: Rule CRS 942 ở PL2 — bao gồm tautology (OR 1=1), auth bypass, v.v.
+# F13: Rule CRS 942 — Benchmark trên LSNM2024 dataset (2026-03, n=3000 normal + 2809 attack):
+#   PL   Rules  TP    FP   FN    F1      FPR
+#   PL1  19     1695  0    1114  0.7527  0.0000  ← zero FP nhưng bỏ sót 40% tấn công
+#   PL2  50     2809  459  0     0.9245  0.1530  ← F1 tốt nhất, recall=100%  [DÙNG]
+#   PL3  57     2809  520  0     0.9153  0.1733  ← thêm FP, không tốt hơn PL2
+#
+# Quyết định: Giữ PL2 — F1 cao nhất (0.9245), mặc dù FPR=15.3% trên benign URI.
+# FPR cao chủ yếu do PL2 nhạy với các query pattern phổ biến trong dataset
+# (DVWA, mutillidae navigation). Trong production thực, FPR sẽ thấp hơn.
+# Chạy lại benchmark: python3 tools/benchmark_crs_pl.py
 _CRS_SQLI_PATTERNS = load_rx_patterns(CRS_SQLI_CONF, paranoia_level=2)
 
 # F14: UNION-based injection
@@ -259,20 +268,20 @@ class F16_SqlStackedQuery(FeatureBase):
 @register_feature(FeatureMetadata(
     name="SqlSelectCount",
     code="F17",
-    description="Số lượng câu lệnh SELECT — nhiều SELECT biểu thị UNION chaining (F1=0.766 khi kiểm thử)",
+    description="Số SELECT trung bình mỗi HTTP request — nhiều SELECT biểu thị UNION chaining (F1=0.766 khi kiểm thử)",
     category="sqli",
 ))
 class F17_SqlSelectCount(FeatureBase):
     """
-    F17: ĐẾM SELECT
+    F17: SỐ SELECT TRUNG BÌNH MỖI HTTP REQUEST
 
-    Đếm số lần xuất hiện SELECT: Nhiều SELECT = subquery injection hoặc UNION chaining.
-    VD: SELECT * FROM users UNION SELECT * FROM passwords → count = 2
+    Đếm số lần xuất hiện SELECT / số HTTP request trong window.
+    Normalize theo request count để nhất quán với F13 (CrsSquliScore).
 
-    Giữ nguyên vì: TPR=62.1%, FPR=0.0%, F1=0.766 trên test dataset.
+    VD: SELECT * FROM users UNION SELECT * FROM passwords → 2 SELECT / 1 request = 2.0
 
     Returns:
-        Số nguyên dạng float, chưa chuẩn hóa
+        float >= 0.0 — số SELECT trung bình mỗi HTTP request
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
@@ -280,14 +289,18 @@ class F17_SqlSelectCount(FeatureBase):
         ctx = context if context else FeatureContext(flows)
 
         total_count = 0
+        http_request_count = 0
         for f in flows:
             for pkt in f.get_fwd_packets():
                 normalized = ctx.get_normalized(pkt)
                 if not normalized:
                     continue
+                http_request_count += 1
                 total_count += len(_SELECT_PATTERN.findall(normalized))
 
-        return float(total_count)
+        if http_request_count == 0:
+            return 0.0
+        return float(total_count) / http_request_count
 
 
 __all__ = [

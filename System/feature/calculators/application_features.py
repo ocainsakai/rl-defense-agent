@@ -182,16 +182,15 @@ class F8_RequestSizeUniformity(FeatureBase):
         return 1.0 / (1.0 + cv)
 
 
-# Backward-compatible aliases (legacy names expected by older entrypoints/tests)
+# Backward-compatible aliases — chỉ dùng bởi test/_archive/, KHÔNG dùng trong code mới
+# Tên cũ (AuthFailureRate/ServerErrorRate) không còn mô tả đúng chức năng hiện tại.
 F7_AuthFailureRate = F7_HttpIatUniformity
 F8_ServerErrorRate = F8_RequestSizeUniformity
 
 
-# Export tất cả đặc trưng
+# Export theo tên thật — alias KHÔNG được export ra ngoài package
 __all__ = [
     'F6_URLConcentration',
-    'F7_AuthFailureRate',
-    'F8_ServerErrorRate',
     'F7_HttpIatUniformity',
     'F8_RequestSizeUniformity',
 ]
