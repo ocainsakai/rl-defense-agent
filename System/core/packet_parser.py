@@ -208,6 +208,17 @@ class HttpPayloadExtractor:
         """Xây dựng composite payload từ HTTP packet: [URI] + [User-Agent] + [Body]
 
         Trích xuất body trực tiếp từ Scapy Raw layer (HTTP body).
+
+        GIỚI HẠN THIẾT KẾ (cross-field pattern):
+        - Các field được nối bằng space: b' '.join([uri, ua, body])
+        - PayloadNormalizer.normalize() strip mọi non-printable char,
+          nên separator như \\x00 sẽ bị loại — không có cách tách field sau normalize.
+        - Pattern matching với re.DOTALL có thể khớp cross-field (ví dụ:
+          URI kết thúc bằng 'UNION' và User-Agent bắt đầu bằng 'SELECT').
+        - Trong thực tế: URI chứa 'UNION' đã là dấu hiệu tấn công, nên
+          false positive cross-field không làm tăng đáng kể alert rate.
+        - Fix đúng về lâu dài: chạy pattern matching riêng trên từng field
+          (uri, user_agent, body) thay vì composite. Xem feature/calculators/.
         """
         parts = []
 
@@ -243,6 +254,9 @@ class HttpPayloadExtractor:
         - Regex quét từ trái sang phải
         - Tấn công thường nằm ở URI (GET) hoặc User-Agent
         - Đặt Header trước Body → phát hiện sớm, tránh quét Body lớn
+
+        GIỚI HẠN THIẾT KẾ: Xem build_composite_payload_from_packet() để biết chi tiết
+        về cross-field pattern matching limitation.
 
         Args:
             pkt: Đối tượng LayerInfo với các thuộc tính HTTP
