@@ -6,9 +6,9 @@ NIDS - Network Intrusion Detection System
 Interactive entry point: chọn chế độ chạy từ menu.
 
 Modes:
-  1) Realtime  - Capture live từ network interface  -> JSONL
-  2) PCAP      - Phân tích offline PCAP file        -> CSV
-  3) CSV       - Extract features từ Wireshark CSV  -> CSV
+  1) Realtime  - Capture live từ network interface  -> CSV / JSONL
+  2) PCAP      - Phân tích offline PCAP file        -> CSV / JSONL
+  3) CSV       - Extract features từ Wireshark CSV  -> CSV / JSONL
 
 Import trực tiếp từ core/feature library modules.
 =============================================================================
@@ -140,13 +140,31 @@ def _prompt_file(msg: str, must_exist: bool = True) -> str:
         return path
 
 
+def _prompt_output_format() -> str:
+    """Chọn định dạng output: 'csv' hoặc 'jsonl'."""
+    print("  Định dạng output:")
+    print("    [1] CSV   - Dạng bảng, dễ mở bằng Excel/Pandas")
+    print("    [2] JSONL - JSON Lines, mỗi dòng là 1 JSON object")
+    while True:
+        choice = input("  Chọn (1/2) [1]: ").strip() or "1"
+        if choice == "1":
+            return "csv"
+        if choice == "2":
+            return "jsonl"
+        print("  [!] Chọn 1 hoặc 2.")
+
+
 # ============================================================================
 # MODE 1: REALTIME
 # ============================================================================
 
-def _run_realtime(interface: str, window_size: float, output_file: str):
-    if not (output_file.endswith(".json") or output_file.endswith(".jsonl")):
-        output_file += ".jsonl"
+def _run_realtime(interface: str, window_size: float, output_file: str, fmt: str = "jsonl"):
+    if fmt == "jsonl":
+        if not (output_file.endswith(".json") or output_file.endswith(".jsonl")):
+            output_file += ".jsonl"
+    else:
+        if not output_file.endswith(".csv"):
+            output_file += ".csv"
 
     packet_queue = PacketQueue(max_size=DEFAULT_CONFIG.MAX_QUEUE_SIZE)
     parser       = PacketLayerExtractor()
@@ -184,7 +202,17 @@ def _run_realtime(interface: str, window_size: float, output_file: str):
                 logger.debug("Packet parse/ingest error: %s", e)
 
     feature_labels = FlowFeatureCalculator.get_feature_labels()
-    out_fd = open(output_file, "w", encoding="utf-8")
+
+    open_kwargs = {"encoding": "utf-8"}
+    if fmt == "csv":
+        open_kwargs["newline"] = ""
+    out_fd = open(output_file, "w", **open_kwargs)
+
+    csv_writer = None
+    if fmt == "csv":
+        csv_fields = ["timestamp", "src_ip"] + feature_labels
+        csv_writer = csv.DictWriter(out_fd, fieldnames=csv_fields)
+        csv_writer.writeheader()
 
     def _process_window(win_end: float):
         with lock:
@@ -205,7 +233,10 @@ def _run_realtime(interface: str, window_size: float, output_file: str):
             row = {"timestamp": round(win_end, 6), "src_ip": src_ip}
             for i, label in enumerate(feature_labels):
                 row[label] = round(float(features[i]), 4)
-            out_fd.write(json.dumps(row) + "\n")
+            if fmt == "jsonl":
+                out_fd.write(json.dumps(row) + "\n")
+            else:
+                csv_writer.writerow(row)
             out_fd.flush()
             stats["rows"] += 1
 
@@ -248,15 +279,17 @@ def _menu_realtime():
     default_iface = "Ethernet" if sys.platform == "win32" else "eth0"
     interface   = _prompt("Network interface", default_iface) or default_iface
     window_size = _prompt_window_size()
-    output_file = _prompt_output_path("live_output.jsonl")
-    _run_realtime(interface, window_size, output_file)
+    fmt         = _prompt_output_format()
+    default_name = "live_output.jsonl" if fmt == "jsonl" else "live_output.csv"
+    output_file = _prompt_output_path(default_name)
+    _run_realtime(interface, window_size, output_file, fmt)
 
 
 # ============================================================================
 # MODE 2: PCAP
 # ============================================================================
 
-def _run_pcap(pcap_file: str, output_csv: str, window_size: float, verbose: bool):
+def _run_pcap(pcap_file: str, output_file: str, window_size: float, verbose: bool, fmt: str = "csv"):
     parser        = PacketLayerExtractor(use_packet_time=True)
     calc          = FlowFeatureCalculator()
     feature_labels = FlowFeatureCalculator.get_feature_labels()
@@ -269,6 +302,8 @@ def _run_pcap(pcap_file: str, output_csv: str, window_size: float, verbose: bool
     total_pkts = total_wins = rows = 0
     win_start = win_end = None
     fm: Optional[FlowManager] = None
+    out_fd = None
+    writer = None
 
     def _export_window():
         nonlocal total_wins, rows
@@ -283,7 +318,7 @@ def _run_pcap(pcap_file: str, output_csv: str, window_size: float, verbose: bool
             by_src.setdefault(fl.src_ip, []).append(fl)
 
         for src_ip, flows_list in by_src.items():
-            n_pkts = sum(f.get_packet_count() for f in flows_list)
+            n_pkts = sum(fl.get_packet_count() for fl in flows_list)
             for fl in flows_list:
                 fl.analysis_window_size = window_size
             features = calc.calculate_all(flows_list)
@@ -304,14 +339,22 @@ def _run_pcap(pcap_file: str, output_csv: str, window_size: float, verbose: bool
             for i, label in enumerate(feature_labels):
                 row[f"{label}_RAW"]  = f"{features[i]:.4f}"
                 row[f"{label}_NORM"] = f"{norm_features[i]:.4f}"
-            writer.writerow(row)
+            if fmt == "jsonl":
+                out_fd.write(json.dumps(row) + "\n")
+            else:
+                writer.writerow(row)
             rows += 1
             if verbose:
                 print(f"    {src_ip}: Flows={len(flows_list)} F1={features[0]:.1f}")
 
-    with open(output_csv, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        writer.writeheader()
+    open_kwargs = {"encoding": "utf-8"}
+    if fmt == "csv":
+        open_kwargs["newline"] = ""
+    with open(output_file, "w", **open_kwargs) as f:
+        out_fd = f
+        if fmt == "csv":
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
         print(f"\n[*] Đọc PCAP: {pcap_file}")
         try:
             with PcapReader(pcap_file) as reader:
@@ -342,16 +385,18 @@ def _run_pcap(pcap_file: str, output_csv: str, window_size: float, verbose: bool
             return
 
     print(f"\n[✓] Done. Packets={total_pkts} | Windows={total_wins} | Rows={rows}")
-    print(f"    Output: {output_csv}")
+    print(f"    Output: {output_file}")
 
 
 def _menu_pcap():
     print("\n--- PCAP MODE ---")
     pcap_file   = _prompt_file("PCAP file path")
     window_size = _prompt_window_size()
-    output_csv  = _prompt_output_path("pcap_output.csv")
+    fmt         = _prompt_output_format()
+    default_name = "pcap_output.jsonl" if fmt == "jsonl" else "pcap_output.csv"
+    output_file = _prompt_output_path(default_name)
     verbose     = _prompt_bool("Verbose (y/n)", False)
-    _run_pcap(pcap_file, output_csv, window_size, verbose)
+    _run_pcap(pcap_file, output_file, window_size, verbose, fmt)
 
 
 # ============================================================================
@@ -470,8 +515,8 @@ def _csv_row_to_layer_info(row: dict, pkt_num: int) -> Optional[LayerInfo]:
     )
 
 
-def _run_csv(csv_file: str, output_csv: str, window_size: float,
-             label: Optional[str], normalize: bool):
+def _run_csv(csv_file: str, output_file: str, window_size: float,
+             label: Optional[str], normalize: bool, fmt: str = "csv"):
     # Parse toàn bộ CSV thành danh sách LayerInfo
     packets = []
     with open(csv_file, "r", encoding="utf-8", errors="ignore", newline="") as f:
@@ -503,9 +548,14 @@ def _run_csv(csv_file: str, output_csv: str, window_size: float,
     win_idx   = rows = 0
     fm        = FlowManager(window_size=window_size)
 
-    with open(output_csv, "w", newline="", encoding="utf-8") as out:
-        writer = csv.DictWriter(out, fieldnames=fieldnames)
-        writer.writeheader()
+    open_kwargs = {"encoding": "utf-8"}
+    if fmt == "csv":
+        open_kwargs["newline"] = ""
+    with open(output_file, "w", **open_kwargs) as out:
+        writer = None
+        if fmt == "csv":
+            writer = csv.DictWriter(out, fieldnames=fieldnames)
+            writer.writeheader()
 
         while idx < n:
             start_idx = idx
@@ -536,7 +586,10 @@ def _run_csv(csv_file: str, output_csv: str, window_size: float,
                     row_out[feat_label] = f"{float(values[i]):.4f}"
                 if label:
                     row_out["label"] = label
-                writer.writerow(row_out)
+                if fmt == "jsonl":
+                    out.write(json.dumps(row_out) + "\n")
+                else:
+                    writer.writerow(row_out)
                 rows += 1
 
             fm.slide_window_packets(win_end)
@@ -544,18 +597,20 @@ def _run_csv(csv_file: str, output_csv: str, window_size: float,
             win_end   = win_start + window_size
             win_idx  += 1
 
-    print(f"[✓] Done. Windows={win_idx} | Rows={rows} | Output={output_csv}")
+    print(f"[✓] Done. Windows={win_idx} | Rows={rows} | Output={output_file}")
 
 
 def _menu_csv():
     print("\n--- CSV MODE (Wireshark export) ---")
     csv_file    = _prompt_file("Input CSV path")
     window_size = _prompt_window_size()
-    output_csv  = _prompt_output_path("features.csv")
+    fmt         = _prompt_output_format()
+    default_name = "features.jsonl" if fmt == "jsonl" else "features.csv"
+    output_file = _prompt_output_path(default_name)
     label_raw   = _prompt("Label (Enter để bỏ qua)")
     label       = label_raw if label_raw else None
     normalize   = _prompt_bool("Normalize features (y/n)", False)
-    _run_csv(csv_file, output_csv, window_size, label, normalize)
+    _run_csv(csv_file, output_file, window_size, label, normalize, fmt)
 
 
 # ============================================================================
