@@ -258,17 +258,26 @@ class HttpPayloadExtractor:
         GIỚI HẠN THIẾT KẾ: Xem build_composite_payload_from_packet() để biết chi tiết
         về cross-field pattern matching limitation.
 
+        Hai trường hợp sử dụng:
+        1. PCAP/Realtime: payload_bytes đã được extract_http_info() xây dựng
+           → trả về trực tiếp, KHÔNG rebuild để tránh nhân đôi URI+UA
+        2. CSV mode: payload_bytes = None → xây dựng từ http_uri + http_user_agent
+
         Args:
             pkt: Đối tượng LayerInfo với các thuộc tính HTTP
 
         Returns:
             bytes: Composite payload cho phân tích
         """
-        body = getattr(pkt, 'payload_bytes', None) or b''
+        # Nếu composite đã được xây dựng trong quá trình parse packet
+        # (PCAP/Realtime mode), trả về trực tiếp — không rebuild
+        if getattr(pkt, 'has_payload', False) and getattr(pkt, 'payload_bytes', None):
+            return pkt.payload_bytes
 
         if not getattr(pkt, 'has_http', False):
-            return body
+            return b''
 
+        # CSV mode: payload_bytes chưa được set, xây dựng từ HTTP fields
         parts = []
 
         # Phần 1: URI
@@ -287,11 +296,7 @@ class HttpPayloadExtractor:
             elif isinstance(ua, bytes):
                 parts.append(ua)
 
-        # Body (chỉ thêm nếu không rỗng)
-        if body:
-            parts.append(body)
-
-        return b' '.join(parts)
+        return b' '.join(parts) if parts else b''
 
 
 class PacketLayerExtractor:
