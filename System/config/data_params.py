@@ -39,7 +39,7 @@ def anonymize_src_ip(src_ip: str) -> str:
 #
 # Rule:  FEATURE_ORDER[i] = feature code at observation index i
 #        obs_vector[i]     = feature_values[FEATURE_ORDER[i]]
-=============================================================================
+# =============================================================================
 
 FEATURE_ORDER: list = [
     # ── Network (indices 0-10) ────────────────────────────────────────────────
@@ -84,6 +84,18 @@ XSS_SLICE     = slice(17, 20)  # indices 17-19
 #
 # Log scale:  log(1 + min(raw, cap)) / log(1 + cap)  — range rộng, skewed
 # Linear:     min(raw, cap) / cap                     — range nhỏ, đều
+#
+# Features KHÔNG có trong dict (pass-through, clamp [0,1]):
+#   F4  RstRatio          — tỷ lệ RST/total ∈ [0,1] theo định nghĩa
+#   F6  URLConcentration  — tỷ lệ max_url/total ∈ [0,1] theo định nghĩa
+#   F7  HttpIatUniformity — 1/(1+CV) ∈ (0,1] theo định nghĩa
+#   F8  RequestSizeUniformity — 1/(1+CV) ∈ (0,1] theo định nghĩa
+#   F12 SqlSpecialChar    — tỷ lệ ký tự đặc biệt ∈ [0,1] theo định nghĩa
+#   F14 SqlUnionSelect    — binary hoặc normalized count ∈ [0,1]
+#   F15 SqlComment        — binary hoặc normalized count ∈ [0,1]
+#   F16 SqlStackedQuery   — binary hoặc normalized count ∈ [0,1]
+#   F19 JsFunctionCall    — binary ∈ {0,1}
+#   F20 HtmlEventHandler  — binary ∈ {0,1}
 FEATURE_CLIP_BOUNDS: dict = {
     'F1':  500.0,   # packets/sec   — DDoS traffic ~100-500 pkt/s
     'F2':  100.0,   # SYN/ACK ratio — SYN flood
@@ -94,7 +106,7 @@ FEATURE_CLIP_BOUNDS: dict = {
     'F11': 500.0,   # pkts/port     — concentrated flood
     'F13':  20.0,   # CRS SQLi rules — PL1 max ~19
     'F17':  10.0,   # SELECT count  — multiple SELECTs rare in legit traffic
-    'F18':  32.0,   # CRS XSS rules — PL1 max ~31
+    'F18':   4.0,   # CRS XSS rules — empirical max=3.0 (3 datasets, 2026-03); was 32 (theoretical PL2 max)
 }
 
 # Features dùng log scale (range rộng, phân phối lệch)

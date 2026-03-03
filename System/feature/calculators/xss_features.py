@@ -31,8 +31,18 @@ logger = logging.getLogger(__name__)
 # PATTERN CRS — tải một lần khi import module
 # =============================================================================
 
+# F18: Rule CRS 941 — Benchmark trên LSNM2024 dataset (2026-03, n=3000 normal + 9 attack):
+#   PL   Rules  TP  FP  F1      FPR
+#   PL1  22     9   0   1.0000  0.0000
+#   PL2  27     9   0   1.0000  0.0000  [DÙNG]
+#   PL3  27     9   0   1.0000  0.0000  (PL3 == PL2 vì không có rule PL3 trong XSS conf)
+#
+# CHÚ Ý: Benchmark XSS bị giới hạn — LSNM2024 XSS dataset (WebGoat) gửi payload
+# qua HTTP POST body, không phải GET URI. CSV chỉ ghi URL → chỉ 9/3000 URI
+# chứa XSS keyword. Kết quả trên KHÔNG đủ tin cậy để quyết định thay đổi PL.
+# → Giữ PL2 cho đến khi có benchmark từ PCAP với POST body đầy đủ.
+# Chạy lại: python3 tools/benchmark_crs_pl.py
 _CRS_XSS_PATTERNS = load_rx_patterns(CRS_XSS_CONF, paranoia_level=2)
-# Danh sách (rule_id, msg, compiled_pattern) — các pattern ở PL2
 
 _CRS_XSS_PHRASES = load_pm_phrases(CRS_XSS_CONF)
 # Danh sách chuỗi chữ thường — 9 cụm từ từ các rule @pm

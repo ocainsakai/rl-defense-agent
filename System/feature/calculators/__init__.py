@@ -5,7 +5,7 @@ plugin architecture with FeatureBase and @register_feature decorator.
 
 Modules:
 - network_features:     F1-F5   (Packet Rate, SYN/ACK Ratio, IAT, RST Ratio, Distinct Ports)
-- application_features: F6-F8   (URL Concentration, Auth Failure Rate, Server Error Rate)
+- application_features: F6-F8   (URL Concentration, HTTP IAT Uniformity, Request Size Uniformity)
 - network_features_ext: F9-F11  (Avg Payload Size, Fwd/Bwd Ratio, Packets Per Port)
 - sqli_features:        F12-F17 (SqlSpecialChar, CRS 942 score, UNION, Comment, Stacked, SELECT count)
 - xss_features:         F18-F20 (CRS 941 score, JS functions, event handlers)
@@ -30,8 +30,8 @@ from feature.calculators.network_features import (
 
 from feature.calculators.application_features import (
     F6_URLConcentration,
-    F7_AuthFailureRate,
-    F8_ServerErrorRate,
+    F7_HttpIatUniformity,
+    F8_RequestSizeUniformity,
 )
 
 from feature.calculators.network_features_ext import (
@@ -67,8 +67,8 @@ __all__ = [
 
     # Application features (F6-F8)
     'F6_URLConcentration',
-    'F7_AuthFailureRate',
-    'F8_ServerErrorRate',
+    'F7_HttpIatUniformity',
+    'F8_RequestSizeUniformity',
 
     # Network extended features (F9-F11)
     'F9_AvgPayloadSize',

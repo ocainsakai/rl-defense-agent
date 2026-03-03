@@ -8,14 +8,16 @@ CHỨC NĂNG:
 - Cung cấp data access methods cho feature extraction
 
 QUAN TRỌNG:
-- Forward/Backward separation giúp F5 (Fail Rate) đếm được RST từ server
+- Forward/Backward separation giúp F4 (RstRatio) đếm được RST từ server
 - FlowManager sẽ xác định direction khi gọi add_packet()
 """
 
+import functools
 from collections import deque
 from typing import Dict, Any, Optional, Set, List
 import time
 
+from config.nids_config import DEFAULT_CONFIG
 from core.layer_info import LayerInfo
 
 
@@ -39,8 +41,9 @@ class FlowState:
         self.analysis_window_size = window_size
 
         # BIDIRECTIONAL: Tách riêng forward và backward
-        self.fwd_packets: deque = deque(maxlen=3000)  # src → dst
-        self.bwd_packets: deque = deque(maxlen=3000)  # dst → src
+        # maxlen = MAX_PACKETS_PER_FLOW từ config (thay đổi config → tự động áp dụng)
+        self.fwd_packets: deque = deque(maxlen=DEFAULT_CONFIG.MAX_PACKETS_PER_FLOW)  # src → dst
+        self.bwd_packets: deque = deque(maxlen=DEFAULT_CONFIG.MAX_PACKETS_PER_FLOW)  # dst → src
         
         # Timestamps
         self.created_at: float = time.time()
@@ -215,41 +218,106 @@ class FlowState:
         return self.get_fwd_payloads() + self.get_bwd_payloads()
     
     # =========================================================================
-    # GHÉP NỐI PAYLOAD - Nối payload để phát hiện tấn công bị phân mảnh
+    # GHÉP NỐI PAYLOAD - Nối payload theo thứ tự TCP sequence number
     # =========================================================================
-    
+
+    @staticmethod
+    def _reassemble(packets) -> bytes:
+        """
+        Ghép payload từ list packets theo TCP sequence number (L2 fix).
+
+        Thuật toán:
+        1. Lọc packets có payload thực sự.
+        2. Tách thành nhóm có seq và không có seq.
+        3. Sort nhóm có seq theo RFC 793 modular arithmetic:
+           b đến sau a  ⟺  (b - a) & 0xFFFF_FFFF < 2^31
+           → xử lý đúng TCP wraparound kể cả khi ISN gần 2^32.
+        4. Dedup retransmission: cùng seq → giữ packet có payload dài hơn.
+        5. Packets không có seq (ví dụ: UDP, stripped header) nối ở cuối.
+
+        Args:
+            packets: iterable[LayerInfo]
+
+        Returns:
+            bytes: payload đã sắp xếp đúng thứ tự TCP
+        """
+        pkts = [p for p in packets if p.has_payload and p.payload_bytes]
+        if not pkts:
+            return b''
+
+        with_seq    = [(p.tcp_seq, p) for p in pkts if p.tcp_seq is not None]
+        without_seq = [p for p in pkts if p.tcp_seq is None]
+
+        if not with_seq:
+            # Không có seq nào → fallback về thứ tự đến (hành vi cũ)
+            return b''.join(p.payload_bytes for p in pkts)
+
+        # RFC 793 modular sort — đúng kể cả khi ISN gần 2^32 và wrap về 0.
+        # Nguyên tắc: b đến SAU a  ⟺  (b - a) & 0xFFFF_FFFF < 2^31
+        # Không dùng (seq - min_seq) vì min_seq có thể là giá trị sau wrap
+        # (nhỏ hơn numerically nhưng thực ra muộn hơn về mặt TCP).
+        def _rfc793_cmp(a, b):
+            diff = (b[0] - a[0]) & 0xFFFF_FFFF
+            if diff == 0:
+                return 0
+            return -1 if diff < 0x8000_0000 else 1
+
+        with_seq.sort(key=functools.cmp_to_key(_rfc793_cmp))
+
+        # Dedup retransmission: cùng seq → giữ payload dài nhất
+        best: dict = {}  # seq → LayerInfo
+        for seq, pkt in with_seq:
+            if seq not in best or len(pkt.payload_bytes) > len(best[seq].payload_bytes):
+                best[seq] = pkt
+
+        # Xây dựng danh sách cuối (theo thứ tự seq đã sort, loại bỏ trùng)
+        seen_seqs: set = set()
+        ordered = []
+        for seq, _ in with_seq:
+            if seq not in seen_seqs:
+                seen_seqs.add(seq)
+                ordered.append(best[seq])
+
+        # Packets không có seq nối ở cuối (vị trí không xác định)
+        ordered.extend(without_seq)
+
+        return b''.join(p.payload_bytes for p in ordered)
+
     def get_reassembled_fwd_payload(self) -> bytes:
         """
-        Nối tất cả forward payloads thành 1 chuỗi bytes liên tục.
-        
-        LAZY REASSEMBLY: Chỉ nối theo thứ tự thời gian, không xử lý
-        sequence number hay retransmission.
-        
-        USE CASE: Phát hiện SQLi/XSS signature bị cắt đôi qua nhiều packet.
-        
+        Nối forward payloads theo thứ tự TCP sequence number.
+
+        Xử lý: out-of-order delivery, TCP wraparound, retransmission.
+        Fallback về thứ tự packet đến nếu không có seq (ví dụ: UDP payload).
+
+        USE CASE: Phát hiện SQLi/XSS signature bị phân mảnh qua nhiều packet.
+
         Returns:
-            bytes: Payload đã nối (có thể rỗng nếu không có payload)
+            bytes: Payload đã ghép theo đúng thứ tự TCP
         """
-        return b''.join(self.get_fwd_payloads())
-    
+        return self._reassemble(self.fwd_packets)
+
     def get_reassembled_bwd_payload(self) -> bytes:
         """
-        Nối tất cả backward payloads thành 1 chuỗi bytes liên tục.
-        
+        Nối backward payloads theo thứ tự TCP sequence number.
+
         Returns:
-            bytes: Payload đã nối từ server response
+            bytes: Payload từ server response đã ghép đúng thứ tự
         """
-        return b''.join(self.get_bwd_payloads())
-    
+        return self._reassemble(self.bwd_packets)
+
     def get_reassembled_payload(self) -> bytes:
         """
-        Nối tất cả payloads (cả 2 chiều) thành 1 chuỗi bytes.
-        
+        Nối payloads cả 2 chiều: reassemble mỗi chiều riêng rồi ghép lại.
+
+        Không trộn seq của fwd và bwd vì chúng thuộc hai TCP stream khác nhau.
+
         Returns:
-            bytes: Toàn bộ payload của flow
+            bytes: Toàn bộ payload của flow (fwd trước, bwd sau)
         """
-        return b''.join(self.get_payloads())
-    
+        return self.get_reassembled_fwd_payload() + self.get_reassembled_bwd_payload()
+
+
     # =========================================================================
     # PHƯƠNG THỨC TIỆN ÍCH
     # =========================================================================

@@ -208,6 +208,17 @@ class HttpPayloadExtractor:
         """Xây dựng composite payload từ HTTP packet: [URI] + [User-Agent] + [Body]
 
         Trích xuất body trực tiếp từ Scapy Raw layer (HTTP body).
+
+        GIỚI HẠN THIẾT KẾ (cross-field pattern):
+        - Các field được nối bằng space: b' '.join([uri, ua, body])
+        - PayloadNormalizer.normalize() strip mọi non-printable char,
+          nên separator như \\x00 sẽ bị loại — không có cách tách field sau normalize.
+        - Pattern matching với re.DOTALL có thể khớp cross-field (ví dụ:
+          URI kết thúc bằng 'UNION' và User-Agent bắt đầu bằng 'SELECT').
+        - Trong thực tế: URI chứa 'UNION' đã là dấu hiệu tấn công, nên
+          false positive cross-field không làm tăng đáng kể alert rate.
+        - Fix đúng về lâu dài: chạy pattern matching riêng trên từng field
+          (uri, user_agent, body) thay vì composite. Xem feature/calculators/.
         """
         parts = []
 
@@ -244,17 +255,29 @@ class HttpPayloadExtractor:
         - Tấn công thường nằm ở URI (GET) hoặc User-Agent
         - Đặt Header trước Body → phát hiện sớm, tránh quét Body lớn
 
+        GIỚI HẠN THIẾT KẾ: Xem build_composite_payload_from_packet() để biết chi tiết
+        về cross-field pattern matching limitation.
+
+        Hai trường hợp sử dụng:
+        1. PCAP/Realtime: payload_bytes đã được extract_http_info() xây dựng
+           → trả về trực tiếp, KHÔNG rebuild để tránh nhân đôi URI+UA
+        2. CSV mode: payload_bytes = None → xây dựng từ http_uri + http_user_agent
+
         Args:
             pkt: Đối tượng LayerInfo với các thuộc tính HTTP
 
         Returns:
             bytes: Composite payload cho phân tích
         """
-        body = getattr(pkt, 'payload_bytes', None) or b''
+        # Nếu composite đã được xây dựng trong quá trình parse packet
+        # (PCAP/Realtime mode), trả về trực tiếp — không rebuild
+        if getattr(pkt, 'has_payload', False) and getattr(pkt, 'payload_bytes', None):
+            return pkt.payload_bytes
 
         if not getattr(pkt, 'has_http', False):
-            return body
+            return b''
 
+        # CSV mode: payload_bytes chưa được set, xây dựng từ HTTP fields
         parts = []
 
         # Phần 1: URI
@@ -273,11 +296,7 @@ class HttpPayloadExtractor:
             elif isinstance(ua, bytes):
                 parts.append(ua)
 
-        # Body (chỉ thêm nếu không rỗng)
-        if body:
-            parts.append(body)
-
-        return b' '.join(parts)
+        return b' '.join(parts) if parts else b''
 
 
 class PacketLayerExtractor:

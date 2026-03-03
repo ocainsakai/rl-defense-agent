@@ -40,11 +40,12 @@ class NIDSConfig:
     MAX_PACKETS_PER_FLOW: int = 3000
     
     # Thời gian inactive để coi flow là expired (giây)
-    FLOW_TIMEOUT_SECONDS: float = 30.0
-    
+    # 120s: đủ lớn cho live traffic có idle periods (HTTP keep-alive ~60s)
+    FLOW_TIMEOUT_SECONDS: float = 120.0
+
     # Số packets giữa các lần cleanup expired flows
-    # Giá trị cao = ít cleanup hơn, tiết kiệm CPU nhưng tốn RAM
-    CLEANUP_INTERVAL: int = 100
+    # 100000: gần như không cleanup tự động — dùng slide_window_packets thay thế
+    CLEANUP_INTERVAL: int = 100000
     
     # Số flows tối đa trong hệ thống (bảo vệ RAM)
     MAX_FLOWS: int = 50000

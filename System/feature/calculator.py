@@ -288,6 +288,39 @@ class FlowFeatureCalculator:
         ]
 
     @staticmethod
+    def get_feature_labels() -> List[str]:
+        """Trả về danh sách 20 label feature theo format 'FN - ClassName'.
+
+        Returns:
+            list: ['F1 - PacketRate', 'F2 - SynAckRatio', ...]
+        """
+        return [
+            # Network [0-10]
+            'F1 - PacketRate',
+            'F2 - SynAckRatio',
+            'F3 - InterArrivalTime',
+            'F4 - RstRatio',
+            'F5 - DistinctPorts',
+            'F6 - URLConcentration',
+            'F7 - HttpIatUniformity',
+            'F8 - RequestSizeUniformity',
+            'F9 - AvgPayloadSize',
+            'F10 - FwdBwdRatio',
+            'F11 - PacketsPerPort',
+            # SQLi [11-16]
+            'F12 - SqlSpecialChar',
+            'F13 - CrsSqliScore',
+            'F14 - SqlUnionSelect',
+            'F15 - SqlComment',
+            'F16 - SqlStackedQuery',
+            'F17 - SqlSelectCount',
+            # XSS [17-19]
+            'F18 - CrsXssScore',
+            'F19 - JsFunctionCall',
+            'F20 - HtmlEventHandler',
+        ]
+
+    @staticmethod
     def get_feature_count() -> int:
         """Trả về tổng số features.
 
