@@ -43,6 +43,7 @@ from core.layer_info import LayerInfo
 from core.packet_parser import PacketLayerExtractor
 from core.packet_queue import PacketQueue
 from core.sniffer import NetworkSniffer
+from core.tshark_l7 import TsharkL7Reader, enrich_flows_with_tshark
 from feature.calculator import FlowFeatureCalculator
 from feature.wamm_classifier import WammClassifier
 
@@ -158,7 +159,21 @@ def _prompt_output_format() -> str:
 # MODE 1: REALTIME
 # ============================================================================
 
-def _run_realtime(interface: str, window_size: float, output_file: str, fmt: str = "jsonl"):
+def _run_realtime(interface: str, window_size: float, output_file: str,
+                  fmt: str = "jsonl", keylog_file: Optional[str] = None):
+    """
+    Realtime capture mode.
+
+    Args:
+        interface:   Network interface name (e.g. 'r-ext', 'eth0')
+        window_size: Feature window size in seconds
+        output_file: Output path (.jsonl or .csv)
+        fmt:         'jsonl' or 'csv'
+        keylog_file: Path to SSLKEYLOGFILE for TLS decryption (optional).
+                     When provided, tshark runs in parallel to enrich L7 features
+                     (F6-F20) by decrypting HTTPS traffic.
+                     The attacker must set SSLKEYLOGFILE=<keylog_file> before curl.
+    """
     if fmt == "jsonl":
         if not (output_file.endswith(".json") or output_file.endswith(".jsonl")):
             output_file += ".jsonl"
@@ -173,8 +188,15 @@ def _run_realtime(interface: str, window_size: float, output_file: str, fmt: str
     calc         = FlowFeatureCalculator(wamm_classifier=wamm)
     sniffer      = NetworkSniffer()
     lock         = threading.Lock()
-    stats        = {"cap": 0, "proc": 0, "drop": 0, "rows": 0, "err": 0}
+    stats        = {"cap": 0, "proc": 0, "drop": 0, "rows": 0, "err": 0, "enrich": 0}
     running      = [True]
+
+    # Optional tshark L7 enrichment (HTTPS decryption)
+    tshark_reader: Optional[TsharkL7Reader] = None
+    if keylog_file:
+        tshark_reader = TsharkL7Reader(interface=interface, keylog_file=keylog_file)
+        tshark_reader.start()
+        print(f"[✓] TsharkL7Reader started | keylog={keylog_file}")
 
     def _capture():
         def cb(pkt):
@@ -219,6 +241,12 @@ def _run_realtime(interface: str, window_size: float, output_file: str, fmt: str
             all_flows = flow_manager.get_all_flows()
             flow_manager.slide_window_packets(win_end)
 
+            # Enrich with tshark L7 data while holding the lock
+            if tshark_reader:
+                tshark_events = tshark_reader.drain_events()
+                n = enrich_flows_with_tshark(all_flows, tshark_events)
+                stats["enrich"] += n
+
         by_src: dict = {}
         for fl in all_flows:
             src = fl.effective_src_ip if hasattr(fl, "effective_src_ip") else fl.src_ip
@@ -258,15 +286,19 @@ def _run_realtime(interface: str, window_size: float, output_file: str, fmt: str
                 _process_window(win_end)
                 win_start += window_size
                 win_end    = win_start + window_size
-                print(f"    Cap={stats['cap']} Proc={stats['proc']} Drop={stats['drop']} Err={stats['err']} Rows={stats['rows']}")
+                enrich_info = f" Enrich={stats['enrich']}" if tshark_reader else ""
+                print(f"    Cap={stats['cap']} Proc={stats['proc']} Drop={stats['drop']} Err={stats['err']} Rows={stats['rows']}{enrich_info}")
     except KeyboardInterrupt:
         print("\n[!] Dừng hệ thống...")
     finally:
         running[0] = False
         sniffer.stop()
+        if tshark_reader:
+            tshark_reader.stop()
         time.sleep(0.5)
         out_fd.close()
-        print(f"[✓] Done. Rows={stats['rows']} | Output={output_file}")
+        enrich_info = f" | Enriched={stats['enrich']}" if tshark_reader else ""
+        print(f"[✓] Done. Rows={stats['rows']}{enrich_info} | Output={output_file}")
 
 
 def _menu_realtime():

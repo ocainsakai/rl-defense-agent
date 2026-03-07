@@ -35,7 +35,7 @@ def tunnelX11( node, display=None):
                 "EXEC:'mnexec -a 1 socat STDIO %s'" % connection ]
     return 'localhost:' + screen, node.popen( cmd )
 
-def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
+def makeTerm( node, title='Node', term='xfce4', display=None, cmd='bash'):
     """Create an X11 tunnel to the node and start up a terminal.
        node: Node object
        title: base title
@@ -47,7 +47,7 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     cmds = {
         'xterm': [ 'xterm', '-title', title, '-display' ],
         'gterm': [ 'gnome-terminal', '--title', title, '--display' ],
-        'xfce4': [ 'xfce4-terminal', '--title', title, '--display' ]
+        'xfce4': [ 'xfce4-terminal', '--disable-server', '--title', title, '--display' ]
     }
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
@@ -100,7 +100,7 @@ def cleanUpScreens():
     "Remove moldy socat X11 tunnels."
     errRun( "pkill -9 -f mnexec.*socat" )
 
-def makeTerms( nodes, title='Node', term='xterm' ):
+def makeTerms( nodes, title='Node', term='xfce4' ):
     """Create terminals.
        nodes: list of Node objects
        title: base title for each

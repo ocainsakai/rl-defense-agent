@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test_all_sync.py:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout 3 python:*)",
+      "Bash(copy:*)",
+      "Bash(cp:*)",
+      "Bash(ls:*)",
+      "Bash(timeout 8 python:*)",
+      "Bash(rm:*)",
+      "Bash(dir \"c:\\\\Users\\\\ADMIN\\\\Desktop\\\\AI RL\\\\Documents\" /b)"
+    ]
+  }
+}

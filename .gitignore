@@ -223,8 +223,8 @@ containernet/**/venv/
 L1_Cap*
 
 # Model checkpoints trung gian (chỉ giữ bản final qua LFS)
-checkpoints/
-runs/
+# checkpoints/
+# runs/
 wandb/
 mlruns/
 *.ckpt
@@ -238,7 +238,7 @@ data/processed/
 *.sqlite
 
 # Archives & compressed
-*.zip
+# *.zip
 *.tar
 *.tar.gz
 *.tar.bz2

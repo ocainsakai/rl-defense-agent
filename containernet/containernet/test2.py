@@ -364,6 +364,28 @@ EOF
     info('  Router logs:\n')
     info('    router tail -f /tmp/router-nginx/logs/access.log\n\n')
 
+    # ================== 7) START SNIFFER ON ROUTER (r-ext, before nginx) ==================
+    # Pre-create keylog file with world-writable permissions so any user (sqlmap, Python tools)
+    # can append TLS session keys without EACCES errors.
+    os.system('touch /tmp/tls_keys.log && chmod 666 /tmp/tls_keys.log')
+    os.system('> /tmp/sniffer_output.jsonl')
+
+    info('*** Starting Sniffer on router (interface r-ext) with TLS decryption\n')
+    sniffer_cmd = (
+        "python3 -c \""
+        "import sys; sys.path.insert(0, '/home/binhhl/Downloads/rl-defense-agent/System'); "
+        "from main import _run_realtime; "
+        "_run_realtime('r-ext', 1.0, '/tmp/sniffer_output.jsonl', 'jsonl', "
+        "keylog_file='/tmp/tls_keys.log')"
+        "\""
+    )
+    router.popen(['bash', '-c', sniffer_cmd])
+    info('*** Sniffer + tshark L7 running -> /tmp/sniffer_output.jsonl\n')
+    info('*** TLS keylog -> /tmp/tls_keys.log  (written by attacker curl)\n')
+    info('\n*** ATTACK WITH TLS DECRYPTION (enables F6-F20):\n')
+    info('    attacker SSLKEYLOGFILE=/tmp/tls_keys.log curl -k "https://192.168.10.10/"\n')
+    info('    attacker SSLKEYLOGFILE=/tmp/tls_keys.log curl -k "https://192.168.10.10/?id=1%27 OR 1=1--"\n')
+
     info('*** Running CLI\n')
     CLI(net)
 
