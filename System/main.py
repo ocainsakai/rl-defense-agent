@@ -255,7 +255,7 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
         for src_ip, flows_list in by_src.items():
             for fl in flows_list:
                 fl.analysis_window_size = window_size
-            features = calc.calculate_all(flows_list)
+            features = calc.calculate_all_optimized(flows_list)
             if not features or float(features[0]) <= 0:
                 continue
             row = {"timestamp": round(win_end, 6), "src_ip": src_ip}
@@ -353,7 +353,7 @@ def _run_pcap(pcap_file: str, output_file: str, window_size: float, verbose: boo
             n_pkts = sum(fl.get_packet_count() for fl in flows_list)
             for fl in flows_list:
                 fl.analysis_window_size = window_size
-            features = calc.calculate_all(flows_list)
+            features = calc.calculate_all_optimized(flows_list)
             if features is None:
                 continue
             # F1 (PacketRate) được tính đúng bởi F1_PacketRate.calculate() thông qua
