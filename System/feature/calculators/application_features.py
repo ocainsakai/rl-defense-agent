@@ -12,6 +12,7 @@ import logging
 from typing import List
 from core.flow_state import FlowState
 from feature.base import FeatureBase, FeatureMetadata, register_feature
+from feature.context import FeatureContext
 
 logger = logging.getLogger(__name__)
 
@@ -162,13 +163,24 @@ class F8_RequestSizeUniformity(FeatureBase):
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Tính độ đồng đều kích thước payload HTTP chiều xuôi."""
-        payload_sizes = [
-            pkt.payload_length
-            for f in flows
-            for pkt in f.get_fwd_packets()
-            if getattr(pkt, 'has_http', False) and getattr(pkt, 'has_payload', False)
-        ]
+        """Tính độ đồng đều kích thước payload HTTP chiều xuôi.
+
+        Dùng ctx.get_raw_payload() thay vì pkt.payload_length để nhất quán
+        giữa CSV mode (payload_length = TCP Length từ Wireshark) và
+        PCAP/Realtime mode (payload_length = len composite bytes).
+        get_raw_payload() luôn trả về len(URI + User-Agent + Body) trong cả 3 mode.
+        """
+        context = kwargs.get('context')
+        ctx = context if context else FeatureContext(flows)
+
+        payload_sizes = []
+        for f in flows:
+            for pkt in f.get_fwd_packets():
+                if not getattr(pkt, 'has_http', False):
+                    continue
+                raw = ctx.get_raw_payload(pkt)
+                if raw:
+                    payload_sizes.append(len(raw))
 
         if len(payload_sizes) < 3:
             return 0.0
