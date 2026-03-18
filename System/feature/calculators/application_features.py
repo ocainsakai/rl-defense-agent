@@ -58,7 +58,11 @@ class F6_URLConcentration(FeatureBase):
                         url_counts[base_uri] = url_counts.get(base_uri, 0) + 1
                         total_requests += 1
 
-        if total_requests == 0:
+        # Guard: cần ít nhất 3 HTTP requests để tính URL concentration có nghĩa.
+        # Với 1-2 request, F6 luôn = 1.0 (trivially concentrated) → gây false positive
+        # vì model nhầm lẫn với brute force (F6 ≈ 0.95).
+        # Brute force thật gửi hàng chục request/giây → total_requests >> 3.
+        if total_requests < 3:
             return 0.0
 
         max_count = max(url_counts.values()) if url_counts else 0
@@ -80,19 +84,26 @@ class F7_HttpIatUniformity(FeatureBase):
     Normal user nhấn F5, click link có timing bất thường.
 
     Công thức:
-        IATs = khoảng cách thời gian giữa các HTTP packet liên tiếp (per-flow)
+        Gom TẤT CẢ HTTP request timestamps từ mọi flows trong window (cross-flow),
+        sắp xếp theo thời gian, tính IAT giữa các request liên tiếp.
         CV   = std_dev(IATs) / mean(IATs)
         F7   = 1.0 / (1.0 + CV)
+
+    Lý do dùng cross-flow thay vì per-flow:
+        Hydra/Burp Suite mở connection TCP mới cho mỗi request (short-lived flows).
+        Mỗi flow chỉ có 1 HTTP packet → per-flow IAT không tính được.
+        Cross-flow gom tất cả HTTP requests từ source IP trong window 1s,
+        phản ánh đúng nhịp điệu tấn công dù mỗi request dùng connection khác nhau.
 
     | Traffic                        | CV     | F7      |
     |--------------------------------|--------|---------|
     | Bot (50ms cố định giữa req)    | ≈ 0.0  | ≈ 1.0  |
     | Human (click không đều)        | > 1.5  | < 0.40 |
-    | < 2 IAT values (guard)         | —      | 0.0    |
+    | < 3 HTTP requests (guard)      | —      | 0.0    |
 
     Khác với F3 (InterArrivalTime):
     - F3: mean IAT của TẤT CẢ fwd packets (L3/4) — đo tốc độ
-    - F7: CV IAT chỉ HTTP packets (L7) — đo nhịp điệu
+    - F7: CV IAT chỉ HTTP packets (L7), cross-flow — đo nhịp điệu
 
     Phối hợp với F6 + F8:
     - {F6 cao + F7 cao + F8 cao} → Brute Force bot (spam /login đều, đồng đều)
@@ -103,20 +114,21 @@ class F7_HttpIatUniformity(FeatureBase):
     """
 
     def calculate(self, flows: List[FlowState], **kwargs) -> float:
-        """Tính độ đồng đều IAT giữa các HTTP request chiều xuôi."""
-        all_iats = []
-
+        """Tính độ đồng đều IAT giữa các HTTP request — cross-flow trong window."""
+        # Gom TẤT CẢ HTTP timestamps từ mọi flows (cross-flow)
+        all_timestamps = []
         for f in flows:
-            # Chỉ lấy timestamp của HTTP packets
-            timestamps = [
-                pkt.timestamp for pkt in f.get_fwd_packets()
-                if getattr(pkt, 'has_http', False) and pkt.timestamp is not None
-            ]
-            if len(timestamps) < 2:
-                continue
-            timestamps.sort()
-            flow_iats = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)]
-            all_iats.extend(flow_iats)
+            for pkt in f.get_fwd_packets():
+                if getattr(pkt, 'has_http', False) and pkt.timestamp is not None:
+                    all_timestamps.append(pkt.timestamp)
+
+        # Guard: cần ít nhất 2 HTTP requests để tính IAT
+        if len(all_timestamps) < 2:
+            return 0.0
+
+        all_timestamps.sort()
+        all_iats = [all_timestamps[i+1] - all_timestamps[i]
+                    for i in range(len(all_timestamps) - 1)]
 
         # Guard: cần ít nhất 2 IAT để tính CV có nghĩa
         if len(all_iats) < 2:
