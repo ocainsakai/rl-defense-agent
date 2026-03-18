@@ -57,7 +57,7 @@ FEATURE_ORDER: list = [
 
     # ── SQLi (indices 11-16) ─────────────────────────────────────────────────
     'F12',  # 11  SqlSpecialChar    — char ratio (', ;, --),   F1=0.919
-    'F13',  # 12  CrsSquliScore     — CRS 942 score (0→N),     F1=0.722
+    'F13',  # 12  CrsSqliScore     — CRS 942 score (0→N),     F1=0.722
     'F14',  # 13  SqlUnionSelect    — UNION SELECT,             FPR=0.0%
     'F15',  # 14  SqlComment        — --, #, /**/,              F1=0.662
     'F16',  # 15  SqlStackedQuery   — ; DROP/DELETE,            FPR=0.0%
@@ -104,7 +104,7 @@ FEATURE_CLIP_BOUNDS: dict = {
     'F9':  1500.0,  # bytes         — MTU ceiling
     'F10': 100.0,   # fwd/bwd ratio — unidirectional flood
     'F11': 500.0,   # pkts/port     — concentrated flood
-    'F13':  20.0,   # CRS SQLi rules — PL1 max ~19
+    'F13':  20.0,   # CRS SQLi rules — PL2 có 50 rules, cap 20 cho score/request trung bình
     'F17':  10.0,   # SELECT count  — multiple SELECTs rare in legit traffic
     'F18':   4.0,   # CRS XSS rules — empirical max=3.0 (3 datasets, 2026-03); was 32 (theoretical PL2 max)
 }
