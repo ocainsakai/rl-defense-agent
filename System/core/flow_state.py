@@ -12,7 +12,6 @@ QUAN TRỌNG:
 - FlowManager sẽ xác định direction khi gọi add_packet()
 """
 
-import functools
 from collections import deque
 from typing import Dict, Any, Optional, Set, List
 import time
@@ -217,107 +216,6 @@ class FlowState:
         """Payloads của TẤT CẢ packets"""
         return self.get_fwd_payloads() + self.get_bwd_payloads()
     
-    # =========================================================================
-    # GHÉP NỐI PAYLOAD - Nối payload theo thứ tự TCP sequence number
-    # =========================================================================
-
-    @staticmethod
-    def _reassemble(packets) -> bytes:
-        """
-        Ghép payload từ list packets theo TCP sequence number (L2 fix).
-
-        Thuật toán:
-        1. Lọc packets có payload thực sự.
-        2. Tách thành nhóm có seq và không có seq.
-        3. Sort nhóm có seq theo RFC 793 modular arithmetic:
-           b đến sau a  ⟺  (b - a) & 0xFFFF_FFFF < 2^31
-           → xử lý đúng TCP wraparound kể cả khi ISN gần 2^32.
-        4. Dedup retransmission: cùng seq → giữ packet có payload dài hơn.
-        5. Packets không có seq (ví dụ: UDP, stripped header) nối ở cuối.
-
-        Args:
-            packets: iterable[LayerInfo]
-
-        Returns:
-            bytes: payload đã sắp xếp đúng thứ tự TCP
-        """
-        pkts = [p for p in packets if p.has_payload and p.payload_bytes]
-        if not pkts:
-            return b''
-
-        with_seq    = [(p.tcp_seq, p) for p in pkts if p.tcp_seq is not None]
-        without_seq = [p for p in pkts if p.tcp_seq is None]
-
-        if not with_seq:
-            # Không có seq nào → fallback về thứ tự đến (hành vi cũ)
-            return b''.join(p.payload_bytes for p in pkts)
-
-        # RFC 793 modular sort — đúng kể cả khi ISN gần 2^32 và wrap về 0.
-        # Nguyên tắc: b đến SAU a  ⟺  (b - a) & 0xFFFF_FFFF < 2^31
-        # Không dùng (seq - min_seq) vì min_seq có thể là giá trị sau wrap
-        # (nhỏ hơn numerically nhưng thực ra muộn hơn về mặt TCP).
-        def _rfc793_cmp(a, b):
-            diff = (b[0] - a[0]) & 0xFFFF_FFFF
-            if diff == 0:
-                return 0
-            return -1 if diff < 0x8000_0000 else 1
-
-        with_seq.sort(key=functools.cmp_to_key(_rfc793_cmp))
-
-        # Dedup retransmission: cùng seq → giữ payload dài nhất
-        best: dict = {}  # seq → LayerInfo
-        for seq, pkt in with_seq:
-            if seq not in best or len(pkt.payload_bytes) > len(best[seq].payload_bytes):
-                best[seq] = pkt
-
-        # Xây dựng danh sách cuối (theo thứ tự seq đã sort, loại bỏ trùng)
-        seen_seqs: set = set()
-        ordered = []
-        for seq, _ in with_seq:
-            if seq not in seen_seqs:
-                seen_seqs.add(seq)
-                ordered.append(best[seq])
-
-        # Packets không có seq nối ở cuối (vị trí không xác định)
-        ordered.extend(without_seq)
-
-        return b''.join(p.payload_bytes for p in ordered)
-
-    def get_reassembled_fwd_payload(self) -> bytes:
-        """
-        Nối forward payloads theo thứ tự TCP sequence number.
-
-        Xử lý: out-of-order delivery, TCP wraparound, retransmission.
-        Fallback về thứ tự packet đến nếu không có seq (ví dụ: UDP payload).
-
-        USE CASE: Phát hiện SQLi/XSS signature bị phân mảnh qua nhiều packet.
-
-        Returns:
-            bytes: Payload đã ghép theo đúng thứ tự TCP
-        """
-        return self._reassemble(self.fwd_packets)
-
-    def get_reassembled_bwd_payload(self) -> bytes:
-        """
-        Nối backward payloads theo thứ tự TCP sequence number.
-
-        Returns:
-            bytes: Payload từ server response đã ghép đúng thứ tự
-        """
-        return self._reassemble(self.bwd_packets)
-
-    def get_reassembled_payload(self) -> bytes:
-        """
-        Nối payloads cả 2 chiều: reassemble mỗi chiều riêng rồi ghép lại.
-
-        Không trộn seq của fwd và bwd vì chúng thuộc hai TCP stream khác nhau.
-
-        Returns:
-            bytes: Toàn bộ payload của flow (fwd trước, bwd sau)
-        """
-        return self.get_reassembled_fwd_payload() + self.get_reassembled_bwd_payload()
-
-
     # =========================================================================
     # PHƯƠNG THỨC TIỆN ÍCH
     # =========================================================================

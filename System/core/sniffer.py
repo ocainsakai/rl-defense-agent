@@ -93,6 +93,11 @@ class NetworkSniffer:
             logger.info(f"Dừng bởi người dùng (Đã xử lý {self.packet_count} gói)")
         except Exception as e:
             logger.error(f"Lỗi Sniffer: {e}", exc_info=True)
+            # Debug: ghi ra file để thấy lỗi khi chạy trong Mininet
+            import traceback
+            with open('/tmp/sniffer_crash.log', 'a') as f:
+                f.write(f"[SNIFF CRASH] {e}\n")
+                traceback.print_exc(file=f)
         finally:
             self.stop()
 
