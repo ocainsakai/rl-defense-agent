@@ -2,13 +2,13 @@
 
 Đặc trưng:
 - F12: SqlSpecialChar   - Tỷ lệ ký tự đặc biệt SQL (', -, ;, #, =)
-- F13: CrsSquliScore    - Điểm bất thường OWASP CRS 942 (0 đến N) — phủ rộng
+- F13: CrsSqliScore     - Điểm bất thường OWASP CRS 942 (0 đến N) — phủ rộng
 - F14: SqlUnionSelect   - UNION SELECT injection — kỹ thuật trích xuất dữ liệu
 - F15: SqlComment       - SQL comment injection (--, #, /**/) — cắt query
 - F16: SqlStackedQuery  - Stacked query injection (; DROP...) — lệnh phá hoại
 - F17: SqlSelectCount   - Số lượng từ khóa SELECT — dấu hiệu UNION chaining
 
-Nguồn CRS: REQUEST-942-APPLICATION-ATTACK-SQLI.conf (paranoia level 1)
+Nguồn CRS: REQUEST-942-APPLICATION-ATTACK-SQLI.conf (paranoia level 2)
   F13 bao gồm: tên DB, hàm SQL, blind SQLi (sleep/benchmark),
                tautology, encoding evasion, error-based, boolean-based blind...
   F14/F15/F16: dấu hiệu đơn lẻ chi tiết cho kỹ thuật rủi ro cao cụ thể.
@@ -124,7 +124,7 @@ class F12_SqlSpecialChar(FeatureBase):
         "Điểm CRS 942 trung bình mỗi HTTP request — số rule SQLi kích hoạt / số request. "
         "Bao gồm: tên DB, hàm SQL (sleep/benchmark), tautology, "
         "encoding evasion, error-based, boolean blind. "
-        "Nguồn: REQUEST-942-APPLICATION-ATTACK-SQLI.conf PL1"
+        "Nguồn: REQUEST-942-APPLICATION-ATTACK-SQLI.conf PL2"
     ),
     category="sqli",
 ))

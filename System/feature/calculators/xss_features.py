@@ -83,7 +83,7 @@ _EVENT_HANDLER_PATTERNS = [
         "Điểm CRS 941 trung bình mỗi HTTP request — số rule XSS kích hoạt / số request. "
         "Bao gồm: script tag, event handler, JS URI, NoScript injection, "
         "IE XSS filter, JSFuck, AngularJS SSTI, từ khóa node-validator. "
-        f"Nguồn: REQUEST-941-APPLICATION-ATTACK-XSS.conf PL1"
+        f"Nguồn: REQUEST-941-APPLICATION-ATTACK-XSS.conf PL2"
     ),
     category="xss",
 ))
