@@ -7,16 +7,18 @@ Cách sử dụng:
     from feature.calculator import FlowFeatureCalculator
 
     calculator = FlowFeatureCalculator()
-    features = calculator.calculate_all(flows)
-    # features = [f1, f2, ..., f20]  — theo FEATURE_ORDER từ data_params.py
 
-    # Với tên features:
-    feature_dict = calculator.calculate_dict(flows)
-    # {'packet_rate': 100.5, 'syn_ack_ratio': 1.2, ...}
+    # PRIMARY — có cache + flags (biết feature nào bị lỗi)
+    features, missing = calculator.calculate(flows)
+    # features = [f1, f2, ..., f20]  — giá trị thô theo FEATURE_ORDER
+    # missing  = [12, 17]            — index các features bị lỗi (rỗng = OK)
+
+    # WRAPPER — backward compat, chỉ trả về features (không có flags)
+    features = calculator.calculate_all_optimized(flows)
 """
 
 import logging
-from typing import List, Dict, Tuple, Optional
+from typing import List, Tuple
 from core.flow_state import FlowState
 from feature.base import FeatureRegistry
 from config.data_params import FEATURE_ORDER
@@ -93,166 +95,49 @@ class FlowFeatureCalculator:
                 logger.warning(f"Feature {code} chưa đăng ký, dùng mặc định 0.0")
                 self.calculators.append(None)
 
-    def calculate_all(self, flows: List[FlowState]) -> List[float]:
-        """Tính tất cả 20 features.
+    def calculate(self, flows: List[FlowState]) -> Tuple[List[float], List[int]]:
+        """Tính tất cả 20 features — PRIMARY method.
+
+        Sử dụng FeatureContext (cache) để tránh normalize payload nhiều lần,
+        và trả về missing_indices để caller phân biệt được "0.0 thật" vs "0.0 do lỗi".
 
         Args:
             flows: Danh sách FlowState từ cùng source IP
 
         Returns:
-            list: 20 giá trị thô theo FEATURE_ORDER
+            tuple:
+                - features (List[float]): 20 giá trị thô theo FEATURE_ORDER
+                - missing (List[int]): index các features bị lỗi hoặc chưa đăng ký
+                  (rỗng = tất cả OK)
         """
         if not flows:
-            return [0.0] * self.NUM_FEATURES
+            return ([0.0] * self.NUM_FEATURES, list(range(self.NUM_FEATURES)))
 
-        results = []
-        for calc in self.calculators:
+        ctx = FeatureContext(flows)
+        features = []
+        missing = []
+
+        for idx, calc in enumerate(self.calculators):
             if calc is None:
-                results.append(0.0)
+                features.append(0.0)
+                missing.append(idx)
             else:
                 try:
-                    value = calc.calculate(flows)
-                    results.append(value)
+                    features.append(calc.calculate(flows, context=ctx))
                 except Exception as e:
                     logger.error(f"Feature {calc.metadata.code} failed: {e}")
-                    results.append(0.0)
+                    features.append(0.0)
+                    missing.append(idx)
 
-        return results
+        return (features, missing)
 
     def calculate_all_optimized(self, flows: List[FlowState]) -> List[float]:
-        """Tính tất cả 20 features với tối ưu caching.
+        """Wrapper backward-compat — trả về chỉ features (không có flags).
 
-        Sử dụng FeatureContext để:
-        - Tính normalized payloads một lần duy nhất
-        - Cache kết quả cho các features dựa trên pattern
-
-        Args:
-            flows: Danh sách FlowState từ cùng source IP
-
-        Returns:
-            list: 20 giá trị thô theo FEATURE_ORDER
+        Các caller cũ (tools, tests) không cần sửa.
+        Dùng calculate() nếu cần biết feature nào bị lỗi.
         """
-        if not flows:
-            return [0.0] * self.NUM_FEATURES
-
-        # Tạo context với caching chuẩn hóa
-        ctx = FeatureContext(flows)
-
-        results = []
-        for calc in self.calculators:
-            if calc is None:
-                results.append(0.0)
-            else:
-                try:
-                    # Truyền context để bật caching
-                    value = calc.calculate(flows, context=ctx)
-                    results.append(value)
-                except Exception as e:
-                    logger.error(f"Feature {calc.metadata.code} failed: {e}")
-                    results.append(0.0)
-
-        return results
-
-    def calculate_all_with_flags(self, flows: List[FlowState]) -> Tuple[List[float], List[int]]:
-        """Tính features và theo dõi dữ liệu thiếu.
-
-        Args:
-            flows: Danh sách FlowState objects
-
-        Returns:
-            tuple: (features_list, missing_indices_list)
-            - features_list: 20 giá trị thô
-            - missing_indices_list: [0, 3, ...] (chỉ số các features thiếu)
-
-        Các trường hợp thiếu dữ liệu:
-            - Danh sách flows rỗng → tất cả features thiếu
-            - Lỗi tính toán feature → đánh dấu là thiếu
-        """
-        if not flows:
-            default_vector = [0.0] * self.NUM_FEATURES
-            missing_indices = list(range(self.NUM_FEATURES))
-            return (default_vector, missing_indices)
-
-        features = []
-        missing_indices = []
-
-        for idx, calc in enumerate(self.calculators):
-            if calc is None:
-                features.append(0.0)
-                missing_indices.append(idx)
-            else:
-                try:
-                    feat_value = calc.calculate(flows)
-                    features.append(feat_value)
-                except Exception as e:
-                    logger.error(f"Feature {calc.metadata.code} failed: {e}")
-                    features.append(0.0)
-                    missing_indices.append(idx)
-
-        return (features, missing_indices)
-
-    def calculate_all_with_flags_optimized(self, flows: List[FlowState]) -> Tuple[List[float], List[int]]:
-        """Tính features với tối ưu hóa và theo dõi dữ liệu thiếu.
-
-        Args:
-            flows: Danh sách FlowState objects
-
-        Returns:
-            tuple: (features_list, missing_indices_list)
-        """
-        if not flows:
-            default_vector = [0.0] * self.NUM_FEATURES
-            missing_indices = list(range(self.NUM_FEATURES))
-            return (default_vector, missing_indices)
-
-        # Tạo context với caching chuẩn hóa
-        ctx = FeatureContext(flows)
-
-        features = []
-        missing_indices = []
-
-        for idx, calc in enumerate(self.calculators):
-            if calc is None:
-                features.append(0.0)
-                missing_indices.append(idx)
-            else:
-                try:
-                    value = calc.calculate(flows, context=ctx)
-                    features.append(value)
-                except Exception as e:
-                    logger.error(f"Feature {calc.metadata.code} failed: {e}")
-                    features.append(0.0)
-                    missing_indices.append(idx)
-
-        return (features, missing_indices)
-
-    def calculate_normalized(self, flows: List[FlowState]) -> List[float]:
-        """Tính và chuẩn hóa tất cả 20 features về [0.0, 1.0].
-
-        Returns:
-            list: 20 giá trị đã chuẩn hóa theo FEATURE_ORDER
-        """
-        from config.data_params import normalize_feature_vector
-        raw = self.calculate_all_optimized(flows)
-        return normalize_feature_vector(raw)
-
-    def calculate_dict(self, flows: List[FlowState], optimized: bool = True) -> Dict[str, float]:
-        """Tính tất cả features và trả về dạng dictionary.
-
-        Args:
-            flows: Danh sách FlowState objects
-            optimized: Dùng tính toán tối ưu (mặc định True)
-
-        Returns:
-            dict: {'packet_rate': 100.5, 'syn_ack_ratio': 1.2, ...}
-        """
-        if optimized:
-            features = self.calculate_all_optimized(flows)
-        else:
-            features = self.calculate_all(flows)
-
-        feature_names = self.get_feature_names()
-        return dict(zip(feature_names, features))
+        return self.calculate(flows)[0]
 
     @staticmethod
     def get_feature_names() -> List[str]:
