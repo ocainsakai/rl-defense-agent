@@ -60,7 +60,7 @@ class PayloadNormalizer:
     """
     
     # Hằng số cấu hình
-    MAX_ITERATIONS = 3  # Ngăn vòng lặp decode vô hạn
+    MAX_ITERATIONS = 2  # Ngăn vòng lặp decode vô hạn; max=2 đủ cho double-encoding (bypass phổ biến nhất, Spett 2005)
     MAX_PAYLOAD_SIZE = 65536  # 64 KB
     
     # Mẫu regex được biên dịch sẵn cho hiệu năng
