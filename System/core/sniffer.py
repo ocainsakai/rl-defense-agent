@@ -56,9 +56,10 @@ class NetworkSniffer:
         self.is_running = False
         self.packet_count = 0
 
-    def start_live(self, interface: str, callback: Callable, 
-                   packet_count: Optional[int] = None, 
-                   bpf_filter: str = "ip") -> None:
+    def start_live(self, interface: str, callback: Callable,
+                   packet_count: Optional[int] = None,
+                   bpf_filter: str = "ip",
+                   timeout: Optional[float] = 20.0) -> None:
         """
         Bắt gói tin trực tiếp từ network interface (Live Mode).
 
@@ -67,27 +68,32 @@ class NetworkSniffer:
             callback: Hàm xử lý từng gói tin
             packet_count: Số lượng gói tin tối đa (None = unlimited)
             bpf_filter: Bộ lọc gói tin (VD: 'tcp port 80', 'ip', 'udp')
-                        Mặc định là 'ip' để loại bỏ các gói tin lớp 2 (ARP) không cần thiết cho AI
+            timeout: Max seconds before sniff() returns (default 20s).
+                     Forces periodic restart even if sniff() is stuck due to
+                     ring buffer overflow or silent interface issues.
+                     Set None for unlimited (not recommended for production).
         """
         logger.info(f"Đang lắng nghe trên giao diện: {interface}")
         logger.info(f"Bộ lọc BPF: {bpf_filter}")
         self.is_running = True
         self.packet_count = 0
-        
+
         def wrapped_callback(pkt):
             if self.is_running:
                 self.packet_count += 1
                 callback(pkt)
-        
+
         try:
             final_count = 0 if packet_count is None else packet_count
             # store=0 là BẮT BUỘC để tránh tràn RAM khi chạy lâu dài
+            # timeout forces sniff() to return periodically — prevents silent stuck state
             sniff(
-                iface=interface, 
-                prn=wrapped_callback, 
+                iface=interface,
+                prn=wrapped_callback,
                 filter=bpf_filter,
                 store=0,
-                count=final_count
+                count=final_count,
+                timeout=timeout,
             )
         except KeyboardInterrupt:
             logger.info(f"Dừng bởi người dùng (Đã xử lý {self.packet_count} gói)")

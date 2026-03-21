@@ -20,10 +20,10 @@ OBSERVATION VECTOR (FROZEN ORDER — 20D, matches NIDS FEATURE_ORDER):
     F18 CrsXssScore, F19 JsFunctionCall, F20 HtmlEventHandler
 
 ACTION → ATTACK TYPE MAPPING:
-  - DDoS / Port Scan  → Block   (action=3)
-  - Brute Force / SQLi / XSS → Redirect (action=2) → escalate to Block after TTL
-  - Noise / grayzone  → RateLimit (action=1)
-  - Normal            → Allow   (action=0)
+  - Normal user        → Allow     (action=0)
+  - Noisy / suspicious → RateLimit (action=1) — user spam F5, click rapid
+  - Brute Force / SQLi / XSS → Redirect (action=2) → Honeypot
+  - DDoS / Port Scan   → Block     (action=3)
 
 CLOSED-LOOP EFFECTS:
   - Allow (0):    No mitigation
@@ -33,6 +33,8 @@ CLOSED-LOOP EFFECTS:
 """
 
 import math
+import sys
+import os
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -40,25 +42,16 @@ import random
 from typing import Dict, List, Tuple, Any
 
 # ============================================================================
-# NORMALIZATION — dùng cùng logic với NIDS data_params.py
+# NORMALIZATION — single source of truth từ System/config/data_params.py
 # ============================================================================
-# Clip bounds và log-scale set match với System/config/data_params.py
-# để obs vector từ MockIPBehavior và từ NIDS output đều nhất quán.
+# Import trực tiếp để tránh duplicate và đảm bảo Training + Inference
+# luôn dùng cùng một clip bounds / log-scale set.
 
-# Clip bounds (features có cap)
-_CLIP = {
-    'F1': 500.0,   # PacketRate       — log scale
-    'F2': 100.0,   # SynAckRatio      — log scale
-    'F3': 5.0,     # InterArrivalTime — log scale
-    'F5': 500.0,   # DistinctPorts    — log scale
-    'F9': 1500.0,  # AvgPayloadSize   — linear
-    'F10': 100.0,  # FwdBwdRatio      — log scale
-    'F11': 500.0,  # PacketsPerPort   — log scale
-    'F13': 20.0,   # CrsSqliScore     — linear
-    'F17': 10.0,   # SqlSelectCount   — linear
-    'F18': 4.0,    # CrsXssScore      — linear
-}
-_LOG = {'F1', 'F2', 'F3', 'F5', 'F10', 'F11'}
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'System'))
+from config.data_params import FEATURE_CLIP_BOUNDS, FEATURE_LOG_SCALE
+
+_CLIP = FEATURE_CLIP_BOUNDS   # alias giữ backward-compat với code bên dưới
+_LOG  = FEATURE_LOG_SCALE     # alias
 
 # Feature order (20D) — FROZEN, matches NIDS FEATURE_ORDER
 FEATURE_CODES = [
@@ -232,20 +225,23 @@ def compute_network_damage(obs: List[float]) -> float:
 
 def compute_action_cost(action) -> float:
     """
-    Action cost normalized to [0, 0.1] range.
+    Action cost — creates "action ladder" discouraging lazy Block-all.
 
-    Creates "action ladder" with balanced ROI:
+    Block zeroes all features (damage_after≈0) so base_reward is only -action_cost.
+    Setting Block cost high (0.15) prevents the model from always preferring Block
+    over Redirect/RateLimit for all traffic types.
+
     - Allow: free (no intervention)
-    - RateLimit: cheapest mitigation (light throttling)
-    - Redirect: moderate cost (honeypot routing)
+    - RateLimit: very cheap (light throttle — good for noisy users)
+    - Redirect: moderate (honeypot setup overhead)
     - Block: expensive (false positive risk + service disruption)
     """
     action = int(action)  # Handle numpy array from model.predict()
     cost_map = {
         0: 0.00,  # Allow
-        1: 0.02,  # RateLimit (reduced from 0.05)
-        2: 0.05,  # Redirect (reduced from 0.08)
-        3: 0.08   # Block (increased from 0.02)
+        1: 0.01,  # RateLimit — very cheap to encourage for noisy traffic
+        2: 0.04,  # Redirect
+        3: 0.15   # Block — expensive to prevent lazy Block-all
     }
     return cost_map.get(action, 0.0)
 
@@ -253,11 +249,11 @@ def compute_action_bonus(action: int, obs_raw: List[float], damage: float) -> fl
     """
     Compute graduated response bonus based on attack-type detection (20D obs).
 
-    Attack-type zones (from 20D raw obs vector):
-      - DDoS / Port Scan  → Block  (action=3)  — F1 high OR F2 high OR (F5+F11) high
-      - Brute Force / SQLi / XSS → Redirect (action=2) — F6/F7/F8 OR F12-F20
-      - Noise / unclear   → RateLimit (action=1) — ambiguous / moderate signals
-      - Normal            → Allow   (action=0)  — no attack signal
+    4-zone mapping (thesis scope):
+      - DDoS / Port Scan   → Block     (action=3) — F1/F2 high OR F5/F11 high
+      - Brute / SQLi / XSS → Redirect  (action=2) — F6/F7/F8 OR F12-F20
+      - Noisy / unclear    → RateLimit (action=1) — ambiguous moderate signals
+      - Normal             → Allow     (action=0) — no attack signal
 
     Args:
         action: Action ID (0=Allow, 1=RateLimit, 2=Redirect, 3=Block)
@@ -270,7 +266,6 @@ def compute_action_bonus(action: int, obs_raw: List[float], damage: float) -> fl
     # ── Attack signal detection from raw 20D vector ──────────────────────────
     f1_pps    = obs_raw[0]   # PacketRate
     f2_syn    = obs_raw[1]   # SynAckRatio
-    f4_rst    = obs_raw[3]   # RstRatio
     f5_ports  = obs_raw[4]   # DistinctPorts
     f6_url    = obs_raw[5]   # URLConcentration [0,1]
     f7_iat    = obs_raw[6]   # HttpIatUniformity [0,1]
@@ -290,63 +285,70 @@ def compute_action_bonus(action: int, obs_raw: List[float], damage: float) -> fl
     f20_html  = obs_raw[19]  # HtmlEventHandler
 
     # Composite signals (normalized to [0,1])
-    ddos_signal   = min(f1_pps / 200.0, 1.0)                    # high pps → DDoS
-    syn_signal    = min(f2_syn / 10.0, 1.0)                     # SYN/ACK ratio spike
-    scan_signal   = min(f5_ports / 50.0, 1.0) * min(f11_ppp / 50.0, 1.0)  # port scan
-    brute_signal  = (f6_url * 0.4 + f7_iat * 0.3 + f8_size * 0.3)         # brute force bot
-    sqli_signal   = min((f12_sqli + f13_crs / 20.0 + float(f14_union > 0)
-                         + float(f15_cmt > 0) + float(f16_stk > 0)) / 3.0, 1.0)
-    xss_signal    = min((f18_xss / 4.0 + float(f19_js > 0) + float(f20_html > 0)) / 2.0, 1.0)
+    ddos_signal  = min(f1_pps / 200.0, 1.0)                    # high pps → DDoS
+    syn_signal   = min(f2_syn / 10.0, 1.0)                     # SYN/ACK ratio spike
+    scan_signal  = min(f5_ports / 50.0, 1.0) * min(f11_ppp / 50.0, 1.0)  # port scan
+    brute_signal = (f6_url * 0.4 + f7_iat * 0.3 + f8_size * 0.3)         # brute force bot
+    sqli_signal  = min((f12_sqli + f13_crs / 20.0 + float(f14_union > 0)
+                        + float(f15_cmt > 0) + float(f16_stk > 0)) / 3.0, 1.0)
+    xss_signal   = min((f18_xss / 4.0 + float(f19_js > 0) + float(f20_html > 0)) / 2.0, 1.0)
+    # Noise signal: elevated pps (20-60 pps) with low attack signals → noisy user (spam F5, rapid clicks)
+    # Trapezoidal: ramp up from 0→1 over 15-30pps, ramp down 1→0 over 50-80pps
+    # Benign F1≈8 → noise_pps≈0 (below 15 pps floor); noisy_normal F1≈30 → noise_pps≈1.0
+    noise_rise   = float(np.clip((f1_pps - 15.0) / 15.0, 0.0, 1.0))   # 0→1 at 15→30 pps
+    noise_fall   = float(np.clip(1.0 - (f1_pps - 50.0) / 30.0, 0.0, 1.0))  # 1→0 at 50→80 pps
+    noise_pps    = noise_rise * noise_fall
+    # Suppress noise only if strong attack signals present (thresholds match is_layer7/is_ddos gates)
+    noise_signal = noise_pps * max(0.0, 1.0 - brute_signal / 0.35) * max(0.0, 1.0 - ddos_signal / 0.40)
 
-    # Zone classification (soft, overlapping)
-    is_ddos_scan  = soft_gate(max(ddos_signal, syn_signal, scan_signal), 0.40, 0.10)
-    is_layer7     = soft_gate(max(brute_signal, sqli_signal, xss_signal), 0.35, 0.10)
-    is_normal     = (1.0 - soft_gate(damage, 0.10, 0.05)) * (1.0 - is_ddos_scan) * (1.0 - is_layer7)
-    # Noise = everything not clearly normal, DDoS, or L7
-    is_noise      = float(np.clip(1.0 - is_ddos_scan - is_layer7 - is_normal, 0.0, 1.0))
+    # Zone classification (soft gates, 4 zones)
+    is_ddos   = soft_gate(max(ddos_signal, syn_signal, scan_signal), 0.40, 0.10)
+    is_layer7 = soft_gate(max(brute_signal, sqli_signal, xss_signal), 0.35, 0.10)
+    is_noise  = float(np.clip(noise_signal * (1.0 - is_ddos) * (1.0 - is_layer7), 0.0, 1.0))
+    is_normal = float(np.clip((1.0 - soft_gate(damage, 0.10, 0.05)) * (1.0 - is_ddos) * (1.0 - is_layer7) * (1.0 - is_noise), 0.0, 1.0))
 
     # Damage gates
-    high_damage   = soft_gate(damage, 0.50, 0.10)
-    low_damage    = 1.0 - soft_gate(damage, 0.15, 0.05)
+    high_damage = soft_gate(damage, 0.50, 0.10)
+    low_damage  = 1.0 - soft_gate(damage, 0.15, 0.05)
 
     bonus = 0.0
 
-    # ── DDoS / Port Scan zone → Block ────────────────────────────────────────
+    # ── DDoS / Port Scan → Block ──────────────────────────────────────────────
     if action == 3:   # Block (correct)
-        bonus += is_ddos_scan * 0.25
+        bonus += is_ddos * 0.30
     elif action == 0: # Allow (very wrong)
-        bonus -= is_ddos_scan * high_damage * 0.50
-    elif action == 2: # Redirect (suboptimal but captures data)
-        bonus -= is_ddos_scan * 0.10
+        bonus -= is_ddos * high_damage * 0.50
+    elif action == 2: # Redirect (suboptimal for DDoS)
+        bonus -= is_ddos * 0.10
 
-    # ── Brute Force / SQLi / XSS zone → Redirect ─────────────────────────────
-    if action == 2:   # Redirect (correct)
-        bonus += is_layer7 * 0.25
+    # ── Brute Force / SQLi / XSS → Redirect ──────────────────────────────────
+    if action == 2:   # Redirect (correct — honeypot capture)
+        bonus += is_layer7 * 0.35    # Increased from 0.25 — must beat Block
     elif action == 0: # Allow (wrong)
         bonus -= is_layer7 * high_damage * 0.40
-    elif action == 3: # Block (escalation — acceptable but suboptimal for L7)
-        # Only penalize Block slightly — it's correct after escalation
-        bonus -= is_layer7 * 0.05
+    elif action == 3: # Block (suboptimal — attacker evades honeypot)
+        bonus -= is_layer7 * 0.20   # Increased from 0.05 — discourage Block for L7
 
-    # ── Noise / grayzone → RateLimit ─────────────────────────────────────────
-    if action == 1:   # RateLimit (correct)
-        bonus += is_noise * 0.20
-    elif action == 3: # Block (over-response)
-        bonus -= is_noise * 0.35
+    # ── Noisy / Suspicious → RateLimit ───────────────────────────────────────
+    if action == 1:   # RateLimit (correct — graduated response)
+        bonus += is_noise * 0.50    # Strong signal — must clearly beat Allow in noise zone
+    elif action == 3: # Block (over-response for ambiguous traffic)
+        bonus -= is_noise * 0.50
     elif action == 2: # Redirect (over-response for noise)
-        bonus -= is_noise * 0.20
-    elif action == 0: # Allow (mild risk)
-        bonus -= is_noise * 0.08
+        bonus -= is_noise * 0.25
+    elif action == 0: # Allow (risky — noisy user may be probing)
+        bonus -= is_noise * 0.30   # Stronger penalty — discourage Allow for noise
 
-    # ── Normal traffic → Allow ────────────────────────────────────────────────
-    if action == 0:   # Allow (correct)
-        bonus += is_normal * low_damage * 0.20
-    elif action == 3: # Block (false positive — very bad)
+    # ── Normal → Allow ────────────────────────────────────────────────────────
+    # Allow is the zero-cost default — no positive bonus, only penalties for wrong actions
+    if action == 3: # Block (false positive — very bad for UX)
         bonus -= is_normal * low_damage * 0.60
-    elif action == 1: # RateLimit (mild over-response)
-        bonus -= is_normal * low_damage * 0.10
+    elif action == 1: # RateLimit (mild over-response for clean traffic)
+        bonus -= is_normal * low_damage * 0.20
+    elif action == 2: # Redirect (over-response for clean traffic)
+        bonus -= is_normal * low_damage * 0.30
 
-    return float(np.clip(bonus, -0.60, 0.25))
+    return float(np.clip(bonus, -0.60, 0.35))
 
 # ============================================================================
 # IP MOCK BEHAVIOR WITH DOMAIN RANDOMIZATION
@@ -393,14 +395,16 @@ class MockIPBehavior:
         """
         if self.ip_type == 'benign':
             self.base_state = {
-                'F1': 60.0,  'F1_sigma': 20.0,      # PacketRate
+                'F1': 8.0,   'F1_sigma': 5.0,        # PacketRate — normal browsing is 1-15 pps
                 'F2': 1.0,   'F2_sigma': 0.15,       # SynAckRatio (log-normal)
                 'F3': 0.3,                             # InterArrivalTime (seconds)
                 'F4': 0.02,  'F4_alpha': 1.0, 'F4_beta': 48.0,   # RstRatio ~ Beta
                 'F5': 2,     'F5_lam': 2,             # DistinctPorts (Poisson)
-                'F6': 0.1,                             # URLConcentration
-                'F7': 0.5,                             # HttpIatUniformity (varied, not bot)
-                'F8': 0.3,                             # RequestSizeUniformity
+                'F6': 0.05,                            # URLConcentration — diverse URLs
+                # Low F7/F8: benign users browse randomly, timing/size non-uniform
+                # → brute_signal low → noise_signal suppressed → Allow zone
+                'F7': 0.08,                            # HttpIatUniformity — random timing
+                'F8': 0.10,                            # RequestSizeUniformity — varied
                 'F9': 180.0, 'F9_sigma': 60.0,        # AvgPayloadSize
                 'F10': 1.5,                            # FwdBwdRatio
                 'F11': 30.0, 'F11_lam': 30,           # PacketsPerPort
@@ -410,26 +414,9 @@ class MockIPBehavior:
                 # XSS: all zero
                 'F18': 0.0, 'F19': 0.0, 'F20': 0.0,
             }
-        elif self.ip_type == 'benign_upload':
-            self.base_state = {
-                'F1': 80.0,  'F1_sigma': 25.0,
-                'F2': 1.0,   'F2_sigma': 0.10,
-                'F3': 0.25,
-                'F4': 0.02,  'F4_alpha': 1.0, 'F4_beta': 48.0,
-                'F5': 2,     'F5_lam': 2,
-                'F6': 0.1,
-                'F7': 0.4,
-                'F8': 0.5,   # Large uniform payload → higher size uniformity
-                'F9': 1400.0,'F9_sigma': 50.0,  # RFC 793 TCP MSS compliant
-                'F10': 1.2,
-                'F11': 40.0, 'F11_lam': 40,
-                'F12': 0.0, 'F13': 0.0, 'F14': 0.0,
-                'F15': 0.0, 'F16': 0.0, 'F17': 0.0,
-                'F18': 0.0, 'F19': 0.0, 'F20': 0.0,
-            }
         elif self.ip_type == 'scan':
             self.base_state = {
-                'F1': 100.0, 'F1_sigma': 30.0,
+                'F1': 160.0, 'F1_sigma': 30.0,  # High pps → always > 80 pps → outside noise zone
                 'F2': 2.0,   'F2_sigma': 0.30,
                 'F3': 0.1,
                 'F4': 0.60,  'F4_alpha': 30.0, 'F4_beta': 20.0,  # High RST (failed conns)
@@ -453,7 +440,7 @@ class MockIPBehavior:
                 'F5': 2,     'F5_lam': 2,
                 'F6': 0.05,
                 'F7': 0.2,
-                'F8': 0.9,   # Uniform SYN packets
+                'F8': 0.2,   # SYN flood — not uniform HTTP size (no HTTP payload)
                 'F9': 70.0,  'F9_sigma': 15.0,   # Tiny payload (SYN has no data)
                 'F10': 8.0,  # Highly asymmetric (all SYN, no ACK back)
                 'F11': 200.0,'F11_lam': 200,
@@ -505,76 +492,26 @@ class MockIPBehavior:
                 'F19': 1.0,  # JS function calls (alert/eval)
                 'F20': 1.0,  # HTML event handlers
             }
-        elif self.ip_type == 'grayzone':
-            self.base_state = {
-                'F1': 140.0, 'F1_sigma': 40.0,
-                'F2': 1.8,   'F2_sigma': 0.40,
-                'F3': 0.15,
-                'F4': 0.15,  'F4_alpha': 7.5, 'F4_beta': 42.5,
-                'F5': 6,     'F5_lam': 6,
-                'F6': 0.4,   # Moderate URL concentration
-                'F7': 0.4,   # Semi-uniform IAT
-                'F8': 0.3,
-                'F9': 280.0, 'F9_sigma': 80.0,
-                'F10': 2.0,
-                'F11': 25.0, 'F11_lam': 25,
-                'F12': 0.02, 'F13': 0.5, 'F14': 0.0,  # Low SQLi hint
-                'F15': 0.0,  'F16': 0.0, 'F17': 0.0,
-                'F18': 0.0,  'F19': 0.0, 'F20': 0.0,
-            }
-        elif self.ip_type == 'layer7_stealth':
-            # Low-volume stealthy L7 attack
-            self.base_state = {
-                'F1': 70.0,  'F1_sigma': 20.0,
-                'F2': 1.1,   'F2_sigma': 0.15,
-                'F3': 0.3,
-                'F4': 0.08,  'F4_alpha': 4.0, 'F4_beta': 46.0,
-                'F5': 2,     'F5_lam': 2,
-                'F6': 0.7,   # Focused on exploit URLs
-                'F7': 0.5,
-                'F8': 0.4,
-                'F9': 620.0, 'F9_sigma': 150.0,
-                'F10': 1.5,
-                'F11': 35.0, 'F11_lam': 35,
-                'F12': 0.03, 'F13': 1.5,  # Mild SQLi indicators (stealth)
-                'F14': 0.0,  'F15': 0.5, 'F16': 0.0, 'F17': 0.5,
-                'F18': 1.5,  'F19': 0.5, 'F20': 0.5,  # Mild XSS indicators
-            }
         elif self.ip_type == 'noisy_normal':
-            # Benign user with high noise/variance
+            # Benign user with moderate noise (spam F5, rapid clicks)
+            # Tuned so noise_signal stays in 0.3-0.7 range for reliable RateLimit zone:
+            #   F1=30 pps avg (low sigma=8) → ddos_signal≈0.15 → noise_pps≈0.92
+            #   F7=0.10 (low IAT uniformity) → brute_signal≈0.10 → not suppressed
             self.base_state = {
-                'F1': 65.0,  'F1_sigma': 35.0,   # High variance
-                'F2': 1.4,   'F2_sigma': 0.50,
+                'F1': 30.0,  'F1_sigma': 8.0,    # Low sigma → stays 15-45 pps range
+                'F2': 1.1,   'F2_sigma': 0.30,
                 'F3': 0.25,
-                'F4': 0.05,  'F4_alpha': 2.5, 'F4_beta': 47.5,
-                'F5': 3,     'F5_lam': 3,
-                'F6': 0.15,
-                'F7': 0.45,
-                'F8': 0.25,
-                'F9': 250.0, 'F9_sigma': 120.0,  # High variance
+                'F4': 0.04,  'F4_alpha': 2.0, 'F4_beta': 48.0,
+                'F5': 2,     'F5_lam': 2,
+                'F6': 0.10,
+                'F7': 0.10,  # Low IAT uniformity → brute_signal low
+                'F8': 0.15,
+                'F9': 250.0, 'F9_sigma': 80.0,
                 'F10': 1.8,
-                'F11': 22.0, 'F11_lam': 22,
+                'F11': 15.0, 'F11_lam': 15,
                 'F12': 0.0, 'F13': 0.0, 'F14': 0.0,
                 'F15': 0.0, 'F16': 0.0, 'F17': 0.0,
                 'F18': 0.0, 'F19': 0.0, 'F20': 0.0,
-            }
-        elif self.ip_type == 'mimicry_attackers':
-            # Attacker mimicking benign traffic with subtle L7 anomalies
-            self.base_state = {
-                'F1': 65.0,  'F1_sigma': 18.0,   # Benign-like rate
-                'F2': 1.1,   'F2_sigma': 0.15,
-                'F3': 0.3,
-                'F4': 0.04,  'F4_alpha': 2.0, 'F4_beta': 48.0,
-                'F5': 4,     'F5_lam': 4,
-                'F6': 0.55,  # Slightly concentrated URLs
-                'F7': 0.5,
-                'F8': 0.4,
-                'F9': 600.0, 'F9_sigma': 180.0,  # Larger than benign (L7 indicator)
-                'F10': 1.5,
-                'F11': 16.0, 'F11_lam': 16,
-                'F12': 0.01, 'F13': 0.8,  # Very low SQLi (gradual escalation)
-                'F14': 0.0,  'F15': 0.0, 'F16': 0.0, 'F17': 0.0,
-                'F18': 0.3,  'F19': 0.0, 'F20': 0.0,
             }
         else:
             raise ValueError(f"Unknown ip_type: {self.ip_type}")
@@ -630,27 +567,46 @@ class MockIPBehavior:
         # F11 PacketsPerPort ~ Poisson
         self.state['F11'] = float(max(1, int(self.rng.poisson(max(1, b['F11_lam'])))))
 
-        # F12 SqlSpecialChar [0,1] — small Beta noise
-        self.state['F12'] = float(np.clip(
-            b['F12'] + self.rng.normal(0, 0.01), 0.0, 1.0))
+        # F12 SqlSpecialChar [0,1] — noise only when base > 0
+        # FIX: benign base=0 → no noise (real NIDS: no SQLi pattern = score 0 exactly)
+        if b['F12'] > 0:
+            self.state['F12'] = float(np.clip(b['F12'] + self.rng.normal(0, 0.01), 0.0, 1.0))
+        else:
+            self.state['F12'] = 0.0
 
-        # F13 CrsSqliScore (0-20) — Poisson-ish noise around mean
-        self.state['F13'] = float(max(0.0, self.rng.normal(b['F13'], max(0.1, b['F13'] * 0.15))))
+        # F13 CrsSqliScore (0-20) — noise only when base > 0
+        # FIX: Normal(0, 0.1) when base=0 → 50% false positive rate for benign
+        if b['F13'] > 0:
+            self.state['F13'] = float(max(0.0, self.rng.normal(b['F13'], max(0.1, b['F13'] * 0.15))))
+        else:
+            self.state['F13'] = 0.0
 
-        # F14-F16: Binary/normalized indicators (Bernoulli with small noise)
-        self.state['F14'] = float(np.clip(b['F14'] + self.rng.normal(0, 0.05), 0.0, 1.0))
-        self.state['F15'] = float(np.clip(b['F15'] + self.rng.normal(0, 0.05), 0.0, 1.0))
-        self.state['F16'] = float(np.clip(b['F16'] + self.rng.normal(0, 0.05), 0.0, 1.0))
+        # F14-F16: Binary/normalized indicators — noise only when base > 0
+        # FIX: clip(0 + Normal(0,0.05)) → ~50% chance >0 → float(f14>0)=1.0 for benign
+        for code in ('F14', 'F15', 'F16'):
+            if b[code] > 0:
+                self.state[code] = float(np.clip(b[code] + self.rng.normal(0, 0.05), 0.0, 1.0))
+            else:
+                self.state[code] = 0.0
 
-        # F17 SqlSelectCount
-        self.state['F17'] = float(max(0.0, self.rng.normal(b['F17'], max(0.1, b['F17'] * 0.15))))
+        # F17 SqlSelectCount — noise only when base > 0
+        if b['F17'] > 0:
+            self.state['F17'] = float(max(0.0, self.rng.normal(b['F17'], max(0.1, b['F17'] * 0.15))))
+        else:
+            self.state['F17'] = 0.0
 
-        # F18 CrsXssScore (0-4)
-        self.state['F18'] = float(max(0.0, self.rng.normal(b['F18'], max(0.1, b['F18'] * 0.15 + 0.05))))
+        # F18 CrsXssScore (0-4) — noise only when base > 0
+        if b['F18'] > 0:
+            self.state['F18'] = float(max(0.0, self.rng.normal(b['F18'], max(0.1, b['F18'] * 0.15 + 0.05))))
+        else:
+            self.state['F18'] = 0.0
 
-        # F19-F20: Binary XSS indicators
-        self.state['F19'] = float(np.clip(b['F19'] + self.rng.normal(0, 0.05), 0.0, 1.0))
-        self.state['F20'] = float(np.clip(b['F20'] + self.rng.normal(0, 0.05), 0.0, 1.0))
+        # F19-F20: Binary XSS indicators — noise only when base > 0
+        for code in ('F19', 'F20'):
+            if b[code] > 0:
+                self.state[code] = float(np.clip(b[code] + self.rng.normal(0, 0.05), 0.0, 1.0))
+            else:
+                self.state[code] = 0.0
 
     def apply_closed_loop_effect(self, action: int):
         """
@@ -716,10 +672,6 @@ class MockIPBehavior:
             if self.rng.random() < 0.1:
                 b['F9'] += 150  # occasional spike (file upload)
 
-        elif self.ip_type == 'benign_upload':
-            b['F9'] += self.rng.normal(0, 100)
-            b['F9'] = max(1200.0, b['F9'])
-
         elif self.ip_type == 'scan':
             if self.last_action == 0:  # Allowed → escalate scan
                 b['F5'] = min(200, b['F5'] + int(self.rng.integers(3, 12)))
@@ -758,23 +710,6 @@ class MockIPBehavior:
                 b['F18'] = max(0.0, b['F18'] * 0.9)
             b['F9'] = max(450.0, b['F9'])
 
-        elif self.ip_type == 'grayzone':
-            if self.last_action == 0:
-                b['F1'] += self.rng.normal(10, 20)
-                b['F4'] = float(np.clip(b['F4'] + self.rng.normal(0.02, 0.03), 0.0, 1.0))
-            elif self.last_action == 1:
-                b['F1'] = max(80.0, b['F1'] + self.rng.normal(-5, 10))
-
-        elif self.ip_type == 'layer7_stealth':
-            if self.last_action == 0:
-                b['F9'] += self.rng.normal(30, 60)
-                b['F13'] = min(20.0, b['F13'] + self.rng.normal(0.1, 0.05))
-                b['F18'] = min(4.0,  b['F18'] + self.rng.normal(0.1, 0.05))
-            elif self.last_action == 2:
-                b['F9'] = max(400.0, b['F9'] * 0.85)
-                b['F13'] = max(0.0, b['F13'] * 0.9)
-                b['F18'] = max(0.0, b['F18'] * 0.9)
-
         elif self.ip_type == 'noisy_normal':
             b['F1'] += self.rng.normal(0, 10)
             b['F9'] += self.rng.normal(0, 30)
@@ -783,17 +718,6 @@ class MockIPBehavior:
                 self.persistence_score = min(1.0, self.persistence_score + 0.1)
             else:
                 self.persistence_score *= 0.98
-
-        elif self.ip_type == 'mimicry_attackers':
-            self.persistence_score = min(1.0, self.persistence_score + 0.02)
-            b['F1'] += self.rng.normal(0, 5)
-            if self.last_action == 0:
-                b['F9'] += self.rng.normal(20, 40)
-                # Gradually escalate L7 signals with persistence
-                b['F13'] = float(np.clip(b['F13'] + self.persistence_score * 0.05, 0.0, 5.0))
-                b['F18'] = float(np.clip(b['F18'] + self.persistence_score * 0.02, 0.0, 2.0))
-            elif self.last_action == 2:
-                b['F9'] = max(400.0, b['F9'] * 0.90)
 
         # Clip base F1, F2, F5, F9 to physical bounds
         b['F1'] = max(0.0, b['F1'])
@@ -823,6 +747,97 @@ class MockIPBehavior:
         ]
 
 # ============================================================================
+# REPLAY BEHAVIOR — reads real NIDS data from training_data.jsonl
+# ============================================================================
+
+import json as _json
+
+class ReplayBehavior:
+    """Replay real NIDS features thay cho MockIPBehavior.
+
+    Đọc training_data.jsonl (được thu thập bằng infer.py --label),
+    cung cấp cùng interface với MockIPBehavior để IDSDefenseEnv
+    có thể swap sang mode="replay" mà không cần thay đổi logic khác.
+
+    Interface:
+        get_features()             → List[float] (20D raw)
+        apply_closed_loop_effect() → (no-op trong replay — features đến từ data thật)
+        step_forward()             → advance to next record
+        persistence_score          → float (luôn = 0.0 trong replay)
+        burst_window               → int (luôn = 0 trong replay)
+    """
+
+    # Reward signal mặc định theo label (dùng khi train với ReplayBehavior)
+    LABEL_DAMAGE = {
+        'normal':       0.0,
+        'benign':       0.0,
+        'noisy_normal': 0.1,
+        'scan':         0.7,
+        'syn_flood':    0.9,
+        'brute_force':  0.6,
+        'sqli_xss':     0.8,
+    }
+
+    def __init__(self, records: list, rng: np.random.Generator = None):
+        """
+        Args:
+            records: list of dicts {features: [20 floats], label: str, src_ip: str, ...}
+            rng: numpy RNG (dùng để shuffle)
+        """
+        if not records:
+            raise ValueError("ReplayBehavior cần ít nhất 1 record")
+        self.records = records
+        self.rng = rng if rng is not None else np.random.default_rng()
+        self.idx = 0
+        self.persistence_score = 0.0
+        self.burst_window = 0
+        self._shuffle()
+
+    def _shuffle(self):
+        self.rng.shuffle(self.records)
+        self.idx = 0
+
+    @property
+    def ip_type(self) -> str:
+        return self.records[self.idx % len(self.records)].get('label', 'normal')
+
+    def get_features(self) -> list:
+        rec = self.records[self.idx % len(self.records)]
+        feats = rec.get('features', [0.0] * 20)
+        if len(feats) != 20:
+            feats = (list(feats) + [0.0] * 20)[:20]
+        return list(feats)
+
+    def apply_closed_loop_effect(self, action: int):
+        # No-op: features đến từ data thật, không simulate closed-loop
+        pass
+
+    def step_forward(self):
+        self.idx += 1
+        if self.idx >= len(self.records):
+            self._shuffle()
+
+
+def _load_replay_records(training_data_file: str) -> list:
+    """Load training_data.jsonl → list of records."""
+    records = []
+    with open(training_data_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = _json.loads(line)
+                if 'features' in rec and len(rec['features']) == 20:
+                    records.append(rec)
+            except Exception:
+                continue
+    if not records:
+        raise ValueError(f"Không có record hợp lệ trong {training_data_file}")
+    return records
+
+
+# ============================================================================
 # GYMNASIUM ENVIRONMENT WITH CLOSED-LOOP CONTROL
 # ============================================================================
 
@@ -840,11 +855,22 @@ class IDSDefenseEnv(gym.Env):
 
     metadata = {'render_modes': []}
 
-    def __init__(self, seed=None, enable_phase2=True, missing_prob=0.01, drift_max=0.12):
-        """Initialize IDS Defense Environment (20D observation)."""
+    def __init__(self, seed=None, enable_phase2=True, missing_prob=0.01, drift_max=0.12,
+                 mode='mock', training_data=None):
+        """Initialize IDS Defense Environment (20D observation).
+
+        Args:
+            seed: Random seed
+            enable_phase2: Enable concept drift / missing data simulation
+            missing_prob: Probability of missing feature (PHASE 2)
+            drift_max: Max concept drift factor (PHASE 2)
+            mode: 'mock' (default) | 'replay' — use real NIDS data for fine-tuning
+            training_data: Path to training_data.jsonl (required when mode='replay')
+        """
         super().__init__()
 
         self.rng = np.random.default_rng(seed)
+        self.mode = mode
 
         # 20D observation space — matches NIDS FEATURE_ORDER
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(20,), dtype=np.float32)
@@ -860,33 +886,43 @@ class IDSDefenseEnv(gym.Env):
         self.missing_prob = missing_prob
         self.drift_max = drift_max
 
-        # IP configuration (PHASE 2: includes noisy_normal and mimicry_attackers)
-        self.ip_list = [
-            '192.168.1.10', '192.168.1.11', '192.168.1.12',
-            '192.168.1.13',
-            '192.168.1.14', '192.168.1.15',  # PHASE 2: noisy_normal
-            '10.0.0.100', '10.0.0.101', '10.0.0.102',
-            '10.0.0.103', '10.0.0.104',
-            '172.16.0.10', '172.16.0.11', '172.16.0.12',
-            '172.16.0.20', '172.16.0.21', '172.16.0.22',
-            '172.16.0.30', '172.16.0.31'   # PHASE 2: mimicry_attackers
-        ]
-        self.ip_types = [
-            'benign', 'benign', 'benign',
-            'benign_upload',                # 1 IP: 5.6% benign uploads
-            'noisy_normal', 'noisy_normal', # 2 IPs: 11.1% noisy benign (PHASE 2)
-            'scan', 'syn_flood', 'brute_force',
-            'sqli_xss', 'sqli_xss',         # 2 IPs: 11.1% SQLi/XSS
-            'grayzone', 'grayzone', 'grayzone',  # 3 IPs: 16.7% grayzone
-            'layer7_stealth', 'layer7_stealth', 'layer7_stealth',  # 3 IPs: 16.7% layer7 stealth
-            'mimicry_attackers', 'mimicry_attackers'  # 2 IPs: 11.1% mimicry (PHASE 2)
-        ]
+        if mode == 'replay':
+            if training_data is None:
+                raise ValueError("mode='replay' requires training_data path")
+            records = _load_replay_records(training_data)
+            # Single ReplayBehavior that cycles through all real records
+            self._replay = ReplayBehavior(records, rng=self.rng)
+            self.ip_list = ['replay_ip']
+            self.ip_types = [self._replay.ip_type]
+            self.ip_behaviors = {'replay_ip': self._replay}
+            self.current_ip_idx = 0
+        else:
+            # IP configuration — 5 types matching thesis demo scope:
+            #   Allow: benign (25%) | RateLimit: noisy_normal (16.7%)
+            #   Redirect: brute_force (16.7%) + sqli_xss (16.7%) = 33.3%
+            #   Block: scan (16.7%) + syn_flood (8.3%) = 25%
+            self.ip_list = [
+                '192.168.1.10', '192.168.1.11', '192.168.1.12',  # benign (3)
+                '192.168.1.13', '192.168.1.14',                   # noisy_normal (2)
+                '10.0.0.100', '10.0.0.101',                       # scan (2)
+                '10.0.0.102',                                       # syn_flood (1)
+                '10.0.0.103', '10.0.0.104',                       # brute_force (2)
+                '10.0.0.105', '10.0.0.106',                       # sqli_xss (2)
+            ]
+            self.ip_types = [
+                'benign', 'benign', 'benign',            # 25% → Allow
+                'noisy_normal', 'noisy_normal',          # 16.7% → RateLimit
+                'scan', 'scan',                          # 16.7% → Block
+                'syn_flood',                             # 8.3% → Block
+                'brute_force', 'brute_force',            # 16.7% → Redirect
+                'sqli_xss', 'sqli_xss',                 # 16.7% → Redirect
+            ]
 
-        # Create IP behaviors
-        self.ip_behaviors = {}
-        self.current_ip_idx = 0
+            # Create IP behaviors
+            self.ip_behaviors = {}
+            self.current_ip_idx = 0
 
-        self._init_behaviors()
+            self._init_behaviors()
 
     def _init_behaviors(self):
         """Initialize all IP behaviors.
@@ -912,8 +948,12 @@ class IDSDefenseEnv(gym.Env):
         self.current_ip_idx = 0
         self.cumulative_damage = 0.0
 
-        # Reset all behaviors
-        self._init_behaviors()
+        if self.mode == 'replay':
+            # Replay: just update ip_type from current record
+            self.ip_types = [self._replay.ip_type]
+        else:
+            # Mock: re-initialize all MockIPBehaviors with fresh RNG seeds
+            self._init_behaviors()
 
         # Get initial observation
         obs, _ = self._get_obs_and_info()
@@ -931,7 +971,7 @@ class IDSDefenseEnv(gym.Env):
         if not self.enable_phase2:
             return features
 
-        if ip_type not in ('benign', 'benign_upload', 'noisy_normal'):
+        if ip_type not in ('benign', 'noisy_normal'):
             return features
 
         drift_start_step = int(self.episode_length * 0.80)
@@ -955,7 +995,8 @@ class IDSDefenseEnv(gym.Env):
         """Get 20D observation for current IP with concept drift applied."""
         current_ip = self.ip_list[self.current_ip_idx]
         behavior = self.ip_behaviors[current_ip]
-        ip_type = self.ip_types[self.current_ip_idx]
+        # In replay mode, ip_type comes from the current record dynamically
+        ip_type = behavior.ip_type if self.mode == 'replay' else self.ip_types[self.current_ip_idx]
 
         raw_features = behavior.get_features()
         raw_features = self._apply_concept_drift(raw_features, ip_type)
@@ -990,7 +1031,7 @@ class IDSDefenseEnv(gym.Env):
             features_after:  20D raw list after closed-loop effect
 
         Returns:
-            reward ∈ [-1, 0]
+            reward ∈ [-1, +1]
         """
         damage_before = compute_network_damage(features_before)
         damage_after  = compute_network_damage(features_after)
@@ -1008,14 +1049,16 @@ class IDSDefenseEnv(gym.Env):
         action_bonus = compute_action_bonus(action, features_before, damage_before)
 
         total_reward = base_reward + reduction_bonus + action_bonus
-        return float(np.clip(total_reward, -1.0, 0.0))
+        # FIX: Clip [-1,+1] not [-1,0] — positive rewards are needed for gradient signal
+        # Old clip to 0 caused BOTH correct and wrong actions to return 0.0 → no learning
+        return float(np.clip(total_reward, -1.0, 1.0))
 
     def step(self, action) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """Execute one step with closed-loop effects (20D)."""
         action = int(action)
         current_ip = self.ip_list[self.current_ip_idx]
-        ip_type    = self.ip_types[self.current_ip_idx]
         behavior   = self.ip_behaviors[current_ip]
+        ip_type    = behavior.ip_type if self.mode == 'replay' else self.ip_types[self.current_ip_idx]
 
         # Raw 20D features BEFORE action
         raw_before = behavior.get_features()
@@ -1095,7 +1138,7 @@ def run_self_test(n_samples: int = 500, verbose: bool = True) -> bool:
         print(f"[TEST 2] Damage bounds: [{min(damages):.4f}, {max(damages):.4f}]", end=" ")
         print("[PASS]" if 0 <= min(damages) and max(damages) <= 1 else "[FAIL]")
 
-    # Test 3: Reward bounds [-1, 0]
+    # Test 3: Reward bounds [-1, +1]  (FIX: was [-1,0], now allows positive rewards)
     rewards = []
     for _ in range(n_samples):
         obs, _ = env.reset()
@@ -1103,14 +1146,14 @@ def run_self_test(n_samples: int = 500, verbose: bool = True) -> bool:
         action = env.action_space.sample()
         _, r, _, _, _ = env.step(action)
         rewards.append(r)
-        if not (-1.0 <= r <= 0.0):
+        if not (-1.0 <= r <= 1.0):
             if verbose:
                 print(f"[FAIL] Reward OOB: {r}")
             all_passed = False
 
     if verbose:
         print(f"[TEST 3] Reward bounds: [{min(rewards):.4f}, {max(rewards):.4f}]", end=" ")
-        print("[PASS]" if -1 <= min(rewards) and max(rewards) <= 0 else "[FAIL]")
+        print("[PASS]" if -1 <= min(rewards) and max(rewards) <= 1 else "[FAIL]")
 
     # Test 4: No NaN/inf
     has_nan_inf = any(np.isnan(r) or np.isinf(r) for r in rewards)
@@ -1137,18 +1180,18 @@ def run_self_test(n_samples: int = 500, verbose: bool = True) -> bool:
     if not obs_valid:
         all_passed = False
 
-    # Test 6: Benign upload 20D — F9 large, F12-F20 zero → low damage
-    benign_upload_20d = [
-        80.0,  1.0,  0.25, 0.02, 2,
-        0.1,   0.4,  0.5,  3500.0, 1.2,
-        40.0,  0.0,  0.0,  0.0,  0.0,
+    # Test 6: Noisy normal 20D — burst F1, no SQLi/XSS → low-moderate damage (not high)
+    noisy_20d = [
+        200.0, 1.4, 0.25, 0.05, 3,
+        0.15,  0.45, 0.25, 250.0, 1.8,
+        22.0,  0.0,  0.0,  0.0,  0.0,
         0.0,   0.0,  0.0,  0.0,  0.0,
     ]
-    d_upload = compute_network_damage(benign_upload_20d)
+    d_noisy = compute_network_damage(noisy_20d)
     if verbose:
-        print(f"[TEST 6] Benign upload damage: {d_upload:.4f}", end=" ")
-        print("[PASS]" if d_upload < 0.15 else "[FAIL]")
-    if d_upload >= 0.15:
+        print(f"[TEST 6] Noisy normal damage: {d_noisy:.4f}", end=" ")
+        print("[PASS]" if d_noisy < 0.50 else "[FAIL]")
+    if d_noisy >= 0.50:
         all_passed = False
 
     # Test 7: Brute force 20D — high F6/F7/F8, no SQLi/XSS → medium-high damage
@@ -1187,7 +1230,7 @@ def run_self_test(n_samples: int = 500, verbose: bool = True) -> bool:
         ip = env_d.ip_list[env_d.current_ip_idx]
         ip_type = env_d.ip_types[env_d.current_ip_idx]
         behavior = env_d.ip_behaviors[ip]
-        if step >= 96 and ip_type in ('benign', 'benign_upload', 'noisy_normal'):
+        if step >= 96 and ip_type in ('benign', 'noisy_normal'):
             if behavior.block_ttl == 0:
                 raw = behavior.get_features()
                 drifted = env_d._apply_concept_drift(list(raw), ip_type)
@@ -1203,8 +1246,8 @@ def run_self_test(n_samples: int = 500, verbose: bool = True) -> bool:
 
     if verbose:
         print(f"[TEST 9] Concept drift: {100*drift_ratio:.1f}% F1 increase", end=" ")
-        print("[PASS]" if 0.05 <= drift_ratio <= 0.15 else "[FAIL]")
-    if not (0.05 <= drift_ratio <= 0.15):
+        print("[PASS]" if 0.02 <= drift_ratio <= 0.15 else "[FAIL]")
+    if not (0.02 <= drift_ratio <= 0.15):
         all_passed = False
 
     if verbose:

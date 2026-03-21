@@ -150,6 +150,18 @@ class TsharkL7Reader:
             self._events.clear()
         return events
 
+    def is_alive(self) -> bool:
+        """Check if tshark subprocess is still running."""
+        if self._proc is None:
+            return False
+        return self._proc.poll() is None
+
+    def restart(self) -> None:
+        """Stop and restart tshark subprocess."""
+        self.stop()
+        time.sleep(1)
+        self.start()
+
     def stop(self) -> None:
         """Stop tshark subprocess."""
         self._running = False

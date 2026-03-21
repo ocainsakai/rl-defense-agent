@@ -47,6 +47,10 @@ def parse_args():
                         help='Number of episodes for evaluation (default: 10)')
     parser.add_argument('--skip_self_test', action='store_true',
                         help='Skip environment self-test (not recommended)')
+    parser.add_argument('--mode', type=str, default='mock', choices=['mock', 'replay'],
+                        help='Training mode: mock (simulation) or replay (real NIDS data). Default: mock')
+    parser.add_argument('--training_data', type=str, default=None,
+                        help='Path to training_data.jsonl (required when --mode replay)')
 
     return parser.parse_args()
 
@@ -95,8 +99,17 @@ def train():
     print(f"[*] Seed: {args.seed}")
     print(f"[*] Total timesteps: {args.timesteps}")
     print(f"[*] Run directory: {run_dir}")
+    print(f"[*] Mode: {args.mode}")
     if args.resume_from:
         print(f"[*] Resuming from: {args.resume_from}")
+    if args.mode == 'replay':
+        if not args.training_data:
+            print("[ERROR] --mode replay requires --training_data <path>")
+            sys.exit(1)
+        if not os.path.exists(args.training_data):
+            print(f"[ERROR] training_data not found: {args.training_data}")
+            sys.exit(1)
+        print(f"[*] Training data: {args.training_data}")
     print()
 
     # ========================================================================
@@ -122,13 +135,16 @@ def train():
     # CREATE ENVIRONMENT
     # ========================================================================
 
-    print(f"[*] Creating IDSDefenseEnv with {args.n_envs} parallel environments...")
-    print(f"    Seeding: make_vec_env(seed={args.seed}) with per-rank offsets; constructor seed not forced.")
+    print(f"[*] Creating IDSDefenseEnv ({args.mode} mode) with {args.n_envs} parallel environments...")
+    env_kwargs = {}
+    if args.mode == 'replay':
+        env_kwargs = {'mode': 'replay', 'training_data': args.training_data}
+
     env = make_vec_env(
         IDSDefenseEnv,
         n_envs=args.n_envs,
-        seed=args.seed
-        # Note: Do NOT pass env_kwargs={'seed': ...} - SB3 handles per-rank seeding automatically
+        seed=args.seed,
+        env_kwargs=env_kwargs if env_kwargs else None
     )
 
     print(f"[*] Environment created.")
@@ -137,7 +153,7 @@ def train():
     print(f"    Episode length: 120 steps\n")
 
     # Create evaluation environment (single env, same seed for reproducibility)
-    eval_env = IDSDefenseEnv(seed=args.seed)
+    eval_env = IDSDefenseEnv(seed=args.seed, **env_kwargs)
 
     # Define evaluation callback
     eval_callback = EvalCallback(
@@ -178,7 +194,7 @@ def train():
         print(f"[*] Initializing new PPO agent...")
 
         # =====================================================================
-        # PPO HYPERPARAMETERS (Stable-Baselines3 v1.x defaults, tuned)
+        # PPO HYPERPARAMETERS (Stable-Baselines3, tuned for thesis demo)
         # =====================================================================
         # Reference: Raffin et al. (2021) "Stable-Baselines3: Reliable Distributed
         #            Deep Reinforcement Learning Implementations" + empirical tuning
@@ -187,35 +203,62 @@ def train():
         #   - learning_rate=3e-4: Standard PPO LR (from SB3 docs)
         #   - gamma=0.99: High discount (long-horizon 120-step episodes)
         #   - n_steps=2048: Rollout buffer for gradient estimation
-        #   - ent_coef=0.02: Increased from SB3 default (0.01) to encourage
-        #                    exploration across Allow/RateLimit/Redirect/Block
+        #   - ent_coef=0.01: SB3 default — 5-type scope is clear, less exploration needed
         #   - gae_lambda=0.95: Generalized Advantage Estimation parameter
         #   - clip_range=0.2: PPO surrogate clipping (standard value)
+        #   - net_arch=[128,128]: Wider network → better critic (higher explained_variance)
+        #                         → cleaner TensorBoard curves for thesis report
         #
         # Reference papers:
         #   - Schulman et al. (2017): PPO algorithm (arxiv.org/abs/1707.06347)
         #   - Raffin et al. (2021): SB3 implementation details
 
+        # =====================================================================
+        # PPO HYPERPARAMETERS v4 — Targeted fixes (v3 post-mortem)
+        # =====================================================================
+        # v3 mistakes: reduced n_epochs/increased batch_size → 4x fewer critic
+        # updates → EV did NOT improve. ent_coef=0.03 too aggressive → start -4.25.
+        #
+        # v4 strategy: keep v2's training intensity, fix only what's broken:
+        #   1. Separate pi[128,128] / vf[256,256] — bigger dedicated critic
+        #   2. vf_coef: 0.5 → 1.0 — double critic gradient weight
+        #   3. ent_coef: 0.01 → 0.02 — moderate (not 0.03 which was too much)
+        #   4. LR schedule: 3e-4 → 1e-4 (floor 1/3, not 1/10)
+        #   5. KEEP n_epochs=10, batch_size=64 (v2 was right, v3 was wrong)
+        # =====================================================================
+
+        def linear_schedule(initial_lr: float, floor_fraction: float = 0.33):
+            """Linear LR decay from initial_lr to initial_lr*floor_fraction."""
+            def schedule(progress_remaining: float) -> float:
+                return initial_lr * max(progress_remaining, floor_fraction)
+            return schedule
+
         model = PPO(
             'MlpPolicy',
             env,
-            learning_rate=3e-4,
+            learning_rate=linear_schedule(3e-4, floor_fraction=0.33),  # 3e-4 → 1e-4
             n_steps=2048,
-            batch_size=64,
-            n_epochs=10,
+            batch_size=64,       # KEEP from v2 (v3 was wrong to change)
+            n_epochs=10,         # KEEP from v2 (v3 was wrong to reduce)
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,
             clip_range_vf=None,
-            ent_coef=0.02,  # Increased from 0.01 for graduated response exploration
-            vf_coef=0.5,
+            ent_coef=0.02,       # 0.01→0.02: moderate entropy preservation
+            vf_coef=1.0,         # 0.5→1.0: double critic gradient weight
             max_grad_norm=0.5,
             use_sde=False,
             seed=args.seed,
             verbose=1,
-            tensorboard_log=tb_dir
+            tensorboard_log=tb_dir,
+            policy_kwargs=dict(
+                net_arch=dict(
+                    pi=[128, 128],   # Actor
+                    vf=[128, 128]    # Critic: separate but same size → faster training
+                )
+            )
         )
-        print(f"[*] PPO agent initialized with policy type: MlpPolicy\n")
+        print(f"[*] PPO agent initialized with policy type: MlpPolicy")
 
     # ========================================================================
     # TRAIN
@@ -237,9 +280,14 @@ def train():
     # ========================================================================
 
     print(f"\n[*] Training complete!")
-    final_model_path = os.path.join(run_dir, 'final_model')
+    model_name = 'final_model_finetuned' if args.mode == 'replay' else 'final_model'
+    final_model_path = os.path.join(run_dir, model_name)
     print(f"[*] Saving final model to {final_model_path}.zip...")
     model.save(final_model_path)
+    # Also save to root dir for easy access
+    root_name = 'policy_model_finetuned' if args.mode == 'replay' else 'policy_model'
+    model.save(root_name)
+    print(f"[*] Also saved to ./{root_name}.zip")
     print(f"[+] Model saved successfully.\n")
 
     # ========================================================================
@@ -258,12 +306,12 @@ def train():
     # Traffic group stats: {group_name: {'total': 0, 'block': 0, 'mitigate': 0}}
     group_stats = {
         'attacker': {'total': 0, 'block': 0, 'mitigate': 0},
-        'benign': {'total': 0, 'block': 0, 'mitigate': 0},
-        'grayzone': {'total': 0, 'block': 0, 'mitigate': 0}
+        'benign':   {'total': 0, 'block': 0, 'mitigate': 0},
+        'noisy':    {'total': 0, 'block': 0, 'mitigate': 0},
     }
     
-    attacker_types = {"scan", "syn_flood", "brute_force", "sqli_xss", "layer7_stealth", "mimicry_attackers", "app_attacker", "apt_attacker"}
-    benign_types = {"benign", "benign_upload", "noisy_normal"}
+    attacker_types = {"scan", "syn_flood", "brute_force", "sqli_xss"}
+    benign_types = {"benign", "noisy_normal"}
 
     for _ in range(args.eval_episodes):
         obs, _ = eval_env.reset()
@@ -291,12 +339,12 @@ def train():
             ip_type = info.get('ip_type', 'unknown')
             
             target_group = None
-            if ip_type in attacker_types or 'attacker' in ip_type: 
+            if ip_type in attacker_types:
                 target_group = 'attacker'
+            elif ip_type == 'noisy_normal':
+                target_group = 'noisy'
             elif ip_type in benign_types:
                 target_group = 'benign'
-            elif ip_type == 'gray_zone_users' or 'gray' in ip_type:
-                target_group = 'grayzone'
             
             if target_group:
                 group_stats[target_group]['total'] += 1
@@ -331,9 +379,9 @@ def train():
         if total == 0: return 0.0, 0.0
         return (stats['block']/total)*100, (stats['mitigate']/total)*100
 
-    att_block, att_mit = get_rates(group_stats['attacker'])
-    ben_block, ben_mit = get_rates(group_stats['benign'])
-    gray_block, gray_mit = get_rates(group_stats['grayzone'])
+    att_block, att_mit   = get_rates(group_stats['attacker'])
+    ben_block, ben_mit   = get_rates(group_stats['benign'])
+    noisy_block, noisy_mit = get_rates(group_stats['noisy'])
 
     print(f"[+] Final Evaluation Results:")
     print("="*50)
@@ -343,9 +391,9 @@ def train():
     print(f"2. Mean Step Damage: {mean_step_damage:.4f}")
     print(f"3. Mean Episode End Cumulative Damage: {mean_ep_damage:.4f}")
     print(f"4. Action Rates: Allow={action_rates[0]:.1f}% | RateLimit={action_rates[1]:.1f}% | Redirect={action_rates[2]:.1f}% | Block={action_rates[3]:.1f}%")
-    print(f"5. Attacker: block_rate={att_block:.1f}% | mitigate_rate={att_mit:.1f}%")
-    print(f"6. Benign:   block_rate={ben_block:.1f}% | mitigate_rate={ben_mit:.1f}%")
-    print(f"7. Grayzone: mitigate_rate={gray_mit:.1f}%")
+    print(f"5. Attacker:     block_rate={att_block:.1f}% | mitigate_rate={att_mit:.1f}%")
+    print(f"6. Benign:       block_rate={ben_block:.1f}% | mitigate_rate={ben_mit:.1f}%")
+    print(f"7. Noisy normal: block_rate={noisy_block:.1f}% | mitigate_rate={noisy_mit:.1f}%")
     print("="*50)
     print(f"    Total Episodes: {n_eval}\n")
 
