@@ -206,7 +206,15 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
                 stats["cap"] += 1
             else:
                 stats["drop"] += 1
-        sniffer.start_live(interface=interface, callback=cb, bpf_filter="tcp")
+        while running[0]:
+            cap_before = stats["cap"]
+            # timeout=20: sniff() returns every 20s → periodic restart prevents stuck state
+            sniffer.start_live(interface=interface, callback=cb, bpf_filter="tcp", timeout=20.0)
+            if running[0]:
+                if stats["cap"] == cap_before:
+                    # No packets captured in this window → truly stalled, warn user
+                    print(f"\n    [!] Scapy: no packets in 20s (Cap={stats['cap']}) — restarting capture...")
+                # Otherwise: normal 20s timeout, silently loop
 
     def _analyze():
         while running[0] or not packet_queue.empty():
@@ -278,12 +286,35 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
     print(f"\n[✓] Đang chạy | Interface={interface} | Window={window_size}s | Output={output_file}")
     print("    Ctrl+C để dừng.\n")
 
+    last_tshark_check = time.time()
+    last_cap_count = 0
+    last_cap_check = time.time()
+
     try:
         while True:
             time.sleep(0.1)
             now = time.time()
+
+            # Health check: tshark alive? (every 10s)
+            if tshark_reader and now - last_tshark_check > 10:
+                last_tshark_check = now
+                if not tshark_reader.is_alive():
+                    print("\n    [!] tshark died — restarting...")
+                    tshark_reader.restart()
+
+            # Health check: capture still receiving packets? (every 15s)
+            if now - last_cap_check > 15:
+                if stats["cap"] == last_cap_count and running[0]:
+                    print(f"\n    [!] No new packets in 15s (Cap={stats['cap']}) — capture may be stalled")
+                last_cap_count = stats["cap"]
+                last_cap_check = now
+
             while now >= win_end:
-                _process_window(win_end)
+                try:
+                    _process_window(win_end)
+                except Exception as e:
+                    logger.warning("Window processing error (skipping window): %s", e)
+                    print(f"\n    [!] Window error: {e}")
                 win_start += window_size
                 win_end    = win_start + window_size
                 enrich_info = f" Enrich={stats['enrich']}" if tshark_reader else ""
