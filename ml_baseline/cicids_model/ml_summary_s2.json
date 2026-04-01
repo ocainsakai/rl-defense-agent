@@ -1,0 +1,13 @@
+{
+  "accuracy": 0.975,
+  "precision": 0.9752,
+  "recall": 0.975,
+  "f1_score": 0.975,
+  "mitigation_rate": 0.989,
+  "fp_cost": 0.0355,
+  "action_efficiency": 0.6636,
+  "redirect_usage_rate": 0.045,
+  "redirect_effectiveness": 0.6481,
+  "redirect_fp_reduction": 0.0839,
+  "avg_response_ms": 18.367
+}
