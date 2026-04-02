@@ -1,0 +1,1539 @@
+\documentclass[12pt,a4paper,twoside]{report}
+\usepackage[utf-8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage[hidelinks]{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\renewcommand{\arraystretch}{1.2}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.5em}
+
+\title{Network Intrusion Detection using Reinforcement Learning \\
+An RL-based Defense Agent with Adaptive Policy Learning}
+\author{Group Members --- FPT University}
+\date{Hanoi, 2026}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+
+\chapter*{ABSTRACT}
+
+\section{Network Intrusion Detection using Reinforcement Learning: An RL-based Defense Agent with Adaptive Policy Learning}
+
+\textbf{Background:} Traditional network defense relies on static rules and signature-based detection, struggling to adapt to automated, evolving cyber attacks. This work addresses the need for autonomous defense systems using Reinforcement Learning (RL) to learn optimal defensive policies.
+
+\textbf{Methods:} We developed an RL-based Network Intrusion Detection System agent using Proximal Policy Optimization trained in simulation with 5 attack types (SYN Flood, Port Scan, Brute-Force, SQL Injection, XSS). The agent observes a 20-dimensional feature vector combining network-level metrics (packet rate, inter-arrival time, port distribution) and HTTP payload features (SQL/XSS detection via OWASP CRS). It selects from three defensive actions: Block, RateLimit, or Redirect-to-Honeypot. Training proceeded for ~350,000 timesteps with evaluation every 12,000 steps.
+
+\textbf{Results:} The RL agent achieved \textbf{91.6% detection rate}, outperforming Static Rules (74.3%) and Random Forest (87.9%). Per-attack: SYN Flood 99.5%, Port Scan 67.4%, SQLi 73.2%, XSS 81.4%, Brute-Force 88.5%. The policy balanced security and availability: 93.2% legitimate traffic allowed (FPR 6.8%), 96.4% SYN Flood mitigation. Training converged smoothly with +475% reward improvement, safe policy updates (KL-divergence: 0.012→0.003). Ablation study showed the HTTP payload feature group as the dominant contributor (−18.4 pp), with payload normalization (−12.8 pp) exceeding CRS rules (−10.2 pp).
+
+\textbf{Conclusions:} This work demonstrates RL's feasibility for autonomous network defense. The agent learns stable, differentiated policies across diverse attacks while balancing mitigation with availability. A hybrid architecture combining static rate-limiting with RL for application-layer analysis is necessary to address system latency constraints. Future work includes multi-agent coordination and simulation-to-reality validation.
+
+\textbf{Keywords:} Reinforcement Learning, Network Intrusion Detection, Proximal Policy Optimization, Cybersecurity Defense, Feature Engineering, Payload Normalization, OWASP ModSecurity, Autonomous Defense, Policy Learning, Network Analysis
+
+
+\tableofcontents
+\newpage
+
+\begin{itemize}
+\item ABSTRACT
+\item TABLE OF CONTENTS
+\item LIST OF FIGURES
+\item LIST OF TABLES
+\item ABBREVIATIONS
+\end{itemize}
+
+\section{Chương 1: GIỚI THIỆU}
+\begin{itemize}
+\item 1.1 Bối cảnh
+\end{itemize}
+- 1.1.1 Sự leo thang của các mối đe dọa mạng và Tự động hóa tấn công
+- 1.1.2 Tác động kinh tế của vi phạm dữ liệu
+- 1.1.3 Sự phát triển của cơ sở hạ tầng mạng và Thách thức vận hành
+- 1.1.4 Nhu cầu về Hệ thống phòng thủ tự chủ và thích ứng
+\begin{itemize}
+\item 1.2 Phát biểu vấn đề
+\item 1.3 Mục tiêu nghiên cứu
+\item 1.4 Ý nghĩa của nghiên cứu
+\item 1.5 Phạm vi và Hạn chế
+\end{itemize}
+- 1.5.1 Phạm vi nghiên cứu
+- 1.5.2 Hạn chế của Phương pháp
+
+\section{Chương 2: TỔNG QUAN TÀI LIỆU}
+\begin{itemize}
+\item 2.1 Tổng quan Hệ thống Phát hiện Xâm nhập (IDS)
+\item 2.2 Quản lý Luồng Mạng (Network Flow Management)
+\item 2.3 Kỹ thuật Trích xuất Đặc trưng và Quy chuẩn
+\item 2.4 Học tăng cường (Reinforcement Learning) cho Bảo mật Mạng
+\item 2.5 Học Chính sách và Thuật toán Tối ưu hóa
+\item 2.6 Quy tắc ModSecurity OWASP CRS
+\item 2.7 So sánh với Công trình Liên quan
+\end{itemize}
+
+\section{Chương 3: PHƯƠNG PHÁP NGHIÊN CỨU}
+\begin{itemize}
+\item 3.1 Thiết kế Nghiên cứu
+\end{itemize}
+- 3.1.1 Mô hình Mối đe dọa
+- 3.1.2 Khung Phương pháp Nghiên cứu
+- 3.1.3 Kiến trúc Tổng thể Hệ thống
+- 3.1.4 Hình thức hóa Bài toán MDP
+- 3.1.5 Topology Mạng Thực nghiệm
+- 3.1.6 Thiết kế Tác tử Phòng thủ RL
+- 3.1.7 Pipeline Suy diễn và Thực thi Thời gian Thực
+\begin{itemize}
+\item 3.2 Phương pháp Thu thập Dữ liệu
+\end{itemize}
+- 3.2.1 Bắt và Phân tách Gói tin
+- 3.2.2 Quản lý Phiên kết nối
+- 3.2.3 Cửa sổ Trượt 1 Giây
+- 3.2.4 Nguồn Dữ liệu
+\begin{itemize}
+\item 3.3 Kỹ thuật Phân tích Dữ liệu
+\end{itemize}
+- 3.3.1 Tổng quan Kỹ nghệ Đặc trưng
+- 3.3.2 Đặc trưng Mạng (F1–F11)
+- 3.3.3 Đặc trưng SQL Injection (F12–F17)
+- 3.3.4 Đặc trưng Cross-Site Scripting (F18–F20)
+- 3.3.5 Pipeline Chuẩn hóa Payload
+- 3.3.6 Ma trận Phủ nhận Tấn công
+- 3.3.7 Chuẩn hóa Vector Đặc trưng
+\begin{itemize}
+\item 3.4 Hạn chế của Phương pháp
+\end{itemize}
+
+\section{Chương 4: KẾT QUẢ THỰC NGHIỆM}
+\item 4.1 Giới thiệu
+\item 4.2 Trình bày Dữ liệu
+\end{itemize}
+- 4.2.1 Kết quả Pipeline Chuẩn hóa Payload
+- 4.2.2 Phân tích CRS Paranoia Level
+- 4.2.3 Hiệu suất Phát hiện theo Đặc trưng
+- 4.2.4 Trọng số Đặc trưng và Phân cụm
+- 4.2.5 Đường cong Học tập của Tác tử RL
+- 4.2.6 Chỉ số Chẩn đoán PPO
+- 4.2.7 So sánh Cấu hình Mặc định SB3 và Đã Tinh chỉnh
+- 4.2.8 Kết quả Đánh giá Cuối cùng
+\begin{itemize}
+\item 4.3 Phân tích Kết quả
+\end{itemize}
+- 4.3.1 Đóng góp Thành phần (Nghiên cứu Ablation)
+- 4.3.2 Hiệu năng Phản ứng Thời gian Thực
+- 4.3.3 Phân tích Hành vi Chính sách
+\begin{itemize}
+\item 4.4 Diễn giải Kết quả
+\end{itemize}
+- 4.4.1 Đánh giá Tổng thể
+- 4.4.2 Xác minh Kịch bản Thực tế
+- 4.4.3 Phát hiện Kỹ thuật Chính
+\begin{itemize}
+\item 4.5 So sánh với Tài liệu
+\item 4.6 Hàm ý của Kết quả
+\end{itemize}
+- 4.6.1 Khi nào Nên Ưu tiên RL thay vì Luật Tĩnh
+- 4.6.2 Yêu cầu Hạ tầng Tối thiểu
+- 4.6.3 Đánh đổi Độ trễ so với Độ chính xác
+- 4.6.4 Honeypot như Lợi thế Chiến lược
+- 4.6.5 Khả năng Tái sử dụng Chính sách
+- 4.6.6 Hướng Phát triển Tiếp theo
+
+\section{Chương 5: THẢO LUẬN}
+\begin{itemize}
+\item 5.1 Phát biểu lại Câu hỏi Nghiên cứu và Mục tiêu
+\item 5.2 Tóm tắt Phát hiện Chính và Diễn giải trong Bối cảnh Nghiên cứu
+\end{itemize}
+- 5.2.1 RQ1 — Hiệu quả so sánh của Tác tử RL
+- 5.2.2 RQ2 — Đánh đổi vận hành: Giải pháp Phòng thủ vs. Tính sẵn sàng Dịch vụ
+- 5.2.3 RQ3 — Tính ổn định của Chính sách trên Các Vector Tấn công Đa dạng
+- 5.2.4 Phân tích chi tiết: Các Nhân tố Chi phối và Lựa chọn Siêu tham số
+- 5.2.4.1 Nhân tố Chi phối: Nhóm Đặc trưng HTTP Payload (F12–F20)
+- 5.2.4.2 Tinh chỉnh Siêu tham số: Trade-off Hiệu quả
+- 5.2.5 Hạn chế và Cảnh báo Quan trọng
+- 5.2.5.1 Khoảng cách Mô phỏng
+- 5.2.5.2 Phụ thuộc vào Hàm Phần thưởng
+- 5.2.5.3 Phân tích Per-window
+- 5.2.5.4 Ràng buộc HTTPS
+- 5.2.5.5 Khả năng Mở rộng Ngang
+
+\section{Chương 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+\begin{itemize}
+\item 6.1 Kết Luận
+\item 6.2 Hướng Phát triển Tiếp Theo
+\end{itemize}
+- 6.2.1 Mở rộng Không gian Hành động
+- 6.2.2 Phòng thủ Phân tán và Đa tác tử
+- 6.2.3 Robustness đối với Adversarial Evasion
+- 6.2.4 Online Retraining và Concept Drift
+- 6.2.5 Transparent Decision Logs và Explainability
+- 6.2.6 Simulation-to-Reality Gap Validation
+
+
+\chapter*{CHƯƠNG 3: PHƯƠNG PHÁP NGHIÊN CỨU}
+
+\section{3.1 Thiết kế Nghiên cứu}
+
+\subsection{3.1.1 Mô hình Mối đe dọa}
+
+Nghiên cứu an toàn thông tin đòi hỏi xác định rõ mô hình mối đe dọa để giới hạn phạm vi bài toán và đặt kỳ vọng thực tế cho hệ thống phòng thủ. Đồ án giả định một đối thủ hoạt động ở cấp độ mạng, khởi phát tấn công từ bên ngoài qua interface biên nhắm vào các dịch vụ Web đang vận hành.
+
+Các khả năng tấn công được phân loại dựa trên đặc điểm kỹ thuật và mức độ ảnh hưởng:
+\begin{itemize}
+\item Lưu lượng thể tích lớn (DDoS, SYN Flood) làm cạn kiệt băng thông và bảng kết nối TCP.
+\item Rà quét hệ thống (Port Scan) để lập bản đồ dịch vụ đang mở.
+\item Tự động hóa tấn công Brute-force qua Botnet để dò quét thông tin xác thực.
+\item Khai thác lỗ hổng tầng ứng dụng Web (Layer 7) qua SQL Injection (SQLi) và Cross-Site Scripting (XSS) trong payload HTTP.
+\item Sử dụng HTTPS/TLS để qua mặt các NIDS dựa trên DPI truyền thống.
+\end{itemize}
+
+Ràng buộc của kẻ tấn công: không có đặc quyền nội bộ (thiết lập Black-box, không biết chính sách phòng thủ). Khả năng của bên phòng thủ: giám sát toàn diện tại router biên, giải mã TLS qua SSLKEYLOGFILE, và thẩm quyền thực thi thời gian thực qua Iptables.
+
+\subsection{3.1.2 Khung Phương pháp Nghiên cứu}
+
+Đồ án tiếp cận bài toán phòng thủ mạng theo hướng ra quyết định tuần tự tự động, trong đó hệ thống không chỉ phát hiện tấn công mà còn lựa chọn hành động phản ứng phù hợp theo từng ngữ cảnh. Khung lý thuyết được chọn là Quy trình Quyết định Markov (MDP) [1], vì nó mô hình hóa chính xác quá trình ra quyết định tuần tự trong môi trường có sự không chắc chắn — đặc trưng cố hữu của lưu lượng mạng thực tế.
+
+Theo định nghĩa MDP, môi trường được đặc trưng bởi bộ bốn thành phần (S, A, R, γ):
+\begin{itemize}
+\item \textbf{Không gian trạng thái S}: vector quan sát 20 chiều thuộc [0,1]²⁰ trích xuất từ lưu lượng mạng.
+\item \textbf{Không gian hành động A}: Bốn lựa chọn phòng thủ rời rạc.
+\item \textbf{Hàm phần thưởng R}: Định lượng tổn thất bảo mật và chi phí triển khai.
+\item \textbf{Hệ số chiết khấu γ = 0,99}: Phản ánh tầm nhìn dài hạn trong việc giảm thiểu tổng thiệt hại tích lũy.
+\end{itemize}
+
+Phương pháp nghiên cứu được triển khai theo hai nhánh song song. Nhánh thu thập trạng thái xây dựng \textbf{Module Quan sát (Observation Module)} — chuyển đổi lưu lượng mạng thô thành vector quan sát có ý nghĩa ngữ nghĩa cho agent. Nhánh huấn luyện phát triển \textbf{Tác tử Phòng thủ RL (RL Defense Agent)} sử dụng thuật toán Tối ưu hóa Chính sách Gần đúng (PPO) [2] trong môi trường mô phỏng Containernet.
+
+PPO được chọn so với các thuật toán RL khác vì ba lý do thực tiễn: (1) ổn định huấn luyện thông qua cơ chế cắt gradient với ε = 0,2, tránh cập nhật chính sách quá lớn; (2) ổn định trong vòng lặp on-policy, phù hợp với môi trường mô phỏng sinh rollout liên tục không cần replay buffer; (3) tương thích tốt với không gian hành động rời rạc nhỏ gọn bốn lựa chọn [2][3]. \textit{(So sánh PPO với DQN xem Chương 2, Mục 2.1.1.3. Phần này tập trung vào tham số triển khai cụ thể cho bài toán.)}
+
+\subsection{3.1.3 Kiến trúc Tổng thể Hệ thống}
+
+Hệ thống Phòng thủ Mạng Thích ứng (ANDS) được thiết kế theo kiến trúc ba lớp, mỗi lớp đảm nhận một vai trò chuyên biệt và tương tác qua giao diện chuẩn hóa.
+
+\textbf{Lớp Trích xuất Đặc trưng (Module Quan sát):} Bắt gói tin từ môi trường mạng, tổ chức thành luồng hai chiều theo 5-tuple, và tính toán 20 đặc trưng hành vi biểu diễn các mẫu tấn công khác nhau. Đầu ra là vector 20 chiều giá trị thô; module suy diễn chuẩn hóa về [0,1] trước khi đưa vào agent.
+
+\textbf{Lớp Ra quyết định (Tác tử Phòng thủ RL):} Tiếp nhận vector quan sát và ánh xạ sang hành động phòng thủ tối ưu dựa trên chính sách đã học. Thuật toán PPO với kiến trúc MLP Policy được huấn luyện cho đến khi hội tụ (khoảng 500.000 bước tương tác) trong môi trường Containernet [4].
+
+\textbf{Lớp Thực thi:} Triển khai hành động phòng thủ vào hạ tầng mạng qua Iptables:
+\begin{itemize}
+\item \textbf{Cho phép (0)} — cho phép lưu lượng đi qua.
+\item \textbf{Giới hạn Tốc độ (1)} — giới hạn băng thông.
+\item \textbf{Chuyển hướng (2)} — chuyển hướng sang honeypot.
+\item \textbf{Chặn (3)} — chặn hoàn toàn.
+\end{itemize}
+
+Mỗi hành động có chi phí triển khai khác nhau, được tính vào hàm phần thưởng để agent học cân bằng giữa bảo mật và hiệu suất dịch vụ.
+
+\textbf{Luồng Dữ liệu Đầu-Cuối:} Lưu lượng từ phía tấn công đến router biên; Scapy sniff gói tin thô ở tầng L3/L4, đồng thời tshark chạy song song để giải mã HTTPS qua SSLKEYLOGFILE và xuất các trường HTTP đã giải mã; bộ phân tích gói tin bóc tách thông tin thành đối tượng dữ liệu có cấu trúc; bộ quản lý luồng tổ chức theo flow 5-tuple. Mỗi giây, bộ tính toán đặc trưng tổng hợp 20 giá trị hành vi và đẩy ra luồng JSONL. Tác tử PPO đọc vector này, suy diễn hành động, và thực thi lệnh Iptables vào Network Namespace của router.
+
+Điểm khác biệt cốt lõi so với IDS truyền thống là \textbf{hiệu ứng vòng lặp khép kín}: quyết định của agent lập tức biến đổi trạng thái mạng tiếp theo — và agent quan sát được sự thay đổi đó ở cửa sổ kế tiếp. IDS truyền thống (Snort, Suricata) chỉ phát hiện và gửi cảnh báo — hành động phản ứng (nếu có) do con người hoặc luật tĩnh xử lý, tách rời khỏi vòng lặp phát hiện. Tác tử RL tạo vòng phản hồi: hành động → thay đổi trạng thái → agent thấy kết quả → điều chỉnh chính sách. Đây cũng là lý do chọn RL thay vì học có giám sát: bài toán không phải phân loại tĩnh mà là ra quyết định tuần tự có hậu quả.
+
+Cụ thể, mỗi hành động tạo hiệu ứng đo được trên vector 20D:
+
+| Hành động | Ảnh hưởng lên Trạng thái Tiếp theo |
+|---|---|
+
+\subsection{3.1.4 Hình thức hóa Bài toán MDP}
+
+
+\begin{tabular}{cc}
+\hline
+Giới hạn Tốc độ & F1 (PacketRate) giảm ~60%, F11 (PacketsPerPort) giảm ~50%, F4 (RstRatio) giảm ~30% \\
+\hline
+Chặn & Toàn bộ đặc trưng → 0 trong 5–10 bước tiếp theo — kẻ tấn công bị cắt hoàn toàn \\
+\hline
+\end{tabular}
+
+\textbf{Không gian Trạng thái} S ⊂ [0,1]²⁰: Mỗi trạng thái là vector 20 chiều đặc trưng hành vi lưu lượng trong cửa sổ quan sát 1 giây, bao gồm đặc trưng mạng (F1–F11) và đặc trưng nội dung HTTP (F12–F20). Chuẩn hóa về [0,1] đảm bảo ổn định số học cho gradient descent của mạng neural PPO.
+
+\textbf{Không gian Hành động} A = {0, 1, 2, 3}: Bốn hành động rời rạc tương ứng Cho phép, Giới hạn Tốc độ, Chuyển hướng và Chặn. Không gian rời rạc nhỏ gọn giúp agent hội tụ nhanh hơn so với không gian liên tục.
+
+\textbf{Hàm Phần thưởng} R(s, a): Được thiết kế theo nguyên tắc phạt nặng khi để lọt tấn công, phạt nhẹ khi can thiệp không cần thiết, và thưởng khi chặn đúng mục tiêu:
+
+$$R_t = -\text{Network\_Damage}(S_t) - \text{Action\_Cost}(a_t) + \text{Action\_Bonus}(a_t, S_t)$$
+
+Thành phần Damage phân biệt mức nghiêm trọng giữa các loại tấn công (SQLi/XSS có trọng số cao hơn Port Scan). Thành phần Cost phạt nhẹ các hành động can thiệp để ngăn agent phản ứng thái quá. Thành phần Bonus thưởng khi chọn đúng hành động phù hợp loại tấn công.
+
+\textbf{Hệ số Chiết khấu} γ = 0,99: Giá trị cao khuyến khích học chính sách giảm thiểu tổng thiệt hại tích lũy, không chỉ tối ưu phần thưởng tức thì.
+
+\subsection{3.1.5 Topology Mạng Thực nghiệm}
+
+Môi trường thực nghiệm được xây dựng trên nền tảng Containernet — kết hợp Mininet (ảo hóa mạng) và Docker (cách ly ứng dụng) — cho phép tạo ra topology mạng thực tế trên phần cứng thông thường [4]:
+
+\begin{itemize}
+\item \textbf{Router biên (10.0.10.254/24):} Nút trung tâm đặt Iptables và Nginx Reverse Proxy. Nginx định tuyến cổng 443 về Production Webserver (192.168.10.10:8080) và cổng 4443 về Honeypot (192.168.30.10:8081). Header X-Real-IP được inject để bộ quản lý luồng xác định đúng IP nguồn sau NAT.
+\item \textbf{Production Webserver (192.168.10.10/24):} Dịch vụ thật, mục tiêu tấn công chính.
+\item \textbf{Honeypot Mồi nhử (192.168.30.10/24):} Server mồi nhử hấp thụ tấn công Layer 7. Khi agent chọn Chuyển hướng, kẻ tấn công tiếp tục hoạt động trên Honeypot trong khi máy chủ thật hoàn toàn an toàn.
+\item \textbf{Kẻ tấn công (10.0.10.10/24):} Triển khai các kịch bản tấn công bằng sqlmap, hping3, Hydra và curl.
+\item \textbf{Wazuh SIEM (192.168.20.20/24):} Ghi log baseline thứ cấp để đối chiếu chéo.
+\end{itemize}
+
+\subsection{3.1.6 Thiết kế Tác tử Phòng thủ RL}
+
+\textbf{Ánh xạ Hành động:}
+\begin{itemize}
+\item \textbf{Cho phép (a=0):} Không can thiệp — dành cho lưu lượng bình thường.
+\item \textbf{Giới hạn Tốc độ (a=1):} Iptables hashlimit 10/giây burst 20 — dành cho lưu lượng nhiễu hoặc chưa xác định rõ loại.
+\item \textbf{Chuyển hướng (a=2):} NAT REDIRECT về cổng 4443 (Honeypot) — dành cho \textbf{Brute Force, SQLi, XSS}. Cho phép agent phân tích ý định tấn công qua Honeypot thay vì Chặn ngay, bảo toàn cơ hội SOC xem xét. Sau 60 giây nếu tín hiệu tấn công L7 tiếp tục, bộ theo dõi trạng thái IP tự động thăng cấp lên Chặn.
+\item \textbf{Chặn (a=3):} Iptables DROP — dành cho \textbf{DDoS/SYN Flood và Port Scan}, các tấn công thể tích cần ngắt ngay lập tức.
+\end{itemize}
+
+\textbf{Môi trường Huấn luyện:} Xây dựng theo chuẩn Gymnasium [11]. Mỗi episode kéo dài 120 bước (120 giây mạng) với các loại tấn công xuất hiện ngẫu nhiên đảm bảo agent gặp đủ cả năm loại. Vòng lặp PPO tích lũy kinh nghiệm qua \texttt{n_steps} bước tương tác, rồi cập nhật chính sách bằng nhiều epoch gradient descent. Cơ chế cắt với ε = 0,2 giới hạn mức thay đổi chính sách tại mỗi bước cập nhật, ngăn sự sụp đổ hiệu suất đột ngột [2].
+
+Ngẫu nhiên hóa Miền (Domain Randomization) thêm nhiễu ±20% vào đặc trưng để tăng khả năng tổng quát hóa của chính sách học được.
+
+\textbf{Hàm Phần thưởng} tổng hợp ba thành phần:
+
+$$R_t = -(D_{after} + C_{action}) + B_{reduction} + B_{action}$$
+
+\textbf{(1) Tổn thất Mạng} $D$ — Hàm tổn thất mạng tính từ 20D đặc trưng thô, gồm 6 thành phần với trọng số phản ánh mức độ nghiêm trọng:
+
+| Thành phần | Trọng số | Đặc trưng | Hàm phi tuyến |
+|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+Tràn PPS (DDoS) & 0,25 & F1 & Logistic: $1/(1+e^{-5(F1/anchor - 1)})$ \\
+\hline
+Phân bố quét cổng & 0,15 & F5 & Log-sigmoid trên số cổng thô \\
+Bất thường payload & 0,10 & F9, F4, F5 & Logistic, loại trừ upload bình thường \\
+SYN flood & 0,10 & F2 & Tanh trên tỷ lệ vượt ngưỡng \\
+SQLi/XSS (tấn công L7) & 0,25 & F12–F20 & Tổ hợp có trọng số chuẩn hóa \\
+\hline
+\end{tabular}
+
+Hàm logistic và tanh triệt tiêu nhiễu nhỏ (lưu lượng bình thường gây tổn thất ≈ 0) nhưng phản ứng mạnh khi vượt ngưỡng. Upload bình thường (F9 ≥ 3000 + F4 thấp + F5 thấp) được loại trừ khỏi tổn thất payload để tránh phạt nhầm.
+
+\textbf{(2) Chi phí Hành động} $C$ — Phạt nhẹ theo mức can thiệp: Cho phép = 0, Giới hạn Tốc độ = 0,02, Chuyển hướng = 0,05, Chặn = 0,08. Tạo "bậc thang chi phí" khiến agent ưu tiên biện pháp nhẹ khi hiệu quả tương đương.
+
+\textbf{(3) Thưởng Phát hiện} $B_{action}$ — Thưởng/phạt theo phân vùng tấn công mềm (soft gating):
+\begin{itemize}
+\item DDoS/Port Scan mà chọn Chặn → +0,25; chọn Cho phép → −0,50
+\item Brute Force/SQLi/XSS mà chọn Chuyển hướng → +0,25; chọn Cho phép → −0,40
+\item Lưu lượng bình thường mà chọn Chặn → \textbf{−0,60} (phạt nặng nhất — dương tính giả gây gián đoạn dịch vụ)
+\end{itemize}
+
+$B_{reduction}$ = (tổn_thất_trước − tổn_thất_sau) × 0,5 — thưởng khi hành động thực sự giảm được tổn thất.
+
+\textbf{Mô hình hóa Phản ứng Kẻ tấn công (Persistence Modeling):} Trong môi trường huấn luyện, MockIPBehavior mô phỏng cách kẻ tấn công phản ứng với hành động phòng thủ: Port scan nếu Cho phép → F5 tiếp tục leo thang; nếu Giới hạn Tốc độ → quét chậm lại. Brute force nếu Chuyển hướng → F6, F7 giảm dần. SQLi nếu Cho phép → F13 tiếp tục tăng. Thiết kế này buộc agent học rằng hành động có hậu quả dài hạn, không chỉ ảnh hưởng bước hiện tại.
+
+\textbf{Siêu tham số:}
+
+| Tham số | Default SB3 | Giá trị sử dụng | Lý do điều chỉnh |
+|---|---|---|---|
+
+\subsection{3.1.7 Pipeline Suy diễn và Thực thi Thời gian Thực}
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+Tổng bước huấn luyện & — & ~500k timesteps & Dừng khi reward bão hòa (hội tụ thực nghiệm) \\
+\hline
+learning_rate & 3×10⁻⁴ (cố định) & 3×10⁻⁴ → 1×10⁻⁴ (giảm tuyến tính) & Học nhanh giai đoạn đầu, tinh chỉnh chính xác giai đoạn cuối \\
+clip_range ε & 0,2 & 0,2 & Giữ nguyên theo Schulman et al. [2] \\
+gamma γ & 0,99 & 0,99 & Tầm nhìn dài hạn phù hợp episode 120 bước \\
+ent_coef & 0,0 & 0,01 & Duy trì khám phá, tránh agent hội tụ cứng vào 1 hành động \\
+batch_size & 64 & 256 & Gradient ổn định hơn với không gian trạng thái 20D \\
+n_steps & 2048 & 2048 & Giữ nguyên — kích thước rollout buffer phù hợp \\
+n_epochs & 10 & 10 & Giữ nguyên \\
+n_envs & 1 & 4 & Song song hóa 4 môi trường, tăng tốc huấn luyện ~4× \\
+Seed & — & 42 & Đảm bảo tái tạo kết quả \\
+\hline
+\end{tabular}
+
+Sau khi huấn luyện, mô hình PPO được triển khai vào vòng lặp suy diễn thời gian thực gồm hai tiến trình chạy song song:
+
+\textbf{Tiến trình 1 — Sniffer (daemon thread):} Module Quan sát chạy liên tục, mỗi giây ghi một dòng JSONL chứa 20 giá trị thô kèm metadata (timestamp, src_ip) vào file \texttt{/tmp/sniffer_output.jsonl}.
+
+\textbf{Tiến trình 2 — Suy diễn (main thread):} Theo dõi file JSONL theo chế độ tail (đọc dòng mới liên tục). Mỗi dòng được xử lý qua ba bước:
+\begin{enumerate}
+\item \textbf{Phân tích:} Trích xuất vector 20D thô từ JSON, xử lý key thiếu bằng giá trị mặc định 0.
+\item \textbf{Chuẩn hóa:} Chuyển đổi giá trị thô về [0,1]²⁰ bằng cùng hàm chuẩn hóa đã dùng trong huấn luyện (thang log, thang tuyến tính, pass-through tương ứng từng đặc trưng).
+\item \textbf{Dự đoán:} Gọi \texttt{model.predict(obs, deterministic=True)} → hành động ∈ {0, 1, 2, 3}.
+\end{enumerate}
+
+\textbf{Thực thi Iptables qua Network Namespace:} Hành động được thực thi vào chain FORWARD hoặc NAT PREROUTING của router thông qua \texttt{nsenter -n -t <router_pid>}. Trước mỗi hành động mới, hệ thống xóa toàn bộ luật cũ của IP nguồn (dọn dẹp idempotent) rồi chèn luật mới:
+\begin{itemize}
+\item \textbf{Giới hạn Tốc độ:} \texttt{-m hashlimit --hashlimit-above 10/sec --hashlimit-burst 20 -j DROP} — cho phép burst 20 gói rồi giới hạn 10 pps.
+\item \textbf{Chuyển hướng:} \texttt{-t nat -I PREROUTING -j REDIRECT --to-ports 4443} — chuyển hướng sang cổng Honeypot.
+\item \textbf{Chặn:} \texttt{-I FORWARD -j DROP} — loại bỏ toàn bộ gói tin.
+\end{itemize}
+
+\textbf{Bộ Theo dõi Trạng thái IP:} Duy trì dictionary per-IP lưu lịch sử hành động và thời gian. Khi agent chọn Chuyển hướng, bộ theo dõi bắt đầu bộ đếm 60 giây. Sau 60 giây, nếu tín hiệu tấn công L7 vẫn tiếp tục (F6 > 0,5 hoặc F13/20 > 0,2 hoặc F18/4 > 0,2), hệ thống tự động thăng cấp lên Chặn mà không cần agent ra quyết định — đảm bảo Honeypot không bị khai thác vô thời hạn.
+
+
+\section{3.2 Phương pháp Thu thập Dữ liệu}
+
+\subsection{3.2.1 Bắt và Phân tách Gói tin}
+
+Pipeline xử lý gói tin hoạt động ở hai chế độ: Thời gian thực Trực tiếp (qua Scapy) và PCAP Ngoại tuyến (qua PcapReader). Bộ phân tách gói tin trích xuất thông tin L3/L4 — bao gồm địa chỉ IP, cờ TCP (SYN, ACK, RST, FIN) và kích thước payload — thành một đối tượng dữ liệu có cấu trúc bất biến cho từng gói tin. Ở chế độ Thời gian thực, hệ thống hỗ trợ giải mã HTTPS bằng cách chạy tshark song song với Scapy: tshark đọc SSLKEYLOGFILE để giải mã TLS, tái hợp TCP stream và xuất các trường HTTP đã giải mã (URI, User-Agent, Body); kết quả được gắn ngược vào các gói tin TCP tương ứng trong flow để F12–F20 phân tích payload như lưu lượng HTTP thông thường.
+
+Với tầng ứng dụng (L7), hệ thống sử dụng phương pháp \textbf{HTTP composite payload per-packet}: tại thời điểm phân tích từng gói tin, hệ thống ghép nối \texttt{[URI] + [User-Agent] + [Body]} từ cùng một gói tin thành một chuỗi bytes duy nhất. Chuỗi này được lưu lại và tái sử dụng trực tiếp khi các đặc trưng F12–F20 cần phân tích nội dung — không tái tính toán. Cách tiếp cận per-packet hoạt động hiệu quả vì payload SQLi/XSS từ các công cụ phổ biến thường nằm gọn trong URI (GET request) hoặc body nhỏ của một POST request đơn lẻ.
+
+\subsection{3.2.2 Quản lý Phiên kết nối}
+
+Bộ quản lý luồng tổ chức gói tin theo 5-tuple (src_ip, dst_ip, src_port, dst_port, protocol) vào các đối tượng flow tương ứng. Mỗi flow duy trì hai hàng đợi riêng biệt: gói tin chiều thuận (src→dst) và gói tin chiều ngược (dst→src), cho phép tính toán độc lập các đặc trưng từng chiều. Theo Lashkari et al. [6], phân tách hai chiều là điều kiện cần thiết để tính chính xác các chỉ số như SynAckRatio và FwdBwdRatio.
+
+Phân tích payload HTTP được thực hiện ở mức per-request — đơn vị phân tích là từng gói tin HTTP, không phải toàn bộ TCP stream. Với lưu lượng HTTPS, tshark đã tái hợp TCP stream trước khi xuất HTTP fields, nên hệ thống không cần tái hợp thủ công. Thiết kế này phù hợp với cách định nghĩa các đặc trưng F13, F17 và F18 theo tỷ lệ trên số HTTP request. Bộ nhớ được kiểm soát với tối đa 50.000 flows đồng thời và 3.000 gói tin mỗi flow.
+
+\subsection{3.2.3 Cửa sổ Trượt 1 Giây}
+
+Tác tử RL yêu cầu vector quan sát phản ánh trạng thái hiện tại của mạng, không phải lịch sử toàn bộ phiên kết nối. Cửa sổ trượt 1 giây đáp ứng yêu cầu này: tại mỗi bước, chỉ gói tin trong khoảng [t−1s, t] được dùng để tính đặc trưng.
+
+Kích thước 1 giây được hiệu chỉnh thực nghiệm từ hai ràng buộc đối lập: cửa sổ quá ngắn không đủ gói tin để tính ổn định các đặc trưng thống kê; cửa sổ quá dài làm mờ ranh giới giữa các pha tấn công, khiến agent không phân biệt được khi cần thay đổi hành động. Nghiên cứu ablation xác nhận 1 giây là điểm cân bằng tối ưu (xem Bảng 4.4).
+
+Trong MDP, mỗi bước quyết định tương ứng một cửa sổ 1 giây: agent quan sát s_t, chọn a_t, nhận r_t, và chuyển sang s_{t+1} sau khi cửa sổ dịch chuyển. Trình tự thực hiện: (1) gọi thủ tục dọn dẹp cửa sổ trượt, xóa gói tin cũ hơn ngưỡng cắt; (2) lấy các flows hiện tại; (3) tính đặc trưng thuần cho 1 giây này. Thứ tự này đảm bảo không có dữ liệu cũ bị bám trụ qua nhiều cửa sổ liên tiếp.
+
+\subsection{3.2.4 Nguồn Dữ liệu}
+
+Một điểm quan trọng cần làm rõ: \textbf{các file PCAP thô không có nhãn tấn công tự nhiên}. Nhãn trong nghiên cứu này được gán theo phương pháp \textit{gán nhãn thí nghiệm có kiểm soát} — nhóm biết trước loại tấn công đang chạy vào thời điểm capture, nhờ đó toàn bộ lưu lượng trong phiên đó được gán nhãn tương ứng.
+
+Ba nguồn dữ liệu được sử dụng với mục đích khác nhau:
+
+\begin{enumerate}
+\item \textbf{Bộ dữ liệu URI có Nhãn LSNM2024 [5]:} Bộ dữ liệu công khai do Lashkari et al. (Đại học New Brunswick) phát hành — gồm 3.000 URI bình thường và 2.809 URI SQLi đã có nhãn. Dùng để hiệu chỉnh CRS Paranoia Level và xác minh pipeline chuẩn hóa payload. Tập này không có lưu lượng PCAP thực — chỉ chứa chuỗi HTTP URI, nên các đặc trưng mạng F1–F11 không áp dụng được.
+\end{enumerate}
+
+\item \textbf{Bộ dữ liệu PCAP Gói tin Đột biến (Abu Al-Haija et al., 2025) [21]:} Bộ dữ liệu PCAP công khai do nhóm nghiên cứu tại Đại học Khoa học và Công nghệ Jordan và Đại học Công nghệ Công chúa Sumaya xây dựng và phát hành. Dataset chứa 15 loại tấn công được thu thập trong môi trường lab có kiểm soát bằng các công cụ thực tế: hping3 (SYN Flood, Port Scan), sqlmap (SQL Injection), Hydra/Burp Suite (Brute Force), XSS, GoldenEye/HULK/LOIC/Slowloris/Slowhttptest (DoS), Ares Botnet, Metasploit, Patator, nmap. Nhóm nghiên cứu xuất các file PCAP qua Wireshark thành CSV theo định dạng chuẩn hóa, sau đó đưa vào pipeline trích xuất đặc trưng để tạo tập đánh giá có nhãn. Đây là tập đánh giá chính cho Bảng 4.1 và 4.2.
+\end{enumerate}
+
+\begin{enumerate}
+\item \textbf{MockIPBehavior Mô phỏng (tự xây dựng):} Môi trường mô phỏng vector trạng thái do nhóm nghiên cứu xây dựng, dùng \textbf{riêng cho huấn luyện PPO}. Sinh ra các đối tượng hành vi tổng hợp với nhiễu ±20% (Ngẫu nhiên hóa Miền) để tăng khả năng tổng quát hóa. Không sử dụng cho đánh giá hiệu suất thực tế.
+\end{enumerate}
+
+
+\section{3.3 Kỹ thuật Phân tích Dữ liệu}
+
+\subsection{3.3.1 Tổng quan Kỹ nghệ Đặc trưng}
+
+Thiết kế 20 đặc trưng xuất phát từ câu hỏi: "Tác tử RL cần biết gì về mạng để ra quyết định phòng thủ đúng đắn?" Agent cần thông tin đủ để phân biệt năm loại tấn công từ lưu lượng bình thường, và phân biệt chúng với nhau để chọn hành động phù hợp — ví dụ, Chặn hiệu quả với SYN Flood nhưng lãng phí với SQLi nơi Chuyển hướng sang Honeypot cho phép thu thập thông tin tình báo mối đe dọa.
+
+\textbf{Bảng 3.1: Danh sách 20 đặc trưng trong vector quan sát của tác tử RL}
+
+\textit{(Mô tả thiết kế và cơ sở lý thuyết của từng đặc trưng xem Chương 2, Mục 2.1.4.5. Bảng này trình bày chi tiết triển khai đầy đủ.)}
+
+| Mã | Tên Đặc trưng | Công thức | Thang đo | Cap | Phát hiện |
+|---|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+F1 & PacketRate & total_pkts / window_size (s) & Log & 500 pkt/s & DDoS / SYN Flood \\
+\hline
+F3 & InterArrivalTime & mean(IAT fwd pkts) & Log & 5,0 s & Tấn công tự động \\
+F4 & RstRatio & (fwd+bwd RST) / total_pkts & Pass-through & — & Port Scan \\
+F5 & DistinctPorts & unique dst_ports trong cửa sổ & Log & 500 & Port Scan \\
+F6 & URLConcentration & max_url_count / total_req & Pass-through & — & Brute Force / L7 DDoS \\
+F7 & HttpIatUniformity & 1 / (1 + CV(HTTP IAT)) & Pass-through & — & Nhịp bot \\
+F8 & RequestSizeUniformity & 1 / (1 + CV(payload_sizes)) & Pass-through & — & Brute Force \\
+F9 & AvgPayloadSize & sum(fwd_payload_len) / fwd_count & Tuyến tính & 1.500 bytes & SYN Flood (≈0) \\
+F10 & FwdBwdRatio & fwd_pkts / max(bwd_pkts, 1) & Log & 100 & Bất đối xứng lưu lượng \\
+F11 & PacketsPerPort & fwd_pkts / max(distinct_ports, 1) & Log & 500 & Mật độ Port Scan \\
+F12 & SqlSpecialChar & count(chars ∈ {\texttt{'}, \texttt{;}, \texttt{#}}) / len(normalized) & Pass-through & — & SQLi \\
+F13 & CrsSqliScore & Σ(CRS-942 rule hits) / req_count & Tuyến tính & 20 & SQLi (CRS PL2) \\
+F14 & SqlUnionSelect & 1 nếu có \texttt{UNION[\s\S]{0,50}SELECT} & Nhị phân & — & SQLi — UNION \\
+F15 & SqlComment & 1 nếu có \texttt{--}, \texttt{#}, \texttt{/\textit{}/}, \texttt{/*!}... & Nhị phân & — & SQLi — comment \\
+F16 & SqlStackedQuery & 1 nếu có \texttt{; DROP/DELETE/INSERT/UPDATE/ALTER/EXEC/...} & Nhị phân & — & SQLi — stacked \\
+F17 & SqlSelectCount & Σ(SELECT count) / req_count & Tuyến tính & 10 & SQLi — trinh sát \\
+F18 & CrsXssScore & Σ(CRS-941 @rx hits + @pm phrase hits) / req_count & Tuyến tính & 4 & XSS (CRS PL2) \\
+F19 & JsFunctionCall & 1 nếu có \texttt{alert()}/\texttt{eval()}/\texttt{prompt()}/\texttt{document.cookie}/\texttt{window.location}/\texttt{innerHTML=} & Nhị phân & — & XSS — JS \\
+F20 & HtmlEventHandler & 1 nếu có `on{error\ & load\ & click\ & mouseover\ & ...}=` & Nhị phân & — & XSS — sự kiện \\
+\hline
+\end{tabular}
+
+\textit{Công thức chuẩn hóa: Log scale — \texttt{log(1 + min(raw, cap)) / log(1 + cap)}; Tuyến tính — \texttt{min(raw, cap) / cap}; Pass-through — \texttt{clamp(raw, 0, 1)}. Giá trị Cap được hiệu chỉnh thực nghiệm trên dữ liệu Containernet và xác minh với LSNM2024 / tập PCAP Abu Al-Haija et al. (2025).}
+
+\subsection{3.3.2 Đặc trưng Mạng (F1–F11)}
+
+Nhóm đặc trưng mạng mã hóa hành vi traffic-level đặc thù của từng loại tấn công. F1 (PacketRate) đo tổng tốc độ gói tin hai chiều (fwd+bwd) trên tất cả flows trong cửa sổ, nhạy cảm với DDoS và SYN Flood vì các tấn công này tạo lưu lượng thể tích lớn bất thường. F2 (SynAckRatio) khai thác cơ chế bắt tay ba bước TCP: SYN Flood tạo tỷ lệ SYN/ACK bất cân xứng do server nhận nhiều SYN nhưng không bao giờ hoàn thành bắt tay.
+
+F3 (InterArrivalTime) phát hiện tấn công tự động thông qua IAT quá đều hoặc quá nhỏ so với người dùng thực. F4 (RstRatio) và F5 (DistinctPorts) mô tả Port Scan: scanner gửi gói đến nhiều cổng và nhận về nhiều RST từ cổng đóng, tạo tỷ lệ RST cao kết hợp số cổng đích đa dạng. F11 (PacketsPerPort) bổ sung bằng cách đo mật độ gói trên mỗi cổng — Port Scan có F11 nhỏ (ít gói/cổng) trong khi lưu lượng bình thường tập trung vào ít cổng nhưng nhiều gói hơn.
+
+F6 (URLConcentration) phát hiện Brute Force qua việc đo mức tập trung yêu cầu vào một URL đích duy nhất như \texttt{/login}. F7 (HttpIatUniformity) bổ sung bằng cách phát hiện nhịp thời gian quá đều — đặc trưng của công cụ tự động như Hydra hay Burp Suite Intruder. Điểm thiết kế quan trọng: F7 tính IAT theo \textbf{cross-flow} — gom tất cả HTTP request timestamps từ mọi flows của cùng IP nguồn trong cửa sổ 1 giây, sắp xếp theo thời gian rồi tính khoảng cách giữa các request liên tiếp. Lý do: Hydra và Burp Suite Intruder mở kết nối TCP mới cho mỗi request (short-lived flows), khiến mỗi flow chỉ chứa 1 gói HTTP — tính IAT per-flow sẽ không có đủ điểm dữ liệu. Cross-flow khắc phục hoàn toàn hạn chế này bằng cách nhìn nhận toàn bộ nhịp điệu tấn công từ một IP nguồn. F8 (RequestSizeUniformity) khai thác việc Brute Force gửi payload gần như giống hệt nhau (chỉ trường mật khẩu thay đổi), làm hệ số biến thiên CV của kích thước payload rất thấp. F9 (AvgPayloadSize) phân biệt SYN Flood (payload ≈ 0) với HTTP flood (payload > 0).
+
+\subsection{3.3.3 Đặc trưng SQL Injection (F12–F17)}
+
+SQLi không để lại dấu vết ở tầng mạng — lưu lượng có thể trông hoàn toàn bình thường về tốc độ và kích thước. Nhóm F12–F17 đào sâu vào payload HTTP để tìm tín hiệu tấn công trong nội dung yêu cầu.
+
+F12 (SqlSpecialChar) tính tỷ lệ các ký tự đặc biệt SQL — dấu nháy đơn (\texttt{'}), dấu chấm phẩy (\texttt{;}) và ký tự comment (\texttt{#}) — trên tổng độ dài payload đã qua chuẩn hóa (URL-decoded). F13 (CrsSqliScore) tích hợp bộ quy tắc OWASP CRS 942 [8] — chuẩn công nghiệp cho WAF — trực tiếp vào vector đặc trưng: CRS PL2 với 50 quy tắc đạt F1-score 0,925 trên tập URI LSNM2024 (n=2.809 SQLi + 3.000 bình thường). F14–F16 là các đặc trưng nhị phân phát hiện ba kỹ thuật SQLi phổ biến: UNION-based (truy xuất dữ liệu — regex \texttt{UNION[\s\S]{0,50}SELECT}), Comment-based (vô hiệu hóa phần sau query — \texttt{--}, \texttt{#}, \texttt{/\textit{}/}, \texttt{/*!}), và Stacked Queries (chèn câu lệnh DDL/DML — \texttt{; DROP/DELETE/INSERT/UPDATE/TRUNCATE/ALTER/EXEC/...}). F17 đo tần suất SELECT — cao bất thường báo hiệu thăm dò cơ sở dữ liệu.
+
+\subsection{3.3.4 Đặc trưng Cross-Site Scripting (F18–F20)}
+
+F18 (CrsXssScore) tích hợp OWASP CRS 941 PL2 bao gồm cả rule \texttt{@rx} (regex) lẫn \texttt{@pm} (phrase match) — tổng cộng 27 regex rule và 9 cụm từ (\texttt{document.cookie}, \texttt{document.write}, \texttt{window.location}, \texttt{.innerhtml}...) — đạt F1-score 1,000 trên tập URI LSNM2024 XSS (n=9 URI tấn công, F1=1,0 nhưng tập quá nhỏ để kết luận chắc chắn). F19 (JsFunctionCall) phát hiện các lời gọi hàm JavaScript nguy hiểm bao gồm: \texttt{alert()}, \texttt{eval()}, \texttt{prompt()}, \texttt{confirm()}, \texttt{expression()}, \texttt{document.cookie/write/domain}, \texttt{window.location}, \texttt{innerHTML=}. F20 (HtmlEventHandler) tìm các thuộc tính event handler như \texttt{onerror=}, \texttt{onload=}, \texttt{onclick=}, \texttt{onmouseover=} và hàng chục event khác — cơ chế kích hoạt JavaScript mà không cần thẻ \texttt{<script>} tường minh.
+
+\subsection{3.3.5 Pipeline Chuẩn hóa Payload}
+
+Kẻ tấn công thường mã hóa payload bằng URL encoding, HTML entities, hoặc Base64 để vượt qua kiểm tra đơn giản. Bộ chuẩn hóa payload triển khai pipeline nhiều giai đoạn trước khi so khớp mẫu:
+
+\textbf{Giai đoạn 1 — Giải mã Encoding:} Giải mã HTML entity (\texttt{&#83;} → \texttt{S}) và chuẩn hóa Unicode NFKC kết hợp ánh xạ smart quotes về ASCII. Đảm bảo các ký tự có ngữ nghĩa tương đương được đưa về biểu diễn thống nhất.
+
+\textbf{Giai đoạn 2 — Giải mã Làm mờ:} URL decode đệ quy (tối đa 2 vòng) và Base64 decode đệ quy (tối đa 2 vòng). Giới hạn MAX_ITERATIONS = 2 theo khuyến nghị Spett [9]: mã hóa kép (\texttt{%2527} → \texttt{%27} → \texttt{'}) là kỹ thuật vượt WAF phổ biến nhất được ghi nhận; mã hóa ba lần không xuất hiện trong các công cụ tấn công phổ biến.
+
+\textbf{Giai đoạn 3 — Chuẩn hóa Văn bản:} Thu gọn khoảng trắng liên tiếp và chuyển về chữ thường [10]. Cho phép regex CRS và so khớp mẫu hoạt động không phân biệt chữ hoa/thường, giảm đáng kể số biến thể cần xử lý.
+
+Benchmark trên N = 10.000 lần gọi: độ trễ trung bình = 23,55 µs/lần gọi, P99 = 67,4 µs, thông lượng = 42.457 lần gọi/giây — đủ xử lý server 10.000 yêu cầu/giây với chi phí dưới 1% CPU trên một lõi đơn.
+
+\subsection{3.3.6 Ma trận Phủ nhận Tấn công}
+
+Để xác minh 20 đặc trưng cung cấp tín hiệu phân biệt đầy đủ cho tác tử RL, Bảng 3.2 trình bày ma trận phủ nhận: dấu ✓ chỉ ra đặc trưng đó có khả năng phát hiện loại tấn công tương ứng. Mỗi loại tấn công được phủ bởi ít nhất hai đặc trưng độc lập, đảm bảo khả năng phát hiện ngay cả khi một đặc trưng bị nhiễu.
+
+\textbf{Bảng 3.2: Ma trận Phủ nhận — Đặc trưng × Loại Tấn công}
+
+| Đặc trưng | SYN Flood | Port Scan | Brute Force | SQLi | XSS |
+|---|---|---|---|---|---|
+
+\subsection{3.3.7 Chuẩn hóa Vector Đặc trưng}
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+F1 PacketRate & ✓ & ✓ & ✓ \\
+\hline
+F3 InterArrivalTime & ✓ & ✓ & ✓ \\
+F4 RstRatio & ✓ \\
+F5 DistinctPorts & ✓ \\
+F6 URLConcentration & ✓ \\
+F7 HttpIatUniformity & ✓ \\
+F8 RequestSizeUniformity & ✓ \\
+F9 AvgPayloadSize & ✓ \\
+F11 PacketsPerPort & ✓ \\
+F12 SqlSpecialChar & ✓ \\
+F13 CrsSqliScore & ✓ \\
+F14–F16 SqlBinary & ✓ \\
+F18 CrsXssScore & ✓ \\
+F19–F20 XssBinary & ✓ \\
+\hline
+\end{tabular}
+
+Sau khi tính giá trị thô, 20 đặc trưng được chuẩn hóa về [0,1] theo phân phối của từng đặc trưng. \textit{(Cơ sở thiết kế phân nhóm chuẩn hóa xem Chương 2, Mục 2.1.4.5; phần này mô tả chi tiết triển khai và lý do kỹ thuật.)} Có ba nhóm:
+
+\begin{itemize}
+\item \textbf{Thang log} (F1, F2, F3, F5, F10, F11): phân phối lệch phải, phạm vi rộng — ví dụ F1 có thể đạt 350 pkt/s khi DDoS nhưng thường < 10 khi bình thường. Công thức: \texttt{f_norm = log(1 + min(f_raw, cap)) / log(1 + cap)}, trong đó \texttt{cap} là giá trị cắt hiệu chỉnh thực nghiệm (Bảng 3.1). Log scale nén phần đuôi dài (outlier tấn công cực đoan) về vùng [0,8–1,0], tránh gradient vanishing cho các cửa sổ bình thường.
+\item \textbf{Thang tuyến tính} (F9, F13, F17, F18): phân phối gần tuyến tính, phạm vi nhỏ. Công thức: \texttt{f_norm = min(f_raw, cap) / cap}. Áp dụng cho các đặc trưng đếm tần suất (CRS scores, SELECT count) có giá trị thực tế nằm trong biên độ dự đoán được.
+\item \textbf{Pass-through} (F4, F6, F7, F8, F12, F14–F16, F19, F20): đã nằm trong [0,1] theo định nghĩa (tỷ lệ, hàm 1/(1+CV), hoặc nhị phân). Áp dụng \texttt{clamp(f_raw, 0, 1)} để đảm bảo an toàn số học trong trường hợp lỗi tính toán biên.
+\end{itemize}
+
+Chuẩn hóa về [0,1] là yêu cầu kỹ thuật cho mạng neural PPO: gradient descent không hội tụ ổn định khi đầu vào có thang đo khác nhau nhiều bậc độ lớn (ví dụ F1 thô ~100–500 pkt/s vs F14 nhị phân {0,1}). MlpPolicy trong Stable-Baselines3 [3] áp dụng thêm lớp VecNormalize theo trung bình/độ lệch chuẩn chạy — hoạt động tốt chỉ khi đầu vào đã được cắt về phạm vi hữu hạn, tránh VecNormalize bị kéo lệch bởi outlier cực đoan.
+
+
+\section{3.4 Hạn chế của Phương pháp}
+
+\textbf{Hạn chế về môi trường mô phỏng:} Containernet tạo ra lưu lượng trong môi trường có kiểm soát, không phản ánh đầy đủ sự phức tạp của mạng sản xuất với nhiều loại thiết bị và mẫu lưu lượng nền đa dạng. Chính sách học được có thể cần tinh chỉnh khi triển khai thực tế.
+
+\textbf{Hạn chế về loại tấn công:} Hệ thống được thiết kế và kiểm tra với năm loại tấn công cụ thể. Các kỹ thuật zero-day và tấn công đối kháng nhắm vào chính tác tử RL nằm ngoài phạm vi nghiên cứu.
+
+\textbf{Hạn chế về đặc trưng nội dung:} F12–F20 chỉ hiệu quả với lưu lượng không mã hóa hoặc sau khi giải mã TLS. Hệ thống đã hỗ trợ giải mã HTTPS qua tshark + SSLKEYLOGFILE ở chế độ Thời gian thực, nhưng yêu cầu SSLKEYLOGFILE phải được cấu hình trước. Trong môi trường HTTPS thuần túy không có SSLKEYLOGFILE, các đặc trưng này không có giá trị.
+
+\textbf{Hạn chế về đánh giá chính sách:} Phần thưởng tích lũy phụ thuộc vào thiết kế hàm thưởng, vốn chứa đựng các giả định về tầm quan trọng tương đối giữa các loại tấn công. Thay đổi trọng số mức nghiêm trọng có thể dẫn đến chính sách khác nhau đáng kể.
+
+\textbf{Hạn chế về gán nhãn dữ liệu:} Nhãn trong tập đánh giá được gán theo phương pháp gán nhãn thí nghiệm có kiểm soát — biết trước loại tấn công đang chạy trong mỗi phiên capture. Phương pháp này không phản ánh lưu lượng hỗn hợp thực tế, nơi nhiều loại tấn công có thể xảy ra đồng thời.
+
+\textbf{Hạn chế về phân tích payload HTTP:} Với đường dẫn Scapy (HTTP văn bản rõ và chế độ PCAP), hệ thống phân tích payload ở mức per-HTTP-request, không tái hợp TCP stream — POST body vượt quá MTU (~1.460 bytes) và bị phân mảnh qua nhiều TCP segment sẽ không được phân tích đầy đủ. Đường dẫn tshark (Thời gian thực HTTPS) không bị hạn chế này vì tshark đã tái hợp TCP stream trước khi xuất HTTP fields. Hạn chế này không ảnh hưởng đến kết quả trong nghiên cứu này vì các công cụ tấn công phổ biến (sqlmap, Burp Suite, Hydra) gửi payload gọn trong một request đơn lẻ.
+
+
+\chapter*{CHƯƠNG 4: KẾT QUẢ THỰC NGHIỆM}
+
+\section{4.1 Giới thiệu}
+
+Chương này trình bày đánh giá thực nghiệm của hệ thống Phòng thủ Mạng Thích ứng (ANDS), bao gồm cả Module Quan sát và Tác tử Phòng thủ RL. Đánh giá theo hai hướng: (1) độ chính xác trích xuất đặc trưng và hiệu suất xử lý cho Module Quan sát; (2) hành vi hội tụ huấn luyện và hiệu suất chính sách cuối cùng cho tác tử RL.
+
+Toàn bộ thực nghiệm được thực hiện trên Linux với nền tảng Containernet. Framework vận hành dựa trên Python 3.x với Stable-Baselines3 yêu cầu \texttt{numpy < 2.0}. Tính tái hiện được đảm bảo bằng seed cố định = 42 trên tất cả các hàm ngẫu nhiên.
+
+Ba nguồn dữ liệu phục vụ các mục đích đánh giá khác nhau. Bộ dữ liệu URI có Nhãn LSNM2024 [5] — bộ dữ liệu công khai từ Đại học New Brunswick — cung cấp 3.000 URI bình thường và 2.809 URI SQLi để hiệu chỉnh CRS Paranoia Level. Bộ dữ liệu PCAP Gói tin Đột biến [21] — bộ dữ liệu công khai của Abu Al-Haija et al. (2025) gồm 15 loại tấn công được capture bằng công cụ thực trong lab kiểm soát — là tập đánh giá chính cho hiệu suất phát hiện đặc trưng. Môi trường mô phỏng MockIPBehavior — do nhóm xây dựng với nhiễu ngẫu nhiên hóa miền ±20% — được dùng riêng cho huấn luyện PPO.
+
+
+\section{4.2 Trình bày Dữ liệu}
+
+\subsection{4.2.1 Kết quả Pipeline Chuẩn hóa Payload}
+
+Pipeline chuẩn hóa payload được kiểm tra trên 10 trường hợp đại diện, bao gồm các kỹ thuật vượt qua thực tế: mã hóa HTML entity, mã hóa URL kép và Base64. Kết quả: \textbf{10/10 trường hợp kiểm tra đạt} — pipeline phát hiện đúng mẫu tấn công trong toàn bộ payload được mã hóa thử nghiệm.
+
+Benchmark hiệu suất trên N = 10.000 lần gọi: độ trễ trung bình = \textbf{23,55 µs/lần gọi}, trung vị = 22,1 µs, P95 = 38,2 µs, P99 = 67,4 µs, thông lượng = \textbf{42.457 lần gọi/giây}. Pipeline đủ xử lý server 10.000 yêu cầu/giây với chi phí dưới 1% CPU trên một lõi đơn.
+
+\subsection{4.2.2 Phân tích CRS Paranoia Level}
+
+Chạy benchmark CRS với tập LSNM2024 SQLi để xác định Paranoia Level tối ưu cho F13:
+
+| PL | Số luật | TP | FP | F1-Score | FPR | Quyết định |
+|---|---|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+PL1 & 19 & 1.695 & 0 & 0,753 & 0,0% & FPR=0 nhưng bỏ sót 40% tấn công \\
+\hline
+PL3 & 57 & 2.809 & 520 & 0,915 & 17,3% & FP cao hơn, không tốt hơn PL2 \\
+\hline
+\end{tabular}
+
+\textit{n = 2.809 URI SQLi + 3.000 URI bình thường từ LSNM2024 (Lashkari et al., 2024). Đây là đánh giá trên URI đơn lẻ (không phải cửa sổ 1 giây), nên các giá trị TP/FP/FPR phản ánh hiệu quả của F13 khi xét riêng lẻ trước khi tổ hợp vào vector 20D.}
+
+PL2 được chọn: F1-score 0,925, Recall = 1,0 (không bỏ sót tấn công), FPR = 15,3% — giao phần xử lý dương tính giả còn lại cho tác tử RL.
+
+\textbf{Phân tích CRS XSS (F18):} Benchmark CRS 941 PL2 trên tập LSNM2024 XSS (n = 9 URI tấn công + 3.000 URI bình thường) cho F1-score = 1,000, FPR = 0,0%. Tuy nhiên, tập tấn công chỉ gồm 9 mẫu — quá nhỏ để kết luận thống kê chắc chắn. Kết quả này có giá trị tham khảo về hướng sai số (recall cao, không có false positive), nhưng cần xác nhận thêm trên tập XSS lớn hơn. Trong hệ thống ANDS, F18 đóng vai trò phụ trợ cho F19/F20 (binary signals) — tác tử RL không phụ thuộc vào F18 đơn lẻ để phân loại XSS.
+
+\subsection{4.2.3 Hiệu suất Phát hiện theo Đặc trưng}
+
+Mỗi nhóm đặc trưng được đánh giá độc lập bằng phân loại nhị phân (RandomForest 200 cây, lấy mẫu cân bằng, chia train-test 70/30, seed=42) trên tập CSV cửa sổ 1 giây trích xuất từ Bộ dữ liệu PCAP Gói tin Đột biến. \textbf{Đơn vị đánh giá là cửa sổ 1 giây} (không phải phiên kết nối) — phù hợp với đầu vào thực tế của tác tử RL.
+
+\textbf{Bảng 4.1: Kết quả phân loại của từng nhóm đặc trưng} \textit{(nguồn: Bộ dữ liệu PCAP Gói tin Đột biến, Abu Al-Haija et al., 2025; đánh giá RandomForest 200 cây, lấy mẫu cân bằng, chia train-test 70/30, seed=42)}
+
+\textit{Đơn vị đánh giá là \textbf{cửa sổ 1 giây} (không phải phiên kết nối). Mỗi "mẫu" là một vector 20D từ một cửa sổ thời gian. Một phiên tấn công điển hình kéo dài 30–120 giây tạo ra 30–120 cửa sổ, nhưng chỉ một số trong đó chứa payload tấn công thực sự.}
+
+| Loại Tấn công | Đặc trưng Chính | Precision | Recall | F1-Score | Tập Kiểm tra (cửa sổ) |
+|---|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+SYN Flood & F1, F2, F9 & 0,991 & 1,000 & 0,995 & 426 cửa sổ \\
+\hline
+Brute Force & F6, F7, F8 & 0,520 & 1,000 & 0,684 & 1.749 cửa sổ \\
+SQLi & F13, F14–F16 & 1,000 & 0,263 & 0,417 & 532 cửa sổ \\
+XSS & F18, F19–F20 & 1,000 & 0,075 & 0,140 & 187 cửa sổ \\
+\hline
+\end{tabular}
+
+\textbf{Diễn giải Kết quả:} SYN Flood đạt F1 = 0,995 vì các đặc trưng mạng (F1, F2, F9) phân biệt rõ ràng toàn bộ cửa sổ tấn công — lưu lượng flood lấp đầy mọi cửa sổ trong phiên. Ngược lại, Recall thấp của SQLi (0,263) và XSS (0,075) là hệ quả tất yếu của thiết kế \textbf{phân tích per-window}: chỉ những cửa sổ 1 giây có HTTP request chứa payload thực sự mới kích hoạt F12–F20 — phân tích trên ft_sqli.csv xác nhận 75,4% cửa sổ trong phiên SQLi không chứa payload tấn công (chỉ TCP setup/teardown/response), và 92,6% cửa sổ trong phiên XSS tương tự.
+
+\textbf{Quan trọng — phân biệt per-window và per-session:} Recall = 0,263 với SQLi có nghĩa là 26,3% \textit{cửa sổ 1 giây trong phiên SQLi} được phân loại đúng là tấn công — không phải 26,3% \textit{phiên tấn công} bị bỏ sót. Ở cấp độ phiên (session-level), nếu ít nhất một cửa sổ trong phiên được phát hiện đúng, tác tử RL có thể phản ứng kịp thời. Phân tích trên tập kiểm tra xác nhận \textbf{100% phiên SQLi có ít nhất 1 cửa sổ} vượt ngưỡng phát hiện, tương tự cho XSS.
+
+Precision = 1,000 cho SQLi và XSS xác nhận không có dương tính giả — mọi cửa sổ được phân loại là tấn công đều thực sự chứa payload độc hại. Recall thấp với Port Scan (0,508) và Brute Force (Precision 0,520) phản ánh tương tự: nhiều cửa sổ trong phiên quét hoặc brute force chứa lưu lượng bình thường xen kẽ. Precision 0,520 với Brute Force nghĩa là ~48% cửa sổ được phân loại là Brute Force thực ra là bình thường — một số lưu lượng web hợp lệ có URLConcentration cao (ví dụ: phiên đăng nhập nhiều lần trong cùng cửa sổ). Trong triển khai thực tế, tác tử RL không cần phát hiện 100% các cửa sổ — chỉ cần tín hiệu đủ sớm trong phiên tấn công để phản ứng.
+
+\subsection{4.2.4 Trọng số Đặc trưng và Phân cụm}
+
+Random Forest Feature Importances trên tập CSV đã trích xuất xác nhận F1 (PacketRate) và F13 (CRS SQLi) đóng góp lớn nhất, phù hợp với đặc thù tấn công DDoS và SQLi. Biểu đồ t-SNE (perplexity = 30) đưa vector 20 chiều về 2 trục chính cho thấy các cụm tấn công và lưu lượng bình thường tách rời rõ ràng — xác nhận F1–F20 có sức phân biệt cao và không bị chồng chéo nhãn.
+
+\subsection{4.2.5 Đường cong Học tập của Tác tử RL}
+
+Tác tử Phòng thủ RL được huấn luyện cho đến khi hội tụ (khoảng 500.000 timesteps, seed cố định 42, n_envs=4). Kết quả huấn luyện được ghi nhận qua TensorBoard với tần suất đánh giá mỗi 12.000 bước.
+
+\textit{(Hình 4.1: Đường cong học tập \texttt{eval/mean_reward} và \texttt{train/entropy_loss} theo số bước huấn luyện — trích từ TensorBoard log tại \texttt{AI RL/runs/run_final_v4/}.)}
+
+\texttt{eval/mean_reward} cải thiện từ \textbf{0,4} tại lần đánh giá đầu tiên (bước 12.000) lên \textbf{2,3} tại điểm hội tụ (bước ~350.000) — tăng \textbf{+475%}. Giai đoạn cải thiện nhanh nhất diễn ra từ bước 50.000 đến 250.000 khi agent học phân biệt tấn công thể tích (SYN Flood, Port Scan) từ lưu lượng bình thường; từ bước 250.000 đến 350.000 học tinh chỉnh phân biệt tấn công L7. Từ bước 350.000 trở đi reward ổn định trong biên độ ±0,05, cho thấy chính sách đã đạt gần tối ưu.
+
+Độ dài episode (\texttt{eval/mean_ep_length}) giữ nguyên ở \textbf{120 bước} suốt quá trình huấn luyện, xác nhận môi trường không bị ngắt sớm (không có terminal state do lỗi).
+
+\texttt{train/entropy_loss} giảm từ \textbf{−1,1} xuống khoảng \textbf{−0,1} — agent ngày càng tự tin hơn. Giá trị entropy cuối ≈ 0,1 (tương ứng ~1,1 nats) cho thấy agent vẫn duy trì mức khám phá nhất định nhờ \texttt{ent_coef = 0,01} trong siêu tham số, không bị hội tụ cứng về một hành động duy nhất.
+
+\subsection{4.2.6 Chỉ số Chẩn đoán PPO}
+
+Bảng 4.2 trình bày các chỉ số nội bộ của thuật toán PPO ghi nhận qua TensorBoard, xác nhận quá trình huấn luyện ổn định và không có dấu hiệu bất thường.
+
+\textbf{Bảng 4.2: Chỉ số chẩn đoán PPO trong quá trình huấn luyện}
+
+| Chỉ số | Giá trị Đầu | Giá trị Cuối | Trạng thái | Diễn giải |
+|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+eval/mean_reward & 0,4 & 2,3 & ✓ Tốt & +475% — chính sách học phòng thủ hiệu quả \\
+\hline
+clip_fraction & 0,14 & 0,02 & ✓ Tốt & Cắt gradient hiếm khi kích hoạt tại hội tụ \\
+clip_range & 0,20 & 0,20 & ✓ Cố định & ε = 0,2 theo thiết kế \\
+entropy_loss & −1,10 & −0,10 & ✓ Tốt & Agent tự tin; vẫn duy trì khám phá \\
+explained_variance & 0,06 & 0,26 & ⚠ Thấp & Chấp nhận được: phương sai return cao do 5 loại tấn công ngẫu nhiên \\
+value_loss & 2,50 & ~0,00 & ✓ Tốt & Critic hội tụ — ước lượng return chính xác \\
+learning_rate & 3×10⁻⁴ & 1×10⁻⁴ & ✓ Tốt & Giảm tuyến tính hoạt động đúng thiết kế \\
+\hline
+\end{tabular}
+
+Tất cả chỉ số nằm trong ngưỡng khỏe mạnh của PPO. \texttt{explained_variance} = 0,26 thấp hơn mức lý tưởng (≥ 0,8) nhưng phản ánh đặc thù của môi trường: mỗi episode trộn ngẫu nhiên 5 loại tấn công với hồ sơ reward rất khác nhau, khiến phương sai của return cao tự nhiên. Mức cải thiện +475% của \texttt{eval/mean_reward} xác nhận mạng chính sách học hiệu quả bất chấp critic chưa hoàn hảo.
+
+\subsection{4.2.7 So sánh Cấu hình Mặc định SB3 và Đã Tinh chỉnh}
+
+\textbf{Bảng 4.2b: Hiệu suất huấn luyện — Default SB3 vs. Đã tinh chỉnh (seed = 42)}
+
+| Cấu hình | Reward cuối (~avg) | Đạt reward 2,0 | Wall-clock (500k steps) |
+|---|---|---|---|
+
+| Default SB3 | ~2,36 | bước ~80.000 | 786 giây |
+| **Đã tinh chỉnh (của chúng tôi)** | **~2,28** | bước ~220.000 | **197 giây** |
+Hai cấu hình đạt reward cuối \textbf{tương đương nhau} (~2,3). Default SB3 hội tụ nhanh hơn về mặt số bước (80k so với 220k) nhưng chạy tuần tự trên 1 môi trường (wall-clock 786 giây). Cấu hình đã tinh chỉnh dùng \texttt{n_envs=4} song song hóa thu thập rollout, rút ngắn thời gian huấn luyện thực tế \textbf{4×} (197 giây). Trong các kịch bản triển khai đòi hỏi tái huấn luyện chính sách thường xuyên theo diễn biến mối đe dọa, lợi thế này có ý nghĩa vận hành quan trọng.
+
+\subsection{4.2.7 Kết quả Đánh giá Cuối cùng}
+
+Agent được đánh giá trên tập kiểm tra độc lập gồm 2.000 episodes, mỗi episode chứa hỗn hợp ngẫu nhiên lưu lượng bình thường và tấn công.
+
+\textbf{Bảng 4.3: Kết quả phân loại hành động của Tác tử Phòng thủ RL} \textit{(nguồn: đánh giá 2.000 episodes trên \textbf{môi trường mô phỏng MockIPBehavior} — vector trạng thái tổng hợp với nhiễu ±20%, không phải lưu lượng mạng thực)}
+
+\textit{Lưu ý về phạm vi đánh giá: tác tử RL được huấn luyện và đánh giá trên cùng loại môi trường tổng hợp (MockIPBehavior). Kết quả phản ánh khả năng ra quyết định của chính sách đã học trong điều kiện mô phỏng. Xác minh trên lưu lượng thực được thực hiện định tính qua 4 kịch bản Containernet (Mục 4.4.2).}
+
+| Loại Lưu lượng | Hành động Tối ưu | Tỷ lệ Đúng | Dương tính Giả | Ghi chú |
+|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+Bình thường & Cho phép (0) & 93,2% & 6,8% & Agent đôi khi Giới hạn Tốc độ nhầm \\
+\hline
+Port Scan & Chặn (3) & 91,8% & — & F4 + F5 cao → triệt tiêu ngay \\
+Brute Force & Chuyển hướng (2) & 84,7% & — & → Honeypot, thăng cấp sau 60s \\
+SQLi & Chuyển hướng (2) & 91,3% & — & Điểm CRS → Honeypot mồi nhử \\
+XSS & Chuyển hướng (2) & 94,8% & — & CRS XSS + JS → Honeypot \\
+\hline
+\end{tabular}
+
+\textit{"Tỷ lệ Đúng" = tỷ lệ episode trong đó agent chọn hành động phòng thủ tối ưu theo thiết kế hàm phần thưởng. Mỗi loại lưu lượng được đánh giá trên tập episode riêng biệt có nhãn đã biết. Kết quả tổng hợp (tất cả loại): tỷ lệ phát hiện = \textbf{91,6%}, dương tính giả = \textbf{6,8%}.}
+
+
+\section{4.3 Phân tích Kết quả}
+
+\subsection{4.3.1 Đóng góp Thành phần (Nghiên cứu Ablation)}
+
+Để định lượng đóng góp của từng thành phần, nhóm lần lượt loại bỏ từng thành phần và đo sự suy giảm hiệu suất agent.
+
+\textbf{Bảng 4.4: Nghiên cứu Ablation — Ảnh hưởng khi loại bỏ từng thành phần}
+
+\textit{(Đánh giá trên 2.000 episodes/cấu hình, môi trường MockIPBehavior, seed=42. Tất cả cấu hình chạy với cùng tập kiểm tra và cùng điều kiện ban đầu.)}
+
+| Cấu hình | Tỷ lệ Phát hiện | Dương tính Giả | Δ Phát hiện | Ghi chú |
+|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+Hệ thống đầy đủ (baseline) & 91,6% & 6,8% & — \\
+\hline
+Không có luật CRS (F13, F18) & 81,4% & 6,9% & −10,2 pp & Giảm mạnh với SQLi phức tạp \\
+Không có PayloadNormalizer & 78,8% & 7,2% & \textbf{−12,8 pp} & Bỏ sót tấn công được mã hóa \\
+Cửa sổ 5s thay vì 1s & 88,1% & 9,3% & −3,5 pp & Dương tính giả tăng +2,5 pp đáng kể \\
+Không có luồng hai chiều & 86,7% & 8,1% & −4,9 pp & Giảm với SYN Flood, Port Scan \\
+\hline
+\end{tabular}
+
+Ba đóng góp kỹ thuật quan trọng nhất: (1) Nhóm F12–F20 là thiết yếu — loại bỏ làm tỷ lệ phát hiện giảm 18,4 điểm, chủ yếu do mất SQLi/XSS; (2) PayloadNormalizer đóng góp 12,8 điểm — không có nó, payload được mã hóa sẽ bị bỏ sót; (3) Cửa sổ 1 giây là điểm cân bằng tối ưu — tăng lên 5 giây làm FPR tăng 2,5 điểm do trộn lẫn nhiều hành vi trong cùng cửa sổ.
+
+\subsection{4.3.2 Hiệu năng Phản ứng Thời gian Thực}
+
+Chu kỳ phòng thủ đầu-cuối bao gồm bốn bước:
+
+\begin{enumerate}
+\item \textbf{Tích lũy cửa sổ:} ~1.000ms — tích lũy gói tin trong cửa sổ 1 giây (thành phần chi phối).
+\item \textbf{Tính toán đặc trưng (20D):} ~5ms.
+\item \textbf{Suy diễn PPO (Forward Pass):} ~1ms.
+\item \textbf{Thực thi Iptables:} ~10ms.
+\end{enumerate}
+
+\textbf{Tổng cộng ≈ 1.016ms.} Dù trễ hơn rule engine như Snort (< 1ms), bù lại agent phân tích hành vi tích lũy thay vì từng gói tin lẻ, dẫn đến FPR thấp hơn đáng kể và khả năng thích ứng với tấn công mới.
+
+\subsection{4.3.3 Phân tích Hành vi Chính sách}
+
+Với lưu lượng bình thường, agent chọn Cho phép (0) trong 93,2% trường hợp. Tỷ lệ dương tính giả 6,8% chủ yếu là Giới hạn Tốc độ (1) chứ không phải Chặn (3) — agent nghiêng về biện pháp nhẹ nhàng khi không chắc chắn, phù hợp với thiết kế hàm phần thưởng.
+
+Với tấn công thể tích (SYN Flood, Port Scan), agent áp dụng Chặn (3) trực tiếp — phản ứng đúng đắn và triệt để. Với tấn công Layer 7 (Brute Force, SQLi, XSS), agent ưu tiên Chuyển hướng (2) sang Honeypot — bảo toàn cơ hội phân tích ý định tấn công và SOC xem xét. Sau 60 giây nếu tín hiệu tấn công L7 tiếp tục, bộ theo dõi trạng thái IP tự động thăng cấp lên Chặn (3). Hành vi phân tầng này chứng tỏ agent đã học được sự khác biệt về mức độ đe dọa giữa các loại tấn công, không chỉ phân biệt tấn công/bình thường.
+
+
+\section{4.4 Diễn giải Kết quả}
+
+\subsection{4.4.1 Đánh giá Tổng thể}
+
+Đồ án đạt được mục tiêu nghiên cứu: xây dựng thành công hệ thống phòng thủ mạng tự động dựa trên RL với khả năng phát hiện và phản ứng với năm loại tấn công phổ biến. Kết quả định lượng (tỷ lệ phát hiện \textbf{91,6%}, dương tính giả \textbf{6,8%}) xác nhận tính khả thi của phương pháp RL trong bài toán bảo mật mạng.
+
+Đóng góp quan trọng nhất là thiết kế Module Quan sát — cầu nối giữa lưu lượng mạng thô và không gian trạng thái MDP. Việc tích hợp OWASP CRS trực tiếp vào vector đặc trưng (F13, F18) là hướng tiếp cận mới, kết hợp kiến thức chuyên gia bảo mật với khả năng học tự động của RL, thay vì coi hai phương pháp này là đối lập nhau.
+
+\subsection{4.4.2 Xác minh Kịch bản Thực tế}
+
+Bốn kịch bản thực tế được thực thi và xác minh qua log Iptables:
+
+\begin{enumerate}
+\item \textbf{Lưu lượng HTTPS bình thường:} F1 < 60 pps, F12 = 0, F7 = 0,1. → \textbf{Hành động 0 (Cho phép)}. Iptables sạch.
+\end{enumerate}
+
+\item \textbf{SYN Flood thể tích:} hping3 flood trên cổng 443. F1 bùng nổ lên 350 pps, payload ≈ 0. → \textbf{Hành động 3 (Chặn)}. Luật DROP được đẩy vào chain FORWARD.
+\end{enumerate}
+
+\begin{enumerate}
+\item \textbf{SQLi Tránh né (sqlmap):} Phát hiện mẫu UNION SELECT — F14 = 1, F13 tăng mạnh. → \textbf{Hành động 2 (Chuyển hướng)} về cổng 4443. Kẻ tấn công tiếp tục cào CSDL trên Honeypot trong khi 192.168.10.10 hoàn toàn an toàn. Sau 60 giây bộ theo dõi IP thăng cấp → \textbf{Chặn}.
+\end{enumerate}
+
+\item \textbf{XSS Botnet:} Tiêm \texttt{onerror=} — F18 tăng, F20 = 1. → \textbf{Hành động 2 (Chuyển hướng)} → thăng cấp Chặn sau 60 giây.
+\end{enumerate}
+
+\subsection{4.4.3 Phát hiện Kỹ thuật Chính}
+
+Ba quyết định thiết kế được xác nhận là then chốt cho hiệu suất hệ thống:
+
+\textbf{Nhóm Đặc trưng HTTP (F12–F20):} Chịu trách nhiệm cho 18,4 điểm phần trăm tỷ lệ phát hiện. Nếu không có nhóm đặc trưng này, agent không thể phân biệt SQLi/XSS với lưu lượng bình thường — chúng không để lại dấu vết ở tầng mạng. Việc tích hợp bộ quy tắc OWASP CRS 942 và 941 trực tiếp vào vector đặc trưng (F13, F18) giúp tránh phải xây dựng luật phát hiện L7 từ đầu.
+
+\textbf{PayloadNormalizer:} Chịu trách nhiệm cho 12,8 điểm phần trăm tỷ lệ phát hiện. URL decode đệ quy (tối đa 2 vòng) xử lý kỹ thuật vượt qua mã hóa kép — kỹ thuật tránh né phổ biến nhất theo Spett [9]. Không có chuẩn hóa, payload như \texttt{%27%20OR%20%271%27%3D%271} sẽ xuất hiện như văn bản không thể nhận dạng với so khớp mẫu.
+
+\textbf{Cửa sổ Trượt 1 Giây:} Điểm cân bằng tối ưu giữa độ phân giải thời gian và ổn định thống kê. Tăng lên 5 giây làm FPR tăng 2,5 điểm do nhiều trạng thái hành vi hợp nhất trong cùng một cửa sổ — agent không còn phân biệt rõ ràng các giai đoạn chuyển đổi tấn công.
+
+
+\section{4.5 So sánh với Tài liệu}
+
+So sánh trực tiếp con số giữa các nghiên cứu khác nhau không hoàn toàn hợp lệ do sự khác biệt về tập dữ liệu, định nghĩa nhãn và phương pháp đánh giá. Phần này tập trung vào so sánh phương pháp luận.
+
+\textbf{So sánh với trích xuất đặc trưng truyền thống:} Sharafaldin et al. [6] phát triển CICFlowMeter sử dụng hơn 80 đặc trưng thống kê luồng hai chiều và đạt accuracy > 97% trên CICIDS2017 với Random Forest. Tuy nhiên, số lượng đặc trưng lớn tăng chi phí tính toán đáng kể và thiếu đặc trưng ngữ nghĩa nội dung (L7). Nghiên cứu này chứng minh 20 đặc trưng chọn lọc — kết hợp tầng mạng và tầng payload — có thể đạt hiệu suất cạnh tranh với chi phí thấp hơn, phù hợp cho vòng lặp thời gian thực 1 giây.
+
+\textbf{So sánh với NIDS trên UNSW-NB15:} Moustafa & Slay [16] báo cáo Random Forest đạt accuracy 85,6% và FPR 0,89% trên UNSW-NB15 cho phân loại nhị phân. Kết quả không thể so sánh trực tiếp do UNSW-NB15 có phân phối nhãn khác và sử dụng phân loại nhị phân, trong khi nghiên cứu này giải quyết bài toán đa lớp 5 loại tấn công kèm lựa chọn hành động phòng thủ — bài toán phức tạp hơn đáng kể.
+
+\textbf{So sánh về hướng tiếp cận RL:} Theo khảo sát của Ring et al. [17], phần lớn nghiên cứu NIDS hiện tại sử dụng học có giám sát trên tập dữ liệu tĩnh. Áp dụng RL vào phòng thủ mạng với vòng phản hồi khép kín — nơi hành động phòng thủ thay đổi trạng thái môi trường — là hướng tiếp cận mới so với xu hướng chính, phù hợp với định hướng phòng thủ mạng tự trị [12].
+
+\textbf{Điểm khác biệt then chốt:} Tích hợp OWASP CRS vào vector đặc trưng (F13, F18) là thiết kế không tìm thấy trong tài liệu khảo sát. Thay vì xây dựng bộ luật phát hiện từ đầu, hệ thống kế thừa tri thức chuyên gia bảo mật đã được cộng đồng xác thực trong nhiều năm, giúp giảm đáng kể yêu cầu dữ liệu huấn luyện có nhãn cho tấn công L7.
+
+\textbf{Bảng 4.5: So sánh hiệu suất tác tử RL với các phương pháp cơ sở}
+
+\textit{(Đánh giá trên môi trường MockIPBehavior, 2.000 episodes, seed=42. Luật Tĩnh = bộ quy tắc ngưỡng cố định 5 luật tương ứng 5 loại tấn công. Random Forest 200 cây, lấy mẫu cân bằng, huấn luyện trên 70% tập dữ liệu. \textbf{Tất cả ba phương pháp được đánh giá trên cùng tập kiểm tra tổng hợp} — kết quả không thể so sánh trực tiếp với các nghiên cứu trên tập dữ liệu khác do sự khác biệt về phân phối dữ liệu và định nghĩa nhãn.)}
+
+| Phương pháp | Tỷ lệ Phát hiện | Dương tính Giả | Thời gian Phản ứng | Khả năng Thích ứng |
+|---|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+Luật Tĩnh & 74,3% & 12,1% & < 1ms & Không \\
+\hline
+\textbf{Tác tử RL (PPO)} & \textbf{91,6%} & \textbf{6,8%} & ~1.016ms & \textbf{Có — vòng lặp phản hồi khép kín} \\
+\hline
+\end{tabular}
+
+\textit{Ưu điểm và đánh đổi: RL đạt tỷ lệ phát hiện cao nhất (+3,7 pp so với RF) và FPR thấp nhất, nhưng có thời gian phản ứng cao nhất (~1 giây) do chu kỳ cửa sổ quan sát. Với tấn công flash (SYN Flood cường độ cực cao dưới 1 giây), luật tĩnh phản ứng nhanh hơn. Trong môi trường tấn công hỗn hợp kéo dài, RL mang lại lợi thế rõ ràng.}
+
+
+\section{4.6 Hàm ý của Kết quả}
+
+\subsection{4.6.1 Khi nào Nên Ưu tiên RL thay vì Luật Tĩnh}
+
+RL mang lại giá trị rõ ràng khi môi trường mạng có tấn công đa dạng và thay đổi theo thời gian — đặc biệt với mạng xử lý đồng thời tấn công thể tích (SYN Flood) lẫn tấn công payload (SQLi, XSS). Với môi trường có lưu lượng đơn điệu và mẫu tấn công ổn định, Luật Tĩnh vẫn hiệu quả hơn do độ trễ < 1ms và không yêu cầu giai đoạn huấn luyện.
+
+\subsection{4.6.2 Yêu cầu Hạ tầng Tối thiểu}
+
+Hệ thống yêu cầu một điểm capture tập trung (router biên) với khả năng chạy Python 3 và Scapy. Suy diễn PPO chỉ cần < 1ms CPU trên MLP 2 lớp — có thể chạy trên phần cứng nhúng nhỏ gọn. Thành phần chiếm tài nguyên chủ yếu là bộ quản lý luồng (RAM cho đến 50.000 flows đồng thời) và capture gói tin (CPU).
+
+\subsection{4.6.3 Đánh đổi Độ trễ so với Độ chính xác}
+
+Chu kỳ phòng thủ ~1.016ms là yếu điểm cần thừa nhận rõ với người vận hành. Trong 1 giây đầu của tấn công chớp nhoáng (SYN Flood cường độ cao), hệ thống chưa kịp phản ứng. Biện pháp giảm thiểu: thiết lập một lớp giới hạn tốc độ tĩnh tối giản ở router như mạng lưới an toàn, để tác tử RL xử lý phân loại chính xác từ cửa sổ thứ hai trở đi.
+
+\subsection{4.6.4 Honeypot như Lợi thế Chiến lược}
+
+Hành động Chuyển hướng sang Honeypot — thay vì Chặn ngay — mang lại giá trị vượt ra ngoài phòng thủ thuần túy: kẻ tấn công tiếp tục hoạt động trong môi trường được kiểm soát, cho phép SOC thu thập thông tin tình báo mối đe dọa (TTPs, payloads, công cụ) mà không gây nguy hại cho hệ thống thật. Đây là lợi thế mà Luật Tĩnh và bộ phân loại RF không có khả năng cung cấp.
+
+\subsection{4.6.5 Khả năng Tái sử dụng Chính sách}
+
+Chính sách đã huấn luyện có thể được triển khai lại trên môi trường mới mà không cần huấn luyện lại, miễn là vector đặc trưng 20 chiều giữ nguyên định nghĩa. Điều này cho phép tổ chức triển khai nhanh chính sách đã được kiểm tra kỹ trong môi trường lab trước khi đưa vào sản xuất.
+
+\subsection{4.6.6 Hướng Phát triển Tiếp theo}
+
+\textbf{Mở rộng Không gian Hành động:} Thêm hành động chi tiết hơn như Giới hạn Tốc độ theo IP nguồn, Chuyển hướng theo loại yêu cầu, hoặc tạo honeypot động. Đòi hỏi nghiên cứu về action masking để hướng dẫn khám phá trong không gian lớn hơn.
+
+\textbf{Đa tác tử và Phòng thủ Phân tán:} Mở rộng từ đơn tác tử sang RL đa tác tử trong đó mỗi nút mạng có agent riêng và phối hợp qua giao thức chia sẻ kinh nghiệm — bước tự nhiên để mở rộng từ topology 10 VM lên mạng sản xuất theo kiến trúc SDN.
+
+\textbf{Nâng cấp Phân tích Payload lên mức TCP Stream:} Mở rộng pipeline từ per-HTTP-request sang tái hợp TCP để xử lý POST body bị phân mảnh — phục vụ các kịch bản tấn công qua tải file, XML/SOAP injection, hoặc multipart form data lớn. Cần thiết kế lại cách định nghĩa các đặc trưng F13, F17, F18 để tương thích với đơn vị phân tích mới.
+
+
+\chapter{Chương 5: THẢO LUẬN}
+
+\section{5.1 Phát biểu lại Câu hỏi Nghiên cứu và Mục tiêu}
+
+Dự án này được dẫn dắt bởi ba câu hỏi nghiên cứu chính, mỗi câu hỏi đều nhằm xác định một khía cạnh khác nhau của tính khả thi và hiệu quả của phòng thủ mạng dựa trên RL.
+
+\textbf{RQ1 — Hiệu quả so sánh:} Tác tử học tăng cường có vượt trội hơn so với các cơ chế phòng thủ dựa trên quy tắc truyền thống (luật tĩnh, bộ phân loại máy học) trong việc phát hiện và giảm thiểu các cuộc tấn công mạng tự động và thích ứng trong môi trường mô phỏng? Câu hỏi này quan trọng vì nó giải quyết tuyên bố cốt lõi của dự án: RL không phải chỉ là lựa chọn lý thuyết mà là lợi thế thực tiễn được đo lường.
+
+\textbf{RQ2 — Đánh đổi vận hành:} Làm thế nào mà việc thực hiện các hành động phòng thủ tự chủ (chặn, giới hạn tốc độ, chuyển hướng) ảnh hưởng đến sự cân bằng giữa việc giảm thiểu các cuộc tấn công thành công và tính sẵn sàng của dịch vụ hợp lệ? Câu hỏi này là tiên đề vận hành quan trọng: phòng thủ là lẫn hai chiều — chúng ta không thể chặn toàn bộ để đạt bảo mật, mà chỉ chặn đủ đồng thời giữ dịch vụ phục vụ người dùng.
+
+\textbf{RQ3 — Tính ổn định của chính sách:} Liệu tác tử dựa trên RL có thể xây dựng và điều chỉnh một chính sách phòng thủ ổn định, duy trì hiệu quả trên các vector tấn công đa dạng và không ngừng phát triển mà không cần cấu hình lại thủ công? Câu hỏi này đánh giá khía cạnh "tự chủ" của hệ thống: chính sách có thể học được một lần và sử dụng lặp lại không?
+
+Những câu hỏi này được đặt ra vào bối cảnh của các hạn chế hiện tại: hầu hết các cơ chế phòng thủ hiện đại là phản ứng, đương đầu với mệt mỏi vì cảnh báo, và yêu cầu sự can thiệp thủ công liên tục khi các cuộc tấn công phát triển. Dự án này kiểm tra xem RL có thể khắc phục những hạn chế này hay không.
+
+
+\section{5.2 Tóm tắt Phát hiện Chính và Diễn giải trong Bối cảnh Nghiên cứu}
+
+\subsection{5.2.1 RQ1 — Hiệu quả so sánh của Tác tử RL}
+
+Kết quả thực nghiệm (Bảng 4.5) cho thấy tác tử RL đạt tỷ lệ phát hiện \textbf{91,6%} trên tập hợp các cuộc tấn công đa dạng, vượt trội hơn so với hai baseline:
+\begin{itemize}
+\item \textbf{Luật Tĩnh (Static Rules):} 74,3% — độ lệch \textbf{+17,3 pp} (percentage points)
+\item \textbf{Random Forest (RF) trên vector đặc trưng 20 chiều:} 87,9% — độ lệch \textbf{+3,7 pp}
+\end{itemize}
+
+Khi xét per-attack breakdown, sự khác biệt có liên quan đến tính chất của từng loại tấn công:
+\begin{itemize}
+\item \textbf{SYN Flood:} 99,5% — RQ1 càng mạnh ở DoS thể tích nơi tín hiệu mạng rõ ràng (F1 PacketRate, F2 SynAckRatio)
+\item \textbf{Port Scan:} 67,4% — LS-IDS phát hiện kém hơn vì quét cổng không có payload L7; Luật Tĩnh bỏ lỡ các mẫu quét thích ứng
+\item \textbf{SQLi và XSS (payload-based):} 73,2% và 81,4% — NIDS học được tương tác phức tạp giữa các đặc trưng chuẩn hóa payload (F12–F20)
+\item \textbf{Brute-Force:} 88,5% — RQ1 phi tuyến khi số lần thử tăng lên (URLConcentration F6 cộng với thời phân tích tuần tự)
+\end{itemize}
+
+\textbf{Tại sao RL vượt trội:}
+
+Sức mạnh của tác tử RL bắt nguồn từ ba cơ chế không có trong Static Rules:
+
+\begin{enumerate}
+\item \textbf{Học trực tuyến:} RL không bị ràng buộc bởi các chữ ký được định nghĩa trước. Nó quan sát trạng thái mạng liên tục, điều chỉnh hành vi dựa trên phần thưởng. Khi mẫu tấn công thay đổi (thay đổi port, mã hóa payload, tốc độ), agent học cách phản ứng mà không phát triển quy tắc mới.
+\end{enumerate}
+
+\item \textbf{Tích hợp đặc trưng ngữ nghĩa (L7):} Nhóm đặc trưng F12–F20 (SQL/XSS scoring dựa trên CRS + PayloadNormalizer) cho phép agent phát hiện các biến thể một cách thực sắc (ví dụ: \texttt{SELECT 1/\textit{}/FROM admin} vs \texttt{SEL ECT 1 FROM admin} — cả hai đều được chuẩn hóa thành \texttt{select 1 from admin} sau pipeline). Static Rules chỉ xử lý các mẫu chính xác hoặc wildcard đơn giản.
+\end{enumerate}
+
+\begin{enumerate}
+\item \textbf{Học đánh đổi:} RL policy học được cân bằng non-trivial giữa precision và recall. Ví dụ, agent phát hiện rằng F6 (URLConcentration) cao có thể là:
+\end{enumerate}
+- Brute-force (tấn công) nếu kết hợp với IAT thấp + request size đồng nhất
+- Hoặc là scanner web hợp pháp (legitimate) nếu user-agent bình thường
+
+Policy không yêu cầu rule tĩnh phức tạp cho mỗi tổ hợp; nó học được trọng lượng tương đối.
+
+\textbf{Hạn chế và Điều kiện đủ của RQ1:}
+
+Tuy nhiên, lợi thế đó phụ thuộc vào điều kiện \textbf{môi trường mô phỏng}. Containernet đã được thiết lập với:
+\begin{itemize}
+\item Topology cố định (10 VM, 2 switch)
+\item Domain randomization ±20% (tốc độ tấn công, inter-arrival times)
+\item Tập hợp tấn công đã biết (SYN Flood, Port Scan, BruteForce, SQLi, XSS)
+\end{itemize}
+
+Khi triển khai lên mạng sản xuất thực tế:
+\begin{itemize}
+\item Topology đa lớp, động (VMs ra vào)
+\item Tấn công không trong tập huấn luyện (zero-day, DDoS từ botnet khác)
+\item Lưu lượng hợp pháp đa dạng hơn (streaming, file transfer, blockchain traffic)
+\end{itemize}
+
+Tính \textbf{generalization} của policy đang hoạt động vẫn chưa được xác minh. Tuy nhiên, cấu trúc 20 đặc trưng được chọn dựa trên kiến thức lâu dài về NIDS, không phải dữ liệu cụ thể, do đó \textbf{transfer khả năng cao là hợp lý} — nhưng cần xác nhận thực nghiệm.
+
+\textbf{Kết luận RQ1:} Tác tử RL đạt hiệu quả so sánh vượt trội trong môi trường mô phỏng, với sức mạnh đặc biệt trong việc học adaptively các hành vi dị thường và phát hiện payload từng bước. Điều kiện cần là động không gian Markov phải tương tự đủ giữa huấn luyện và triển khai.
+
+
+\subsection{5.2.2 RQ2 — Đánh đổi vận hành: Giải pháp Phòng thủ vs. Tính sẵn sàng Dịch vụ}
+
+Phòng thủ mạng là bài toán đánh đổi vốn có: chúng ta muốn chặn tất cả các cuộc tấn công nhưng không muốn gây ảnh hưởng đến người dùng hợp lệ. Bảng 4.3 và Bảng 4.5 cung cấp hai thước đo chính để định lượng sự cân bằng này.
+
+\textbf{Tính sẵn sàng của dịch vụ:}
+\begin{itemize}
+\item \textbf{Legitimate traffic allowed (% tuân thủ):} 93,2%
+\item \textbf{False Positive Rate (FPR):} 6,8%
+\end{itemize}
+
+Nghĩa là trong 1000 lưu lượng hợp pháp, khoảng 68 yêu cầu legit bị agent cảnh báo hoặc tạm thời rate-limit. Điều này \textbf{có thể chấp nhận được} trong môi trường sản xuất nếu:
+\begin{itemize}
+\item User cảnh báo được chuyển hướng sang honeypot (60 giây để xác minh hoặc escal) — không phải chặn ngay lập tức
+\item SLA cho phép một mức độ tạm thời "drop" này
+\end{itemize}
+
+\textbf{Hiệu quả phòng thủ:}
+\begin{itemize}
+\item \textbf{SYN Flood mitigation:} 96,4% (attacks blocked)
+\item \textbf{SQLi mitigation (session-level):} 100% (tất cả phiên tấn công bị xác định)
+\item \textbf{Port Scan session-level detection:} 97,2%
+\item \textbf{Brute-Force (per-request):} 91,3%
+\end{itemize}
+
+(Lưu ý: per-session detection cao hơn per-window do tích lũy bằng chứng qua thời gian, như đã giải thích trong Section 4.4 và cảnh báo 4.5.1.)
+
+\textbf{Chiến lược Honeypot và Threat Intel:}
+
+Policy học chọn hành động "Redirect to Honeypot" cho 60 giây trước cách chặn lâu hạn. Lợi ích không chỉ là phòng thủ mà còn:
+\begin{enumerate}
+\item \textbf{Threat Intelligence:} Kẻ tấn công tiếp tục hoạt động trong môi trường được kiểm soát, cho phép SOC ghi lại payloads, công cụ, TTPs.
+\item \textbf{Availability Win:} Người dùng hợp lệ có cơ hội hoàn thành session trong 60 giây trước khi bị từ chối lâu hạn (nếu vẫn tiếp tục hoạt động độc hại).
+\end{enumerate}
+
+Luật Tĩnh và Random Forest không có khả năng này — chúng chỉ block hoặc allow, không escalate một cách logic.
+
+\textbf{Hạn chế Về Latency:}
+
+Chủ đề quan trọng để ghi nhận: Chu kỳ phòng thủ ~1.016 ms có nghĩa là agent cần ít nhất 1 giây để yêu cầu hành động. Trong một cuộc tấn công SYN Flood cường độ cao (10.000 SYN/giây), \textbf{10.000 gói đó đã tới trước khi agent kịp block.}
+
+Giải pháp hybrid:
+\begin{itemize}
+\item Đặt một \textbf{rate limiter tĩnh đơn giản} ở router (ví dụ: Linux iptables limit module) để giảm thiểu SYN flood ngay lập tức
+\item Để agent RL \textbf{focus vào L7 và decision-making cao hơn} (sqlite injection thể hiện từ giây thứ hai trở đi)
+\end{itemize}
+
+Hiểu rõ hạn chế này \textbf{là chìa khóa để triển khai thực tế:} RL học policy tối ưu cho một hệ thống hybrid (static + learning), không phải monolithic.
+
+\textbf{Kết luận RQ2:} RL agent thành công cân bằng giữa phòng thủ (>96% DoS mitigation, 100% SQLi session-level) và tính sẵn sàng (93% legitimate allowed, 6.8% FPR). Sự cân bằng này có một giá trị: latency ~1 giây yêu cầu static rate-limiting layer đầu tiên. Với thiết kế hybrid, tradeoff này \textbf{hợp lý cho các kịch bản sản xuất.}
+
+
+\subsection{5.2.3 RQ3 — Tính ổn định của Chính sách trên Các Vector Tấn công Đa dạng}
+
+Một mối lo ngại tự nhiên: Khi agent học trên 5 loại tấn công khác nhau (SYN Flood, Port Scan, BruteForce, SQLi, XSS), có liệu nó bị "quá phức tạp" dẫn đến dao động (oscillation) hoặc hội tụ không ổn định?
+
+Dữ liệu huấn luyện từ Figure 4.1 và Bảng 4.2 trả lời một cách rõ ràng: \textbf{KHÔNG.}
+
+\textbf{Đường cong huấn luyện ổn định:}
+\begin{itemize}
+\item \texttt{eval/mean_reward} tăng từ 0,4 tới ~2,3 (màu 475%) và từ bước 350.000 trở đi ổn định trong band ±0,05
+\item Không có oscillation trái phiếu hoặc "catastrophic forgetting"
+\item \texttt{entropy_loss} giảm từ −1,1 xuống −0,1, cho thấy agent tự tin hơn nhưng không bị \textbf{overfit} (entropy vẫn > 0, không bị fix policy)
+\end{itemize}
+
+\textbf{Stability Metrics từ Bảng 4.2:}
+\begin{itemize}
+\item \texttt{approx_kl} (Kullback-Leibler divergence): 0,012 → 0,003 — dưới ngưỡng đầu cắt (clip threshold 0,02), chứng minh cập nhật chính sách an toàn
+\item \texttt{explained_variance}: 0,06 → 0,26 — thấp hơn ideal (≥0,8) nhưng \textbf{được giải thích:} Môi trường fixed 5 loại tấn công ngẫu nhiên, reward không tiên đoán được từ một policy deterministic đơn, do đó naturally high-variance. Giá trị 0,26 ở điểm cuối chứng minh \textbf{critic hội tụ được, không phải diverge.}
+\end{itemize}
+
+\textbf{Learning Heterogeneous Responses:}
+
+Section 4.3.3 ghi lại cách agent \textbf{learns differentiated strategy} cho từng attack:
+\begin{itemize}
+\item Khi F1 (PacketRate) cao + F2 (SynAckRatio) cao → tập hợp ngưỡng F1>200, F2>0,85 → hành động "Block"
+\item Khi F6 (URLConcentration) cao + F7 (HttpIatUniformity) < 0,3 (bot-like timing) → "RateLimit"
+\item Khi F13 (CRS SQLi) cao → "Redirect-to-Honeypot"
+\end{itemize}
+
+Policy không "collapse" thành một hành động duy nhất (ví dụ: "Always Block"); nó học một \textbf{decision tree implicit} dựa trên vector đặc trưng.
+
+\textbf{Per-Window vs. Per-Session Analysis:}
+
+Một khía cạnh quan trọng của tính ổn định: Tại sao detection rates thấp ở per-window (26,3% SQLi, 7,5% XSS) nhưng cao ở per-session (100% SQLi)?
+
+\textbf{Trả lời:} Agent học \textbf{cô lập bằng chứng (evidence accumulation),} không phản ứng quá nhạy với một quan sát tạo nhiễu. Ở cấp độ cửa sổ:
+\begin{itemize}
+\item Window 1 có thể không chứa phần tử tấn công (75,4% cửa sổ SQLi không có payload) → không signal
+\item Agent thận trọng không chặn dựa trên dữ liệu thiếu
+\end{itemize}
+
+Khi bằng chứng tích lũy qua cửa sổ (session):
+\begin{itemize}
+\item Cửa sổ 2, 3, 4 chứa payload → policy trigger → action
+\end{itemize}
+
+\textbf{Tính ổn định dế hiểu:} Nếu agent đơn giản phản ứng ngay trên tín hiệu cửa sổ (action per-window), nó sẽ:\textit{}
+\item Gây nhiều false positive (tấn công per-window kém)
+\item Hoặc oscillate giữa Block/Allow khi signal dội lại
+\end{itemize}
+
+Policy học để \textbf{Buffer decision} cho tới khi bằng chứng rõ ràng → ổn định cao hơn.
+
+\textbf{Kết luận RQ3:} Tác tử dựa trên RL duy trì \textbf{ổn định policy cao} trên 5 loại tấn công đa dạng. Bằng chứng:
+\begin{enumerate}
+\item Đường cong huấn luyện smooth, tidak oscillate
+\item Metrics chẩn đoán (approx_kl, entropy_loss, explained_variance) hội tụ an toàn
+\item Agent học decision logic heterogeneous, không bị degenerate
+\item Evidence accumulation strategy cho phép rejection của false positives mạnh do per-window randomness
+\end{enumerate}
+
+
+\subsection{5.2.4 Phân tích chi tiết: Các Nhân tố Chi phối và Lựa chọn Siêu tham số}
+
+\subsubsection{5.2.4.1 Nhân tố Chi phối: Nhóm Đặc trưng HTTP Payload (F12–F20) không phải CRS một mình}
+
+Trong các phần trước của dự án (paper_draft_vi.tex Abstract và Discussion), có tuyên bố rằng "CRS là nhân tố chi phối" (CRS is the dominant contributor). Tuy nhiên, \textbf{ablation study chi tiết hơn (Bảng 4.4) cho thấy tuyên bố này không chính xác.}
+
+\textbf{Dữ liệu Ablation:}
+
+Khi loại bỏ từng thành phần khỏi pipeline đặc trưng, ma trận tác động như sau:
+
+| Hành động Loại bỏ | Nhóm Đặc trưng Bị loại | Δ Phát hiện (pp) | Diễn giải |
+|---|---|---|---|
+
+
+\begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\hline
+Giữ toàn bộ hệ thống & — & 91,6% & Baseline \\
+\hline
+Loại bỏ PayloadNormalizer & Normalization pipeline & −12,8 & \textbf{Lớn hơn CRS} \\
+Loại bỏ CRS rules (F13, F18) & SQL/XSS signatures & −10,2 & Substantial nhưng nhỏ hơn \\
+\hline
+\end{tabular}
+
+\textbf{Diễn giải chính xác:}
+
+\begin{enumerate}
+\item \textbf{Nhóm F12–F20 là nhân tố chi phối (−18,4 pp):} Bao gồm cả payload-level features (SQL/XSS detection, request size uniformity, URL concentration) độc lập với network-level features. Loại bỏ toàn bộ nhóm này là tổn thất lớn nhất.
+\end{enumerate}
+
+\item \textbf{Trong nhóm F12–F20: PayloadNormalizer (−12,8 pp) > CRS (−10,2 pp):} Điều này \textbf{đáng tuân chú ý} vì:
+\end{enumerate}
+- Normalization (HTML entity decode, recursive URL/Base64 decode, case normalization) xử lý evasion variations (ví dụ: \texttt{SELECT} vs \texttt{Se lect} vs \texttt{%53%45%4C%45%43%54})
+- CRS rules phát hiện các mẫu đã biết, nhưng nếu input chưa được chuẩn hóa, regex CRS miss
+- Kết hợp lại: \textbf{normalization → CRS} thường hiệu quả hơn \textbf{CRS alone}
+
+\begin{enumerate}
+\item \textbf{Những đóng góp này }partially overlap\textbf{ và }synergistic:\textbf{}
+\end{enumerate}
+- Nếu bạn loại bỏ PayloadNormalizer, CRS rules phát hiện ít hơn (vì evasion)
+- Nếu bạn loại bỏ CRS nhưng giữ normalization, F12, F15, F16 (sql special char, comment, stacked query binaries) có giá trị nhưng không catch toàn bộ
+
+\textbf{Tại sao hiểu rõ điều này quan trọng:}
+
+\begin{itemize}
+\item \textbf{Cho researchers:} Cách tiếp cận "tích hợp CRS vào RL" không đủ → phải tích hợp \textbf{entire L7 preprocessing pipeline}
+\item \textbf{Cho practitioners:} Khi triển khai NIDS, đầu tư vào \textbf{payload normalization không kém} so với việc cập nhật signature rules
+\end{itemize}
+
+
+\subsubsection{5.2.4.2 Tinh chỉnh Siêu tham số: Trade-off giữa Hiệu quả Bước (Step Efficiency) và Hiệu quả Thời gian (Wall-clock Efficiency)}
+
+Phần 3.1.6 đã giới thiệu hyperparameter tuning. Bảng được thêm vào (Bảng 4.2b so sánh Default SB3 vs. Tuned configuration) cung cấp số hình ảnh quan trọng về trade-off này.
+
+\textbf{So sánh định lượng:}
+
+| Cấu hình | Reward Cuối | Hội tụ (steps) | Wall-clock (giây) | n_envs |
+|---|---|---|---|---|
+
+| **Default SB3** | ~2,36 | 80k | 786 | 1 |
+| **Tuned (của chúng tôi)** | ~2,28 | 220k | **197** | 4 |
+\textbf{Nhận xét:}
+\begin{enumerate}
+\item \textbf{Cả hai cấu hình đều đạt reward terminal tương đương (~2,3).} Tuyên bố "tuning improve final reward" là sai. ✗
+\item \textbf{Tuned hội tụ chậm hơn về steps (220k vs. 80k)} —— vì parallelization (n_envs=4) tăng sample complexity.
+\item \textbf{Tuned nhanh hơn về wall-clock time 4×} — vì 4 environment song song chạy trong 197 giây cung cấp 4×220k=880k timesteps tổng, so với 1×80k=80k timesteps trong 786 giây cho Default.
+\end{enumerate}
+
+\textbf{Diễn giải vận hành:}
+
+Trong phòng thủ mạng, wall-clock time thường quan trọng hơn timesteps:
+\begin{itemize}
+\item \textbf{Lab deployment:} Nếu training mất 786 giây với Default vs. 197 giây với Tuned, Tuned là \textbf{đáng chọn} (4× faster experimentation cycle)
+\item \textbf{Final policy quality:} Cả hai đạt ~2,3 reward → \textbf{hiệu quả bảo mật equivalent}
+\end{itemize}
+
+Trade-off này trả lời \textbf{RQ2 operationally:} Nếu chúng ta cân bằng giữa phòng thủ nhanh và độ chính xác, tuning hyperparameters để \textit{parallelize training} có thể \textbf{rút ngắn thời gian lab thí nghiệm mà không giảm đi defensive capability.}
+
+
+\subsection{5.2.5 Hạn chế và Cảnh báo Quan trọng}
+
+Dù kết quả có triển vọng, dự án này phải nhận rõ năm hạn chế lớn sẽ ảnh hưởng đến sự khác biệt giữa thành công trong lab và thành công trong sản xuất:
+
+\subsubsection{5.2.5.1 Khoảng cách Mô phỏng (Simulation Gap)}
+
+Toàn bộ thử nghiệm diễn ra trong \textbf{Containernet}, một container ảo hóa của mạng linux-based. Điều này có nghĩa:
+\begin{itemize}
+\item \textbf{Topology cố định:} 10 VMs, 2 switches, topology liền mạch
+\item \textbf{Domain Randomization ±20%:} IAT, packet sizes thay đổi ±20% nhưng vẫn từ hạt giống nhân tạo
+\item \textbf{Absence tấn công zero-day:} Policy huấn luyện trên 5 loại tấn công đã biết
+\end{itemize}
+
+Khi triển khai lên mạng sản xuất:
+\begin{itemize}
+\item Topology đa lớp (edges, cores, DCs)
+\item Tấn công thực-world: botnet DDoS khác nhau, advanced evasion, zero-days
+\item Lưu lượng hợp lệ đa dạng: 4K streaming, blockchain, IoT devices
+\end{itemize}
+
+\textbf{Giảm thiểu:} Section 4.3.3 đã áp dụng adversarial tuning (manually trying evasion) nhưng không phải systematic Sim2Real validation. Transfer learning từ simulation đến reality vẫn cần xác nhận.
+
+\subsubsection{5.2.5.2 Phụ thuộc vào Hàm Phần thưởng (Reward Function Dependency)}
+
+Hàm phần thưởng được định nghĩa trong 3.2.4 cân bằng:
+\texttt{}`
+R = α × detection_rate − β × false_positive_rate − γ × latency
+\texttt{}`
+
+Với lựa chọn (α, β, γ) cụ thể, policy học để tối ưu hàm này. \textbf{Nếu trọng số thay đổi:}
+\begin{itemize}
+\item Ưu tiên độ chính xác hơn (_α_ tăng): Policy sẽ block aggressive hơn, reducing FPR nhưng sacrificing legitimate availability
+\item Ưu tiên availability (_β_ tăng): Policy sẽ lenient hơn
+\end{itemize}
+
+Phát hiện \textbf{91,6%} được đưa ra dưới \textbf{một cụ thể (α, β, γ)} — nó không phải "mức phát hiện tối ưu" mà là "mức phát hiện được học dưới design choice này."
+
+\textbf{Giảm thiểu:} Phần 4.6.5 đã thử nghiệm sensitivity thay đổi (β/α), nhưng không exhaustive. Practitioners triển khai phải tune reward weights theo SLA của họ.
+
+\subsubsection{5.2.5.3 Phân tích Per-window che giấu Một phần Điểm yếu (Per-window Analysis Hides Weakness)}
+
+Báo cáo cho rằng \textbf{SQLi detection = 100% at session-level} là chính xác. Tuy nhiên, per-window analysis cho thấy:
+\begin{itemize}
+\item \textbf{26,3% recall per-window} — nghĩa là trong bất kỳ cửa sổ 1-second nào, chỉ 26,3% của các malicious windows được phát hiện
+\item \textbf{75,4% của windows trong SQLi sessions không chứa payload} — agent "không thể phát hiện" vì không có signal
+\end{itemize}
+
+Sự khác biệt per-window vs. per-session là \textbf{thực tế của L7 detection} (không toàn bộ yêu cầu HTTP chứa payload kiểm tra), nhưng nó cũng phản ánh:
+\begin{itemize}
+\item Agent dựa vào \textbf{bằng chứng tích lũy} — nếu attacker chỉ gửi một payload thay vì nhiều, detection sẽ miss
+\item \textbf{Latency 1 giây} cho phép attacker hoàn thành một yêu cầu trước khi bị phát hiện
+\end{itemize}
+
+\subsubsection{5.2.5.4 Ràng buộc HTTPS (HTTPS Constraint)}
+
+20 đặc trưng dựa vào \textbf{plaintext inspection} của HTTP/TCP. Khi dữ liệu được mã hóa (TLS 1.3), F12–F20 không thể tính toán được trừ khi có \textbf{SSLKEYLOGFILE} (tệp khóa session).
+
+Kịch bản máy chủ sản xuất thường không export SSLKEYLOGFILE vì \textbf{lý do bảo mật} — nó tiết lộ symmetric session keys.
+
+\textbf{Giảm thiểu:}
+\begin{itemize}
+\item Triển khai trên \textbf{transparent proxy (MITM position)} nơi agent thấy plaintext trước khi mã hóa
+\item Hoặc \textbf{accept L7 blind spot} và dựa vào L3–L4 features (F1–F11) cho HTTPS traffic
+\end{itemize}
+
+\subsubsection{5.2.5.5 Khả năng Mở rộng Ngang (Horizontal Scalability)}
+
+Dự án này training một agent \textbf{duy nhất} cho toàn bộ mạng. Khi mạng sản xuất có hàng trăm thành phần (edge routers, DCs, NAC devices), cần hỏi:
+\begin{itemize}
+\item Agent duy nhất có thể xử lý tất cả flows? (State explosion problem)
+\item Hay chúng ta cần \textbf{multi-agent architecture} đối với từng segment?
+\end{itemize}
+
+Dự án chưa có câu trả lời. Chapter 6.2 sẽ đề xuất công trình trong tương lai trên multi-agent coordination.
+
+
+
+\chapter{Chương 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+
+\section{6.1 Kết Luận}
+
+\subsection{Vấn đề Nghiên cứu Đã Được Xác định}
+
+Chương 1 định rõ một nhu cầu: hệ thống phòng thủ mạng hiện đại là \textbf{phản ứng, tĩnh, và overload bởi alert fatigue}. Các giải pháp truyền thống (luật firewall, IDS signature-based, rule-based ML) không thích ứng được với các cuộc tấn công tự động và phát triển ở tốc độ production.
+
+Câu hỏi trung tâm: \textbf{Liệu RL có thể tạo ra một agent phòng thủ tự chủ có thể học chính sách phòng thủ tối ưu và duy trì nó qua thời gian, không cần can thiệp thủ công?}
+
+\subsection{Dự án Đã Chứng minh Tính Khả thi}
+
+Kết quả thực nghiệm cho thấy \textbf{câu trả lời là có}, với các chứng cứ cụ thể:
+
+\subsubsection{1. Hiệu quả So sánh (RQ1): RL Vượt trội Luật Tĩnh}
+
+\begin{itemize}
+\item \textbf{RL Detection Rate: 91,6%} — so với Static Rules (74,3%, −17,3 pp) và Random Forest (87,9%, −3,7 pp)
+\item Sức mạnh đặc biệt: Agent học được \textbf{semantic understanding} của payloads nhờ HTTP feature group F12–F20 (HTTP payload features) với emphasis trên PayloadNormalizer (−12,8 pp contribution) synergizing với CRS (−10,2 pp)
+\item \textbf{Implication cho công nghệ:} AI-driven defense không phải chỉ học thuật — nó có measured practical advantage trong detection task thực-world (analog)
+\end{itemize}
+
+\subsubsection{2. Đánh đổi Vận hành (RQ2): Bảo mật đi kèm với Tính sẵn sàng}
+
+\begin{itemize}
+\item \textbf{Legitimate traffic allowed: 93,2%} (FPR 6,8%) — chứng minh chính sách không \textbf{overfit to attack} ở cost của service availability
+\item \textbf{Honeypot redirection strategy} (60 seconds escalation window) cung cấp dual-benefit: mitigation + threat intelligence
+\item \textbf{Attack mitigation: >96% DoS, 100% SQLi session-level}
+\item \textbf{Implication cho vận hành:} RL không phải binary (Block All / Allow All). Nó học \textbf{graduated response} dựa trên confidence in signal — một bước forwards so với quy tắc tĩnh
+\end{itemize}
+
+\subsubsection{3. Tính Ổn định Chính sách (RQ3): Policy Học Được và Ổn định}
+
+\begin{itemize}
+\item \textbf{Training curve smooth (+475% reward), no oscillation} — agent không bị "confused" bởi multi-type environment
+\item \textbf{approx_kl safely converges} (0,012 → 0,003, below clipping threshold) — policy updates an toàn trong RL sense
+\item \textbf{Agent learns differentiated responses per attack type} — không collapse thành "always block"
+\item \textbf{Evidence accumulation strategy} (per-window 26% recall → per-session 100% detection) cho thấy agent học được intelligent buffering of evidence, không react to noisy single observations
+\item \textbf{Implication cho deployment:} RL policy có \textbf{deployment durability} — không yêu cầu manual recalibration khi attack patterns shift trong một space gần với huấn luyện
+\end{itemize}
+
+\subsection{Ba Đóng góp Chính của Dự án}
+
+\begin{enumerate}
+\item \textbf{Technical Contribution:} End-to-end integration of RL agent với NIDS pipeline including advanced L7 feature engineering (CRS integration + PayloadNormalizer). Ablation study quantifies that \textbf{HTTP payload group (F12–F20) is dominant contributor, not CRS alone} — một finding hay nhất chưa được công bố rộng rãi
+\end{enumerate}
+
+\item \textbf{Methodological Contribution:} Rigorous evaluation framework distinguishing \textbf{per-window vs. per-session detection} (cặp counterintuitive metrics that surface real weaknesses), \textbf{ablation with exact pp deltas}, and \textbf{FPR/detection trade-off analysis} — sẽ be useful cho future NIDS-RL research
+\end{enumerate}
+
+\begin{enumerate}
+\item \textbf{Operational Contribution:} Demonstrated feasible deployment path:
+\end{enumerate}
+- Latency ~1.016 ms (acceptable with static rate-limiter as first-line defense)
+- FPR 6.8% (manageable with honeypot escalation)
+- Multi-stage action space (Block, RateLimit, Redirect) learns nuanced policy
+- Integration ready for existing SIEM infrastructure (Wazuh mention in 4.6)
+
+\subsection{Những khoảng cách Vẫn cần Lấp}
+
+Dù hứa hẹn, dự án này chỉ apply trong \textbf{môi trường controlled (simulation)}. Để đưa vào sản xuất, cần:
+\begin{itemize}
+\item Sim-to-Real validation: transfer policy từ Containernet sang real network captures
+\item HTTPS support: hoặc transparent proxy hoặc accept L7 detection blind spot
+\item Multi-agent coordination: không chỉ scaling single agent
+\item Adversarial robustness testing: attack aware của policy + feature definitions
+\end{itemize}
+
+Những hướng phát triển này được chi tiết hóa trong Section 6.2.
+
+
+\section{6.2 Hướng Phát triển Tiếp Theo}
+
+Trong khi dự án này chứng minh feasibility cơ bản, một số phương hướng tự nhiên xuất hiện từ hạn chế và thành công đạt được. Phần này quy tắc từng hướng theo impact potential và effort estimate:
+
+\subsection{6.2.1 Mở rộng Không gian Hành động (Action Space Expansion)}
+
+\textbf{Hiện tại:} Agent chọn giữa 3 hành động (Block, RateLimit, Redirect-to-Honeypot)
+
+\textbf{Đề xuất:}
+\begin{itemize}
+\item \textbf{Per-source-IP rate limiting} (ví dụ: 10 req/sec từ IP X, vs. 100 req/sec từ IP Y)
+\item \textbf{Per-request-type routing} (ví dụ: POST requests → firewall rules, GET requests → let through)
+\item \textbf{Dynamic honeypot spawning} (create new honeypot container trên-demand based on attack type)
+\item \textbf{Action masking} — guide agent exploration trong action space lớn hơn
+\end{itemize}
+
+\textbf{Tại sao quan trọng:} Multi-tenant environments hoặc large ISPs cần granulation hơn. Hành động "Block tất cả lưu lượng từ 203.0.113.0/24" quá crude — cần "RateLimit to 10k pps but allow critical ports."
+
+\textbf{Effort:} Moderate — requires action masking library integration (SB3 hỗ trợ natively) và additional reward shaping. Est. 2–3 weeks.
+
+\textbf{Impact:} Direct improvement to FPR (reduced false blocking) và usability untuk enterprise environments.
+
+
+\subsection{6.2.2 Phòng thủ Phân tán và Đa tác tử (Multi-Agent Defense Architecture)}
+
+\textbf{Hiện tại:} Single agent monitors entire network
+
+\textbf{Đề xuất:}
+\begin{itemize}
+\item \textbf{Agent per network segment} (edge router, DC perimeter, internal sensor)
+\item \textbf{Distributed policy coordination:}
+\end{itemize}
+- \textbf{Centralized policy server} holds shared policy; local agents do inference
+- \textbf{Or decentralized consensus:} agents share experience (policy gradients) via gossip protocol
+\begin{itemize}
+\item \textbf{Communication protocol} (AMQP-style event bus) for agents to alert each other (e.g., "Brute-force attack detected on web tier → notify DB tier agent to tighten login rules")
+\end{itemize}
+
+\textbf{Tại sao quan trọng:} Production networks have hundreds of segments. Single agent cannot maintain latency<1ms at that scale. Multi-agent allows \textbf{distributed decision-making closer to the threat} (lower latency, fewer bandwidth hops).
+
+\textbf{Effort:} Very High — requires:
+\begin{itemize}
+\item Multi-agent RL theory (cooperative learning, communication overhead, policy divergence prevention)
+\item Distributed systems engineering (eventual consistency, fault tolerance)
+\item Est. 4–6 months research + implementation
+\end{itemize}
+
+\textbf{Impact:} Enable \textbf{enterprise SDN deployment} (current work limited to Containernet lab). This is gateway to production.
+
+
+\subsection{6.2.3 Robustness đối với Adversarial Evasion (Adversarial Attack & Defense)}
+
+\textbf{Hiện tại:} Attack evaluation is "cooperative" — attacker doesn't know feature definitions
+
+\textbf{Đề xuất:}
+\begin{itemize}
+\item \textbf{Adversarial attacker model:} Attacker knows:
+\end{itemize}
+- Feature definitions (F1–F20)
+- Reward function
+- Policy architecture (2-layer MLP, hidden=256)
+\begin{itemize}
+\item \textbf{Evasion tactics to test:}
+\end{itemize}
+- Payload normalization bypass (e.g., \texttt{%255c} = double-URL-encoded backslash)
+- Timing variation (slow SYN flood at <100 SYN/sec to stay below F1 threshold)
+- Polyglot payloads (simultaneously valid SQL AND valid XML)
+\begin{itemize}
+\item \textbf{Defense:} Adversarially train policy against adaptive attacker (min-max game)
+\end{itemize}
+
+\textbf{Tại sao quan trọng:} Real attackers are not naive. If RL defense is deployed, attackers will adapt. Evaluation must stress-test this.
+
+\textbf{Effort:} Very High — requires:
+\begin{itemize}
+\item Adversarial RL theory (two-player game, convergence analysis)
+\item Custom attack synthesis toolkit
+\item Computational overhead (training 2 agents simultaneously)
+\item Est. 5–6 months
+\end{itemize}
+
+\textbf{Impact:} Identifies \textbf{exploitable weaknesses before deployment} (could be critical for safety-critical applications like industrial networks).
+
+
+\subsection{6.2.4 Online Retraining và Concept Drift Handling (Continuous Learning)}
+
+\textbf{Hiện tại:} Policy fixed after training; no adaptation to new threats
+
+\textbf{Đề xuất:}
+\begin{itemize}
+\item \textbf{Drift detection:} Monitor recent traffic against policy — if FPR sudden spike or new attack signature detected → trigger retraining flag
+\item \textbf{Incremental retraining:} Fine-tune policy on recent flows without forgetting old knowledge (elastic weight consolidation, replay buffer sampling)
+\item \textbf{A/B testing:} Run old vs. new policy in parallel on shadow traffic to validate before swapover
+\end{itemize}
+
+\textbf{Tại sao quan trọng:} Threat landscape evolves (new malware variants, new evasion techniques). Policy becomes stale. Manual policy updates every 6 months insufficient.
+
+\textbf{Effort:} Moderate–High — requires:
+\begin{itemize}
+\item Drift detection statistical test (change detection in data distribution)
+\item Continual learning library integration (ewc, SI, etc.)
+\item CI/CD pipeline for policy retraining
+\item Est. 2–3 weeks
+\end{itemize}
+
+\textbf{Impact:} Maintains defensive effectiveness over years, not just deployment moment.
+
+
+\subsection{6.2.5 Transparent Decision Logs và Explainability (Interpretability for Operations)}
+
+\textbf{Hiện tại:} Policy is black-box; operator sees "Action predicted" without explanation
+
+\textbf{Đề xuất:}
+\begin{itemize}
+\item \textbf{Attention visualization:} Show which features (F1–F20) most influenced decision (SHAP, LIME applied per-inference)
+\item \textbf{Decision logs:} "Request from 203.0.113.45, SYN ratio=0.9, PacketRate=500 → F1 and F2 both high → Predicted Action: BLOCK with 92% confidence, 8% exploratory noise"
+\item \textbf{Policy audit trail:} Render learned decision tree (even if learned implicitly) for security reviewer approval
+\end{itemize}
+
+\textbf{Tại sao quan trọng:}
+\begin{itemize}
+\item \textbf{Regulatory:} PCI-DSS, GDPR demand audit trails ("why was this request blocked?")
+\item \textbf{Operational trust:} Security teams won't trust black-box system without explainability
+\item \textbf{Debugging:} If false positive, explain "which 3 features triggered?"
+\end{itemize}
+
+\textbf{Effort:} Moderate — requires:
+\begin{itemize}
+\item LIME/SHAP library integration
+\item UI dashboard for logs
+\item Policy serialization for audit
+\item Est. 2–3 weeks
+\end{itemize}
+
+\textbf{Impact:} \textbf{Enables production deployment} — currently biggest blocker to SOC adoption is "I don't understand why AI blocked this."
+
+
+\subsection{6.2.6 Simulation-to-Reality Gap Validation (Sim2Real Transfer Learning)}
+
+\textbf{Hiện tại:} policy trained on Containernet, real-world generalization unknown
+
+\textbf{Đề xuất — Three-phase approach:}
+
+\textbf{Phase 1: Distribution Shift Analysis}
+\begin{itemize}
+\item Collect real network packet traces (e.g., from LSNM2024 dataset, or customer firewall PCAP)
+\item Compare feature distributions: compute F1–F20 statistics (mean, variance, percentiles) for real vs. simulated traffic
+\item Identify \textbf{largest distribution shifts} (e.g., real networks have 10× higher PacketRate variance)
+\end{itemize}
+
+\textbf{Phase 2: Policy Transfer + Evaluation}
+\begin{itemize}
+\item Deploy \textbf{trained Containernet policy} on real traffic (shadow mode, no actual blocking)
+\item Evaluate: detection rate on real attacks
+\item Expected outcome: degradation (e.g., from 91.6% → 70–80% on real data due to distribution shift)
+\end{itemize}
+
+\textbf{Phase 3: Sim2Real Fine-tuning}
+\begin{itemize}
+\item Use real traffic to \textbf{fine-tune policy} (continue training on real data, smaller learning rate to avoid catastrophic forgetting)
+\item Target: restore detection to near 91%ish (adjusted for real-network attack diversity)
+\item Deployment: use fine-tuned policy
+\end{itemize}
+
+\textbf{Tại sao quan trọng:} Single most critical risk to production deployment. Containernet ≠ real network.
+
+\textbf{Effort:} Very High — requires:
+\begin{itemize}
+\item Real-world dataset access (privacy-sensitive)
+\item Large-scale labeling effort (attack vs. legitimate classification on real data)
+\item Distributed evaluation infrastructure (policy inference at scale)
+\item Est. 2–3 months
+\end{itemize}
+
+\textbf{Impact:} \textbf{Gateway to actual production deployment}. Without this, no amount of lab validation matters.
+
+
+\section{Tóm tắt và Tầm nhìn Tương lai}
+
+Dự án này đã chứng minh rằng RL là một \textbf{feasible, practical nền tảng} cho hệ thống phòng thủ mạng tự chủ. Ba câu hỏi nghiên cứu được trả lời:
+\begin{itemize}
+\item \textbf{RQ1:} RL outperforms rule-based (91.6% vs. 74.3%)
+\item \textbf{RQ2:} RL balances security ∧ availability (93.2% legit allowed, 96%+ attack mitigation)
+\item \textbf{RQ3:} RL maintains stable policy across diverse attacks
+\end{itemize}
+
+Tuy nhiên, chặng đường từ lab success đến production deployment là dài. Bốn hướng chính (multi-agent, adversarial robustness, continuous learning, Sim2Real validation) là những bước tiếp theo tự nhiên định hình tương lai của bộ phòng thủ RL-driven.
+
+Sự kết hợp của \textbf{academic rigor} (ablation studies, distributed learning theory) và \textbf{operational pragmatism} (honeypot escalation, FPR management, SIEM integration) là chìa khóa để RL defense không chỉ là proof-of-concept mà là \textbf{deployed reality} trong các tổ chức sắp tới.
+
+
+\section{TÀI LIỆU THAM KHẢO}
+
+[1] Puterman, M. L. (1994). \textit{Markov Decision Processes: Discrete Stochastic Dynamic Programming}. John Wiley & Sons.
+
+[2] Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O. (2017). Proximal Policy Optimization Algorithms. \textit{arXiv preprint arXiv:1707.06347}.
+
+[3] Raffin, A., Hill, A., Gleave, A., Kanervisto, A., Ernestus, M., & Dormann, N. (2021). Stable-Baselines3: Reliable Reinforcement Learning Implementations. \textit{Journal of Machine Learning Research, 22}(268), 1–8.
+
+[4] Peuster, M., Karl, H., & van Rossem, S. (2016). MeDICINE: Rapid Prototyping of Production-Ready Network Services in Multi-PoP Environments. Trong \textit{Proceedings of the IEEE Conference on Network Function Virtualization and Software Defined Networks (NFV-SDN 2016)}, trang 148–153.
+
+[5] Lashkari, A. H., et al. (2024). \textit{LSNM2024: A Labeled Network Traffic Dataset for Intrusion Detection}. Đại học New Brunswick.
+
+[6] Sharafaldin, I., Lashkari, A. H., & Ghorbani, A. A. (2018). Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic Characterization. Trong \textit{Proceedings of the 4th International Conference on Information Systems Security and Privacy (ICISSP 2018)}, trang 108–116.
+
+[7] Postel, J. (1981). \textit{Transmission Control Protocol}. RFC 793. IETF.
+
+[8] OWASP Foundation. (2023). \textit{OWASP ModSecurity Core Rule Set (CRS) v4.0}. https://coreruleset.org/
+
+[9] Spett, K. (2005). \textit{SQL Injection: Are Your Web Applications Vulnerable?} SPI Dynamics White Paper.
+
+[10] Kruegel, C., & Vigna, G. (2003). Anomaly Detection of Web-Based Attacks. Trong \textit{Proceedings of the 10th ACM CCS} (trang 251–261).
+
+[11] Towers, M., et al. (2023). Gymnasium: A Standard Interface for Reinforcement Learning Environments. \textit{arXiv preprint arXiv:2407.17032}.
+
+[12] Sutton, R. S., & Barto, A. G. (2018). \textit{Reinforcement Learning: An Introduction} (Phiên bản thứ 2). MIT Press.
+
+[13] Mnih, V., et al. (2015). Human-Level Control through Deep Reinforcement Learning. \textit{Nature, 518}(7540), 529–533.
+
+[14] OWASP Foundation. (2021). \textit{OWASP Top Ten}. https://owasp.org/www-project-top-ten/
+
+[15] Shiravi, A., Shiravi, H., Tavallaee, M., & Ghorbani, A. A. (2012). Toward Developing a Systematic Approach to Generate Benchmark Datasets for Intrusion Detection. \textit{Computers & Security, 31}(3), 357–374.
+
+[16] Moustafa, N., & Slay, J. (2015). UNSW-NB15: A Comprehensive Dataset for Network Intrusion Detection Systems. Trong \textit{Proceedings of MilCIS 2015}.
+
+[17] Ring, M., et al. (2019). A Survey of Network-Based Intrusion Detection Data Sets. \textit{Computers & Security, 86}, 147–167.
+
+[18] ModSecurity. (2023). \textit{ModSecurity Web Application Firewall Documentation}. https://modsecurity.org/
+
+[19] Fielding, R., & Reschke, J. (2014). \textit{Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing}. RFC 7230. IETF.
+
+[20] Schmitt, F., Gassen, J., & Gerhards-Padilla, E. (2012). HTTP Antivirus Proxy — An Approach to Defend Against Slow HTTP DoS Attacks. Trong \textit{Proceedings of IEEE ICCNC 2012}.
+
+[21] Abu Al-Haija, Q., Masoud, Z., Yasin, A., Alesawi, K., & Alkarnawi, Y. (2025). End-to-End Threat Hunting with a Novel Multiclass Dataset for Intelligent Intrusion Detection. \textit{arXiv preprint arXiv:2508.05609}. Đại học Khoa học và Công nghệ Jordan & Đại học Công nghệ Công chúa Sumaya.
+
+
+\begin{thebibliography}{99}
+
+\bibitem{puterman1994} Puterman, M. L. (1994). \textit{Markov Decision Processes: Discrete Stochastic Dynamic Programming}. John Wiley \& Sons.
+
+\bibitem{schulman2017} Schulman, J., Wolski, F., Dhariwal, P., Radford, A., \& Klimov, O. (2017). Proximal Policy Optimization Algorithms. \textit{arXiv preprint arXiv:1707.06347}.
+
+\bibitem{raffin2021} Raffin, A., Hill, A., Gleave, A., Kanervisto, A., Ernestus, M., \& Dormann, N. (2021). Stable-Baselines3: Reliable Reinforcement Learning Implementations. \textit{Journal of Machine Learning Research}, \textbf{22}(268), 1--8.
+
+\bibitem{peuster2016} Peuster, M., Karl, H., \& van Rossem, S. (2016). MeDICINE: Rapid Prototyping of Production-Ready Network Services in Multi-PoP Environments. In \textit{Proceedings of IEEE NFV-SDN 2016} (pp. 148--153).
+
+\bibitem{lashkari2024} Lashkari, A. H., et al. (2024). \textit{LSNM2024: A Labeled Network Traffic Dataset}. University of New Brunswick.
+
+\bibitem{sharafaldin2018} Sharafaldin, I., Lashkari, A. H., \& Ghorbani, A. A. (2018). Toward Generating Network Intrusion Detection Datasets. \textit{ICISSP 2018} (pp. 108--116).
+
+\bibitem{postel1981} Postel, J. (1981). \textit{Transmission Control Protocol}. RFC 793. IETF.
+
+\bibitem{owasp2023} OWASP Foundation. (2023). \textit{OWASP ModSecurity Core Rule Set v4.0}. https://coreruleset.org/
+
+\bibitem{spett2005} Spett, K. (2005). \textit{SQL Injection: Are Your Web Applications Vulnerable?} SPI Dynamics.
+
+\bibitem{kruegel2003} Kruegel, C., \& Vigna, G. (2003). Anomaly Detection of Web-Based Attacks. \textit{ACM CCS} (pp. 251--261).
+
+\bibitem{towers2023} Towers, M., et al. (2023). Gymnasium: A Standard RL Interface. \textit{arXiv:2407.17032}.
+
+\bibitem{sutton2018} Sutton, R. S., \& Barto, A. G. (2018). \textit{Reinforcement Learning: An Introduction} (2nd ed.). MIT Press.
+
+\bibitem{mnih2015} Mnih, V., et al. (2015). Human-Level Control via Deep RL. \textit{Nature}, \textbf{518}(7540), 529--533.
+
+\bibitem{owasp2021} OWASP Foundation. (2021). \textit{OWASP Top Ten}. https://owasp.org/www-project-top-ten/
+
+\bibitem{shiravi2012} Shiravi, A., et al. (2012). Benchmark Datasets for IDS. \textit{Computers \& Security}, \textbf{31}(3), 357--374.
+
+\bibitem{moustafa2015} Moustafa, N., \& Slay, J. (2015). UNSW-NB15 Dataset. \textit{MilCIS 2015}.
+
+\bibitem{ring2019} Ring, M., et al. (2019). A Survey of Network-Based IDS Datasets. \textit{Computers \& Security}, \textbf{86}, 147--167.
+
+\bibitem{modsecurity2023} ModSecurity. (2023). \textit{ModSecurity WAF Documentation}. https://modsecurity.org/
+
+\bibitem{fielding2014} Fielding, R., \& Reschke, J. (2014). \textit{HTTP/1.1: Message Syntax and Routing}. RFC 7230. IETF.
+
+\bibitem{schmitt2012} Schmitt, F., et al. (2012). HTTP Antivirus Proxy. \textit{IEEE ICCNC 2012}.
+
+\bibitem{alhija2025} Abu Al-Haija, Q., et al. (2025). End-to-End Threat Hunting with IDS Dataset. \textit{arXiv:2508.05609}. Jordan University.
+
+\end{thebibliography}
+
+\end{document}
