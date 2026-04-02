@@ -54,7 +54,7 @@ class FlowFeatureCalculator:
           F11: PacketsPerPort          tỷ lệ
         SQLi [11-16]:
           F12: SqlSpecialChar          tỷ lệ [0,1]
-          F13: CrsSquliScore           số lượng (0-N)
+          F13: CrsSqliScore            số lượng (0-N)
           F14: SqlUnionSelect          nhị phân 0/1
           F15: SqlComment              nhị phân 0/1
           F16: SqlStackedQuery         nhị phân 0/1

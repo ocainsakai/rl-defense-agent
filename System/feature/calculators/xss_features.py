@@ -5,7 +5,7 @@
 - F19: JsFunctionCall   - Gọi hàm JS nguy hiểm (giữ lại: F1=0.995 khi kiểm thử)
 - F20: HtmlEventHandler - HTML event handler (giữ lại: F1=0.755 khi kiểm thử)
 
-Nguồn CRS: REQUEST-941-APPLICATION-ATTACK-XSS.conf (paranoia level 1)
+Nguồn CRS: REQUEST-941-APPLICATION-ATTACK-XSS.conf (paranoia level 2)
   Bao gồm: script tags, event handler, JS URI, NoScript injection,
            IE XSS filter, obfuscation JSFuck, AngularJS SSTI,
            từ khóa blacklist node-validator, ...

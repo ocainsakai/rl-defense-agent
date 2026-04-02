@@ -40,10 +40,10 @@ from feature.calculators.network_features_ext import (
     F11_PacketsPerPort,
 )
 
-# SQLi features (F12=SqlSpecialChar, F13=CrsSquliScore, F14=UnionSelect, F15=Comment, F16=Stacked, F17=SelectCount)
+# SQLi features (F12=SqlSpecialChar, F13=CrsSqliScore, F14=UnionSelect, F15=Comment, F16=Stacked, F17=SelectCount)
 from feature.calculators.sqli_features import (
     F12_SqlSpecialChar,
-    F13_CrsSquliScore,
+    F13_CrsSqliScore,
     F14_SqlUnionSelect,
     F15_SqlComment,
     F16_SqlStackedQuery,
@@ -77,7 +77,7 @@ __all__ = [
 
     # SQLi features (F12-F17)
     'F12_SqlSpecialChar',
-    'F13_CrsSquliScore',
+    'F13_CrsSqliScore',
     'F14_SqlUnionSelect',
     'F15_SqlComment',
     'F16_SqlStackedQuery',

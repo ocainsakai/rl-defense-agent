@@ -75,8 +75,8 @@ class PayloadNormalizer:
         1. Kiểm tra kích thước (trả về "" nếu quá lớn)
         2. Chuyển đổi bytes -> string (UTF-8 với fallback Latin-1)
         3. HTML entity decode (unescape)
-        4. URL decode đệ quy (tối đa 3 lần)
-        5. Base64 decode đệ quy (tối đa 3 lần)
+        4. URL decode đệ quy (tối đa 2 lần)
+        5. Base64 decode đệ quy (tối đa 2 lần)
         6. Chuẩn hóa khoảng trắng (nhiều khoảng trắng -> 1 khoảng trắng)
         7. Chuyển đổi thành chữ thường
         

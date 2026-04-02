@@ -122,7 +122,7 @@ class F7_HttpIatUniformity(FeatureBase):
                 if getattr(pkt, 'has_http', False) and pkt.timestamp is not None:
                     all_timestamps.append(pkt.timestamp)
 
-        # Guard: cần ít nhất 2 HTTP requests để tính IAT
+        # Guard: cần ít nhất 3 HTTP requests để tính CV có nghĩa (2 IATs tối thiểu)
         if len(all_timestamps) < 2:
             return 0.0
 

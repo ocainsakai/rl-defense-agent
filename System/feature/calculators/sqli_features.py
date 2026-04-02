@@ -1,7 +1,7 @@
 """Đặc trưng phụ SQLi — Phát hiện SQL Injection mạnh mẽ dựa trên CRS.
 
 Đặc trưng:
-- F12: SqlSpecialChar   - Tỷ lệ ký tự đặc biệt SQL (', -, ;, #, =)
+- F12: SqlSpecialChar   - Tỷ lệ ký tự đặc biệt SQL (', ;, #)
 - F13: CrsSqliScore     - Điểm bất thường OWASP CRS 942 (0 đến N) — phủ rộng
 - F14: SqlUnionSelect   - UNION SELECT injection — kỹ thuật trích xuất dữ liệu
 - F15: SqlComment       - SQL comment injection (--, #, /**/) — cắt query
@@ -118,7 +118,7 @@ class F12_SqlSpecialChar(FeatureBase):
 
 
 @register_feature(FeatureMetadata(
-    name="CrsSquliScore",
+    name="CrsSqliScore",
     code="F13",
     description=(
         "Điểm CRS 942 trung bình mỗi HTTP request — số rule SQLi kích hoạt / số request. "
@@ -128,7 +128,7 @@ class F12_SqlSpecialChar(FeatureBase):
     ),
     category="sqli",
 ))
-class F13_CrsSquliScore(FeatureBase):
+class F13_CrsSqliScore(FeatureBase):
     """
     F13: ĐIỂM BẤT THƯỜNG CRS SQLi (bình quân mỗi request)
 
@@ -276,7 +276,7 @@ class F17_SqlSelectCount(FeatureBase):
     F17: SỐ SELECT TRUNG BÌNH MỖI HTTP REQUEST
 
     Đếm số lần xuất hiện SELECT / số HTTP request trong window.
-    Normalize theo request count để nhất quán với F13 (CrsSquliScore).
+    Normalize theo request count để nhất quán với F13 (CrsSqliScore).
 
     VD: SELECT * FROM users UNION SELECT * FROM passwords → 2 SELECT / 1 request = 2.0
 
@@ -305,7 +305,7 @@ class F17_SqlSelectCount(FeatureBase):
 
 __all__ = [
     'F12_SqlSpecialChar',
-    'F13_CrsSquliScore',
+    'F13_CrsSqliScore',
     'F14_SqlUnionSelect',
     'F15_SqlComment',
     'F16_SqlStackedQuery',
