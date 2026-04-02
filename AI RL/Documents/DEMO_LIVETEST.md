@@ -684,27 +684,39 @@ hping3 -S -p 443 -i u200 --count 500 192.168.10.10
 
 ---
 
-### Kịch bản 8b — DNS Amplification Simulation (chưa train)
+### Kịch bản 8b — C2 Beaconing / Malware Callback (chưa train)
 
-**Bản chất**: Flood UDP traffic lớn → tạo đặc điểm DDoS rõ ràng.
+**Bản chất**: Malware sau khi xâm nhập sẽ gửi request định kỳ về C2 server để nhận lệnh — pattern rất đều đặn, traffic nhỏ, ẩn trong HTTPS bình thường.
 
-**Feature signature**:
-- F1 (PacketRate): rất cao — flood
-- F4 (RstRatio): cao — nhiều RST
-- F10 (FwdBwdRatio): bất thường
+**Feature signature — khác hoàn toàn mọi loại đã train**:
+- F1 (PacketRate): **rất thấp** — chỉ 1 request mỗi 10-30 giây
+- F3 (InterArrivalTime): **rất cao và đều đặn** — khoảng cách giữa request gần như bằng nhau
+- F7 (HttpIatUniformity): **rất cao** — timing uniform (khác hẳn human browsing)
+- F6 (URLConcentration): cao — luôn hit cùng 1 endpoint `/beacon`
 
-**Gần nhất với**: `syn_flood` / `scan`
+**Gần nhất với**: Không rõ ràng — không giống bất kỳ loại nào đã train
 
 ```bash
-# Trong terminal attacker
-hping3 --udp -p 53 --flood --count 1000 192.168.10.10
-# PacketRate tăng vọt → AI block ngay
+# Trong terminal attacker — simulate C2 beacon mỗi 8 giây
+for i in $(seq 1 15); do
+  SSLKEYLOGFILE=/tmp/tls_keys.log curl -sk \
+    "https://192.168.10.10/beacon?id=c2_$(hostname)&seq=$i" \
+    -o /dev/null
+  sleep 8
+done
+# Chạy ~2 phút → NIDS capture đủ window
 ```
 
 **Kết quả kỳ vọng**:
 ```
-[ts] 10.0.10.10      | RL:Block → Block
+[ts] 10.0.10.10      | RL:Allow → Allow
+# hoặc
+[ts] 10.0.10.10      | RL:RateLimit → RateLimit
 ```
+
+**Giải thích — honest limitation thứ 2**: C2 beaconing có PacketRate thấp, không flood, không SQLi/XSS features → AI không thấy dấu hiệu nguy hiểm rõ ràng → Allow hoặc RateLimit. Đây là giới hạn của **network-volume-based IDS**: C2 beaconing ẩn trong traffic HTTPS bình thường, cần thêm behavioral analysis (phân tích pattern thời gian) mới phát hiện được — nằm ngoài scope của hệ thống hiện tại.
+
+> **Lưu ý cho demo**: Kịch bản này chứng minh AI **trung thực về giới hạn** — không Block bừa traffic thấp chỉ vì nghi ngờ, giảm false positive. Nhưng cũng vì vậy mà C2 chậm sẽ thoát được.
 
 ---
 
@@ -769,7 +781,7 @@ done
 
 ### Luận điểm học thuật cho ACT 8
 
-> "AI RL không học nhận diện **tên** tấn công mà học nhận diện **đặc điểm traffic** trong 20D feature space. 3/4 tấn công mới thử nghiệm (Slowloris, DNS Amplification, Credential Stuffing) đều được xử lý đúng hướng dù chưa từng xuất hiện trong training — vì feature signature của chúng nằm gần với các loại đã biết. Path traversal (8d) là honest limitation: khi feature không đủ rõ ràng, AI giữ conservative action thay vì Block sai — tốt hơn Rule-Based vốn sẽ block nhầm hoặc bỏ sót không nhất quán."
+> "AI RL không học nhận diện **tên** tấn công mà học nhận diện **đặc điểm traffic** trong 20D feature space. 2/4 tấn công mới thử nghiệm (Slowloris → Block, Credential Stuffing → Redirect) được xử lý đúng hướng dù chưa từng xuất hiện trong training — vì feature signature của chúng nằm gần với các loại đã biết. 2/4 trường hợp còn lại (Path Traversal, C2 Beaconing) là honest limitation: Path Traversal không tạo network feature rõ ràng; C2 Beaconing ẩn trong HTTPS traffic nhỏ giọt đều đặn — cả hai đều cần thêm layer phân tích ngoài network-volume IDS. Quan trọng: AI không Block sai những traffic này — giữ conservative action, tránh false positive."
 
 ---
 
