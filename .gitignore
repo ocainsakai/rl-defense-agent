@@ -224,7 +224,10 @@ L1_Cap*
 
 # Model checkpoints trung gian (chỉ giữ bản final qua LFS)
 # checkpoints/
-# runs/
+# Ignore old training runs, keep only run_final_v4
+AI RL/runs/run_2026*/
+AI RL/runs/run_final_v2/
+AI RL/runs/run_final_v3/
 wandb/
 mlruns/
 *.ckpt
@@ -462,3 +465,34 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+
+# Large files — không commit
+AI RL/runs/*/checkpoints/
+AI RL/runs/*/tb/
+AI RL/runs/run_34d_v1/
+AI RL/runs/run_34d_v2/
+AI RL/runs/run_34d_v3/
+AI RL/runs/run_34d_v3_cont/
+AI RL/runs/run_34d_v4/
+AI RL/runs/run_34d_v5/
+AI RL/runs/run_34d_v6/
+AI RL/runs/run_34d_v7/
+AI RL/runs/run_34d_v8/
+AI RL/runs/run_34d_v9/
+AI RL/runs/run_34d_v10/
+AI RL/runs/run_34d_v11/
+AI RL/runs/run_34d_v12/
+AI RL/runs/run_34d_kl_probe_100k/
+AI RL/runs/run_34d_kl_probe_500k/
+AI RL/runs/run_soft_v1/
+AI RL/runs/run_v2_30d/
+AI RL/runs/run_v2_30d_continued/
+AI RL/runs/run_v3_30d/
+AI RL/runs/run_v4_30d/
+AI RL/runs/run_v5_30d/
+AI RL/runs/run_v6_30d/
+AI RL/runs/run_v7_30d/
+datasets/
+training_data_retrain.jsonl
+.claude/scheduled_tasks.lock
+.codex
