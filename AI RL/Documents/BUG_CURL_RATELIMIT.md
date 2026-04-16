@@ -44,7 +44,11 @@ for f6 in [0.0, 0.1, 0.2, 0.3, 0.4]:
     # F6=0.3 → Allow
 ```
 
-## Hướng sửa (chưa implement)
+## Trạng thái: ĐÃ ĐƯỢC XỬ LÝ (xem bên dưới)
+
+---
+
+## Hướng sửa (tham khảo — các option bên dưới đã được implement theo cách tốt hơn)
 
 ### Option 1: Policy override trong `infer.py` (nhanh nhất)
 
@@ -74,7 +78,19 @@ Trong `MockIPBehavior._init_base_state()` cho `'benign'`:
 
 Trong `System/core/tshark_l7.py`: nếu tshark chưa decrypt kịp 1 window, điền F6 bằng giá trị từ window trước (carry-forward) thay vì để 0.
 
-## Workaround tạm thời
+## Fix đã implement (thay thế các options trên)
+
+3 lớp bảo vệ trong `IDSDefenseAgent` (cả v1 và v2 path):
+
+| Guard | Vị trí | Cách hoạt động |
+|---|---|---|
+| `_apply_decrypt_miss_guard()` | `infer.py` ~line 716 | Dùng metadata `meta_https_data_packets` + `meta_l7_confident` từ NIDS để detect window bị decrypt miss → downgrade về Allow |
+| `_apply_benign_browse_guard()` | `infer.py` ~line 760 | Detect single page-fetch nhỏ (F6≥0.95, https_data_packets≤4, không có attack signal) bị nhầm Redirect → về Allow |
+| `_apply_demo_safe_override()` | `infer.py` ~line 808 | Fallback heuristic (chỉ active với `--demo-safe` flag): F6≤0.05 + F9≤0.05 + benign profile → Allow |
+
+**Yêu cầu:** NIDS sniffer (`System/main.py`) phải emit metadata fields `meta_https_data_packets`, `meta_https_unenriched_packets`, `meta_l7_confident` trong JSONL output để các guard hoạt động đầy đủ.
+
+## Workaround tạm thời (vẫn còn hiệu lực)
 
 Giảm `CLEAN_WINDOWS_TO_DOWNGRADE[1]` từ 5 → 2 trong `infer.py` (đã làm):
 ```python

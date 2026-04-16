@@ -804,7 +804,11 @@ done
 
 ```bash
 # Terminal AI Agent — gán nhãn sqli_xss cho toàn bộ traffic đang đến
-sudo python3 infer.py --watch /tmp/sniffer_output.jsonl --label sqli_xss
+sudo python3 infer.py \
+    --watch /tmp/sniffer_output.jsonl \
+    --model runs/run_final_v4/best_model \
+    --collect /tmp/collect_$(date +%Y%m%d).jsonl \
+    --label sqli_xss
 # → Tự động ghi training_data.jsonl với label="sqli_xss" mỗi window
 ```
 
@@ -855,9 +859,10 @@ Trong thực tế, admin không thể biết trước mọi traffic là loại g
 **Bước 1**: Chạy infer với `--collect` — thu thập mà không gán nhãn
 
 ```bash
-sudo python3 infer.py --watch /tmp/sniffer_output.jsonl \
+sudo python3 infer.py \
+    --watch /tmp/sniffer_output.jsonl \
+    --model runs/run_final_v4/best_model \
     --collect /tmp/collect_$(date +%Y%m%d).jsonl
-# → Ghi collect_20260402.jsonl:
 #   {"timestamp":..., "src_ip":..., "label":null, "ai_action":"Block", "features":[...]}
 #   label=null — chưa biết, ai_action là GỢI Ý của AI để admin review
 ```
@@ -897,11 +902,14 @@ cd "/home/binhhl/Downloads/rl-defense-agent/AI RL"
 # Gộp data labeled mới với data cũ (nếu có)
 cat training_data.jsonl /tmp/labeled_$(date +%Y%m%d).jsonl > /tmp/dataset_merged.jsonl
 
-# Backup và retrain
+# Backup và retrain TỪ DATA THẬT (--mode replay)
 cp policy_model.zip policy_model_backup_$(date +%Y%m%d).zip
-python3 train.py --timesteps 100000 \
-    --resume_from runs/run_final_v4/best_model.zip
-# → 100k steps (~10 phút) — đủ để model học thêm từ pattern thực tế
+python3 train.py \
+    --mode replay \
+    --training_data /tmp/dataset_merged.jsonl \
+    --resume_from runs/run_final_v4/best_model.zip \
+    --timesteps 100000
+# → 100k steps (~10 phút) — model học từ feature thật, không phải synthetic mock
 ```
 
 ---
@@ -929,3 +937,385 @@ A: Về kỹ thuật có thể dùng `ai_action` của chính model làm pseudo-
 **Q: Fine-tune có làm model quên kiến thức cũ không?**
 
 A: Rủi ro này gọi là "catastrophic forgetting". Giảm thiểu bằng cách: (1) dùng `--resume_from` thay vì train từ đầu, (2) dùng ít steps hơn (50k–100k thay vì 500k), (3) mix data mới với data cũ khi merge dataset. Trong thực nghiệm, 50k steps fine-tune từ checkpoint giữ được >95% kiến thức cũ.
+
+---
+
+### 9C — Tự Động Hóa Hoàn Toàn (adapt_pipeline.py)
+
+**Vấn đề của 9B**: Admin phải dùng `jq` để gán nhãn thủ công từng batch — tốn thời gian, dễ sai.
+
+**Giải pháp**: `adapt_pipeline.py` — script tự động gán nhãn dựa trên **heuristic feature threshold** rút ra từ base_state của MockIPBehavior. Kết quả ghi thẳng vào `training_data.jsonl`, sau đó dùng `train.py --mode replay` để retrain từ data thật.
+
+**Kiến trúc pipeline đầy đủ:**
+
+```
+infer.py --collect  →  collect_YYYYMMDD.jsonl  (label=null, ai_action, features[20])
+adapt_pipeline.py   →  training_data.jsonl      (label=auto, features[20])
+train.py --mode replay  →  model mới            (học từ data thật)
+```
+
+---
+
+**Bước 1**: Thu thập passive song song với production (giống 9B)
+
+```bash
+sudo python3 infer.py \
+    --watch /tmp/sniffer_output.jsonl \
+    --model runs/run_final_v4/best_model \
+    --collect /tmp/collect_$(date +%Y%m%d).jsonl
+# Chạy liên tục — Ctrl+C khi đủ data (thường 5–15 phút)
+```
+
+---
+
+**Bước 2**: Dry-run để xem trước nhãn sẽ được gán
+
+```bash
+cd "/home/binhhl/Downloads/rl-defense-agent/AI RL"
+python3 adapt_pipeline.py \
+    --input /tmp/collect_$(date +%Y%m%d).jsonl \
+    --auto-label \
+    --dry-run
+```
+
+Output mẫu:
+```
+====================================================
+  ADAPT PIPELINE — KẾT QUẢ
+====================================================
+  Input:   /tmp/collect_20260402.jsonl
+  Output:  training_data.jsonl  [DRY-RUN, không ghi]
+  Records đã xử lý: 247
+  Records hợp lệ:   231
+
+  Phân phối nhãn:
+    benign          87  ( 37.7%)  ███████
+    brute_force     43  ( 18.6%)  ███
+    noisy_normal    38  ( 16.5%)  ███
+    sqli_xss        35  ( 15.2%)  ███
+    syn_flood       28  ( 12.1%)  ██
+====================================================
+```
+
+---
+
+**Bước 3**: Admin review — nếu phân phối hợp lý → ghi thật
+
+```bash
+python3 adapt_pipeline.py \
+    --input /tmp/collect_$(date +%Y%m%d).jsonl \
+    --output training_data.jsonl \
+    --auto-label \
+    --min-confidence 0.5   # chỉ ghi sample có confidence ≥ 0.5
+```
+
+---
+
+**Bước 4**: Retrain với `--mode replay` (học từ data thật, không phải mock)
+
+```bash
+cp policy_model.zip policy_model_backup_$(date +%Y%m%d).zip
+python3 train.py \
+    --mode replay \
+    --training_data training_data.jsonl \
+    --resume_from runs/run_final_v4/best_model.zip \
+    --timesteps 50000
+# ~5 phút — kế thừa kiến thức cũ, học thêm từ feature thật
+```
+
+---
+
+**Bước 5**: Kiểm tra model mới so với cũ
+
+```bash
+# Chạy thử dry-run với model mới
+python3 infer.py \
+    --watch /tmp/sniffer_output.jsonl \
+    --model runs/run_*/best_model \
+    --no-enforce
+# So sánh quyết định với model cũ trên cùng traffic
+```
+
+---
+
+#### Heuristic Rules trong adapt_pipeline.py
+
+| Điều kiện (raw feature values) | Label | Lý do |
+|---|---|---|
+| F13 (CrsSqliScore) > 0.5 OR F18 (CrsXssScore) > 0.5 | `sqli_xss` | CRS score đặc trưng nhất |
+| F2 (SynAckRatio) > 5.0 | `syn_flood` | Nhiều SYN, ít ACK |
+| F5 (DistinctPorts) > 50 AND F4 (RstRatio) > 0.2 | `scan` | Port scan + RST cao |
+| F6 (URLConcentration) > 0.75 AND F1 (PacketRate) > 30 | `brute_force` | Tập trung URL + rate vừa |
+| F1 < 15 AND F2 < 0.5 AND F6 < 0.3 | `benign` | Tất cả indicator thấp |
+| else | `noisy_normal` | Fallback conservative |
+
+**Confidence score**: Mỗi rule tính khoảng cách khỏi threshold → sample có `confidence < --min-confidence` bị bỏ qua, không ghi vào training data. Mặc định `--min-confidence 0.4`.
+
+---
+
+#### Luận điểm học thuật cho 9C
+
+> "Vòng lặp adaptive hoàn chỉnh: hệ thống thu thập traffic thật qua `--collect`, script `adapt_pipeline.py` tự động gán nhãn dựa trên 5 heuristic rules rút ra từ domain knowledge về network traffic, sau đó `train.py --mode replay` cho model học lại trực tiếp từ feature thật thay vì synthetic mock. Đây không phải unsupervised learning — đây là **semi-automated Human-in-the-loop**: heuristic thay admin gán nhãn từng dòng, admin chỉ cần review phân phối tổng thể (`--dry-run`) trước khi xác nhận. Giảm workload admin từ O(n) dòng xuống O(1) quyết định."
+
+**Honest limitation**:
+> "Heuristic rules hiệu quả khi attack mới có feature signature gần với một trong 5 ip_type đã biết. Nếu attack mới hoàn toàn khác biệt (ví dụ: C2 beaconing rate thấp), rule fallback về `noisy_normal` — conservative, không block nhầm benign, nhưng cũng không học được pattern mới đó. Trong trường hợp này cần admin xác nhận thủ công (9B) hoặc thêm rule mới vào `adapt_pipeline.py`."
+
+---
+
+## Phụ Lục Kỹ Thuật — Flow Retrain Replay Mode (dòng code cụ thể)
+
+> Mục đích: tra cứu nhanh khi bị hỏi "code nào xử lý bước nào" trong vòng lặp retrain.
+
+---
+
+### TỔNG QUAN FLOW
+
+```
+training_data.jsonl
+  │  {"label":"brute_force", "features":[35.0, 0.2, ..., 0.92, ..., 0.0]}
+  │
+  ▼  [env_ids_harder.py:830] _load_replay_records()
+  │  Đọc file, lọc record có features[20], trả list
+  │
+  ▼  [env_ids_harder.py:903] ReplayBehavior(records)
+  │  Giữ list trong RAM, shuffle ngẫu nhiên
+  │
+  ▼  [env_ids_harder.py:1084] env.step() gọi _compute_reward()
+  │  features_before = behavior.get_features()  → raw [35.0, 0.2, ..., 0.92]
+  │
+  ▼  [env_ids_harder.py:1013] _normalize_features()
+  │  F1=35 → log(36)/log(501)=0.58 | F6=0.92 → pass-through=0.92
+  │  obs = [0.58, 0.04, ..., 0.92, ..., 0.0, 0.0, ...]
+  │
+  ▼  PPO nhận obs[20] → ra action (0/1/2/3)
+  │
+  ▼  [env_ids_harder.py:1046] compute_network_damage(features_before)
+  │  Tính damage từ F1,F2,F4,F5,F9,F12-F16,F18-F20
+  │  (F6 KHÔNG có ở đây — F6 chỉ dùng trong action_bonus)
+  │
+  ▼  [env_ids_harder.py:1059] compute_action_bonus(action, features_before, damage)
+  │  brute_signal = F6×0.4 + F7×0.3 + F8×0.3 = 0.92×0.4+... = 0.64
+  │  is_layer7 = soft_gate(0.64, threshold=0.35) ≈ 0.95
+  │  Redirect → bonus += 0.95 × 0.35 = +0.33
+  │  Allow    → bonus -= 0.95 × 0.40 = -0.38
+  │
+  ▼  [env_ids_harder.py:1061] total_reward = base_reward + reduction_bonus + action_bonus
+  │  clip(-1, +1)
+  │
+  ▼  PPO lưu (obs, action, reward) vào rollout buffer
+  │
+  ▼  [env_ids_harder.py:824] behavior.step_forward()
+  │  idx += 1 | nếu hết records → _shuffle() → lặp lại
+  │
+  ▼  Sau 2048 steps: PPO chạy gradient update × 10 epochs
+     Weights update: "F6=0.92 + action=Allow → bị phạt → giảm P(Allow)"
+```
+
+---
+
+### CHI TIẾT TỪNG HÀM QUAN TRỌNG
+
+#### `_load_replay_records()` — [env_ids_harder.py:830]
+```python
+# Điều kiện để 1 record được chấp nhận:
+if 'features' in rec and len(rec['features']) == 20:
+    records.append(rec)
+# Label không validate ở đây — chỉ cần features[20]
+```
+**Vai trò**: Đọc JSONL, lọc record hợp lệ → trả list cho ReplayBehavior
+
+---
+
+#### `ReplayBehavior.get_features()` — [env_ids_harder.py:813]
+```python
+def get_features(self) -> list:
+    rec = self.records[self.idx % len(self.records)]
+    return list(rec['features'])   # raw values, không normalize
+```
+**Vai trò**: Trả feature thật từ record hiện tại. Gọi mỗi step.
+
+---
+
+#### `ReplayBehavior.apply_closed_loop_effect()` — [env_ids_harder.py:820]
+```python
+def apply_closed_loop_effect(self, action: int):
+    pass   # no-op
+```
+**Vai trò**: Trong mock mode, Block làm F1→0. Replay mode không simulate điều này — features đến từ data thật, không thay đổi theo action.
+
+---
+
+#### `ReplayBehavior.step_forward()` — [env_ids_harder.py:824]
+```python
+def step_forward(self):
+    self.idx += 1
+    if self.idx >= len(self.records):
+        self._shuffle()   # shuffle rồi lặp từ đầu
+```
+**Vai trò**: Advance sang record tiếp theo. Mỗi record được gặp lại ~250 lần trong 50k steps với 200 records.
+
+---
+
+#### `compute_network_damage()` — [env_ids_harder.py:137]
+
+Tính damage từ feature values — **không dùng label, không có kế hoạch trước**:
+
+| Feature | Công thức | Ý nghĩa |
+|---|---|---|
+| F1 (PacketRate) | `logistic(F1/300)` | Capacity overflow |
+| F2 (SynAckRatio) | `tanh(max(0, F2-2)/5)` | SYN flood |
+| F4 (RstRatio) | `tanh(F4×2)` | Connection failure |
+| F5 (DistinctPorts) | `tanh(log(F5)/log(500)×2)` | Port scan |
+| F13 (CrsSqliScore) | `0.4×(F13/20)` | SQLi severity |
+| F18 (CrsXssScore) | `0.5×(F18/4)` | XSS severity |
+
+**F6 (URLConcentration) KHÔNG có trong hàm này** → ảnh hưởng brute force nằm ở `compute_action_bonus`.
+
+Weight tổng hợp (dòng 215-222):
+```python
+total = 0.25×pps + 0.15×rst + 0.15×scan + 0.10×payload + 0.10×syn + 0.25×sqli_xss
+```
+
+---
+
+#### `compute_action_bonus()` — [env_ids_harder.py:248]
+
+Đây là nơi F6 (URLConcentration) có tác dụng:
+
+```python
+# Dòng 291: brute_signal từ F6, F7, F8
+brute_signal = F6×0.4 + F7×0.3 + F8×0.3
+
+# Dòng 306: zone classification
+is_layer7 = soft_gate(max(brute_signal, sqli_signal, xss_signal), 0.35)
+
+# Dòng 325-330: bonus/penalty cho từng action
+Redirect  → +is_layer7 × 0.35   ← được thưởng khi F6 cao
+Allow     → -is_layer7 × 0.40   ← bị phạt nặng
+Block     → -is_layer7 × 0.20   ← cũng bị phạt (dùng honeypot tốt hơn)
+```
+
+**Vai trò**: Hướng dẫn action nào đúng cho từng loại tấn công — **không cần label**.
+
+---
+
+#### `_compute_reward()` — [env_ids_harder.py:1034]
+```python
+damage_before = compute_network_damage(features_before)
+damage_after  = compute_network_damage(features_after)   # replay: giống before (no closed-loop)
+action_cost   = compute_action_cost(action)              # Allow=0, RateLimit=0.01, Redirect=0.04, Block=0.15
+
+base_reward     = -(damage_after + action_cost)
+reduction_bonus = (damage_before - damage_after) × 0.5  # replay: luôn = 0 (no closed-loop)
+action_bonus    = compute_action_bonus(action, features_before, damage_before)
+
+total_reward = clip(base_reward + reduction_bonus + action_bonus, -1, +1)
+```
+**Hệ quả replay mode**: `reduction_bonus = 0` vì features_before == features_after (no closed-loop). Reward chủ yếu đến từ `action_bonus`.
+
+---
+
+### TẠI SAO LABEL TRONG JSONL KHÔNG DÙNG ĐỂ TÍNH REWARD?
+
+```
+Label "brute_force" trong JSONL
+  → chỉ dùng làm ip_type cho _apply_concept_drift() (không đáng kể)
+  → KHÔNG dùng trong compute_network_damage()
+  → KHÔNG dùng trong compute_action_bonus()
+
+Reward tính hoàn toàn từ feature values thật
+  → F6=0.92 → brute_signal=0.64 → is_layer7=0.95 → Redirect được thưởng
+  → Không cần biết tên "credential stuffing" hay "brute_force"
+```
+
+**Hệ quả**: Nếu `adapt_pipeline.py` gán sai label (credential stuffing → sqli_xss), **reward vẫn tính đúng** vì reward chỉ nhìn vào F6=0.92, không nhìn vào label.
+
+---
+
+### SỐ LẦN MODEL GẶP LẠI 1 RECORD
+
+```
+50,000 steps training
+÷ 200 records trong JSONL
+= 250 lần lặp qua toàn dataset
+
+× 10 epochs (n_epochs trong PPO)
+= mỗi record đóng góp vào ~2,500 gradient updates
+```
+
+Sau 50k steps, model đã "thấy" F6=0.92 hàng nghìn lần với tín hiệu reward nhất quán → convergence tốt.
+
+---
+
+## Known Issue: Brute Force → Block (Training Distribution Mismatch)
+
+### Vấn đề
+
+Trong một số trường hợp, RL model trả về **Block** thay vì **Redirect** cho brute_force traffic. Đây không phải lỗi reward function — reward đã thiết kế đúng:
+
+```python
+# env_ids.py — compute_action_bonus()
+if action == 2:   # Redirect — đúng cho layer7
+    bonus += is_layer7 * 0.35    # thưởng +0.35
+elif action == 3: # Block — sai cho layer7
+    bonus -= is_layer7 * 0.20   # phạt -0.20
+```
+
+### Nguyên nhân gốc
+
+`is_layer7` được tính từ `brute_signal`:
+
+```python
+brute_signal = f6_url * 0.4 + f7_iat * 0.3 + f8_size * 0.3
+```
+
+Khi tshark **chưa decrypt TLS kịp** (cửa sổ 1s đầu tiên của connection):
+- F6 (URLConcentration) = 0 — chưa thấy HTTP URL
+- F7 (HttpIatUniformity) = 0 — chưa có keep-alive IAT
+- → `brute_signal ≈ 0` → `is_layer7 ≈ 0` → tất cả bonus ≈ 0
+- → Model không phân biệt được brute_force hay DDoS
+- → Fallback: **Block** (giảm `damage_after` về 0 — "an toàn nhất")
+
+**Training không có trường hợp này**: MockIPBehavior luôn trả về F6=0.9, F7=0.85 cho brute_force — model chưa bao giờ thấy brute_force với F6=F7=0 trong quá trình train.
+
+### Workaround hiện tại (infer.py)
+
+```python
+# infer.py:468-473 — policy override
+if rl_action == 3 and len(raw) >= 20:
+    brute_score = max(raw[5], raw[6], raw[7])  # F6/F7/F8
+    if brute_score > 0.5:
+        rl_action = 2  # Block → Redirect
+```
+
+Chỉ kích hoạt khi F6/F7 đã decode được (> 0.5). Cửa sổ đầu tiên (F6=F7=0) vẫn có thể Block — nhưng IPStateTracker sẽ downgrade sau 2 clean windows.
+
+### Hướng sửa (Future Work)
+
+Thêm **domain randomization** vào MockIPBehavior — mô phỏng cửa sổ tshark chưa decrypt:
+
+```python
+# env_ids.py — MockIPBehavior.get_features() cho brute_force
+def get_features(self):
+    if self.ip_type == 'brute_force' and random.random() < 0.20:
+        # 20% xác suất: cửa sổ "chưa decrypt" — F6/F7=0
+        state = self.base_state.copy()
+        state['F6 - URLConcentration']  = 0.0
+        state['F7 - HttpIatUniformity'] = 0.0
+        return state
+    return self.base_state  # 80%: bình thường
+```
+
+Sau khi retrain với domain randomization → model học cả 2 tình huống → có thể bỏ policy override trong infer.py.
+
+### Tóm tắt
+
+```
+Training (MockIPBehavior):  brute_force → F6=0.9, F7=0.85 → Redirect ✓
+                                              ↕ mismatch
+Deploy (tshark timing):     cửa sổ đầu → F6=0,   F7=0    → Block ✗
+                                              ↕ fix tạm
+infer.py override:          Block + brute_score>0.5       → Redirect
+                                              ↕ fix đúng
+Domain randomization:       train cả F6=0 case            → Redirect ✓ (không cần override)
+```

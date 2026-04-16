@@ -51,6 +51,8 @@ scapy_conf.checkIPaddr = False
 
 # Thư mục output mặc định (có thể thay đổi qua menu [4])
 _output_dir: str = str(Path.cwd())
+L7_ENRICH_GRACE_SEC: float = 0.20
+L7_ENRICH_MAX_RETRIES: int = 3
 
 
 def _resolve_output(filename: str) -> str:
@@ -188,7 +190,10 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
     calc         = FlowFeatureCalculator(wamm_classifier=wamm)
     sniffer      = NetworkSniffer()
     lock         = threading.Lock()
-    stats        = {"cap": 0, "proc": 0, "drop": 0, "rows": 0, "err": 0, "enrich": 0}
+    stats        = {
+        "cap": 0, "proc": 0, "drop": 0, "rows": 0, "err": 0,
+        "enrich": 0, "late_enrich": 0,
+    }
     running      = [True]
 
     # Optional tshark L7 enrichment (HTTPS decryption)
@@ -240,20 +245,92 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
 
     csv_writer = None
     if fmt == "csv":
-        csv_fields = ["timestamp", "src_ip"] + feature_labels
+        csv_fields = [
+            "timestamp",
+            "src_ip",
+            "meta_https_data_packets",
+            "meta_https_unenriched_packets",
+            "meta_http_enriched_packets",
+            "meta_l7_confident",
+        ] + feature_labels
         csv_writer = csv.DictWriter(out_fd, fieldnames=csv_fields)
         csv_writer.writeheader()
+
+    def _has_pending_https_candidates(all_flows) -> bool:
+        """Detect HTTPS/TLS client packets that likely need late tshark enrichment."""
+        for fl in all_flows:
+            for pkt in fl.get_fwd_packets():
+                if not pkt.has_tcp or pkt.has_http:
+                    continue
+                if (pkt.tcp_dport or 0) != 443:
+                    continue
+                flags = str(pkt.tcp_flags or '')
+                has_data = pkt.payload_length > 0
+                if 'P' in flags or ('A' in flags and has_data):
+                    return True
+        return False
+
+    def _collect_l7_window_stats(flows_list) -> dict:
+        """Summarize how much HTTPS client traffic was enriched in this window."""
+        stats_map = {
+            "https_data_packets": 0,
+            "https_unenriched_packets": 0,
+            "http_enriched_packets": 0,
+        }
+
+        for fl in flows_list:
+            for pkt in fl.get_fwd_packets():
+                if not pkt.has_tcp:
+                    continue
+                if (pkt.tcp_dport or 0) != 443:
+                    continue
+                flags = str(pkt.tcp_flags or '')
+                has_data = pkt.payload_length > 0
+                if not ('P' in flags or ('A' in flags and has_data)):
+                    continue
+
+                stats_map["https_data_packets"] += 1
+                if pkt.has_http:
+                    stats_map["http_enriched_packets"] += 1
+                else:
+                    stats_map["https_unenriched_packets"] += 1
+
+        stats_map["l7_confident"] = (
+            stats_map["https_data_packets"] == 0 or
+            stats_map["https_unenriched_packets"] == 0
+        )
+        return stats_map
 
     def _process_window(win_end: float):
         with lock:
             all_flows = flow_manager.get_all_flows()
-            flow_manager.slide_window_packets(win_end)
 
-            # Enrich with tshark L7 data while holding the lock
+            # Enrich with tshark L7 data before sliding the window so late TLS
+            # decrypt events still have a chance to attach to the matching packet.
             if tshark_reader:
                 tshark_events = tshark_reader.drain_events()
                 n = enrich_flows_with_tshark(all_flows, tshark_events)
                 stats["enrich"] += n
+                need_grace = (n == 0 and _has_pending_https_candidates(all_flows))
+            else:
+                need_grace = False
+
+        if tshark_reader and need_grace:
+            for _ in range(L7_ENRICH_MAX_RETRIES):
+                time.sleep(L7_ENRICH_GRACE_SEC)
+                with lock:
+                    all_flows = flow_manager.get_all_flows()
+                    tshark_events = tshark_reader.drain_events()
+                    n_late = enrich_flows_with_tshark(all_flows, tshark_events)
+                    stats["enrich"] += n_late
+                    stats["late_enrich"] += n_late
+                    need_grace = (n_late == 0 and _has_pending_https_candidates(all_flows))
+                if not need_grace:
+                    break
+
+        with lock:
+            all_flows = flow_manager.get_all_flows()
+            flow_manager.slide_window_packets(win_end)
 
         by_src: dict = {}
         for fl in all_flows:
@@ -267,6 +344,11 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
             if not features or float(features[0]) <= 0:
                 continue
             row = {"timestamp": round(win_end, 6), "src_ip": src_ip}
+            l7_meta = _collect_l7_window_stats(flows_list)
+            row["meta_https_data_packets"] = l7_meta["https_data_packets"]
+            row["meta_https_unenriched_packets"] = l7_meta["https_unenriched_packets"]
+            row["meta_http_enriched_packets"] = l7_meta["http_enriched_packets"]
+            row["meta_l7_confident"] = l7_meta["l7_confident"]
             for i, label in enumerate(feature_labels):
                 row[label] = round(float(features[i]), 4)
             if fmt == "jsonl":
@@ -317,7 +399,10 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
                     print(f"\n    [!] Window error: {e}")
                 win_start += window_size
                 win_end    = win_start + window_size
-                enrich_info = f" Enrich={stats['enrich']}" if tshark_reader else ""
+                enrich_info = (
+                    f" Enrich={stats['enrich']} LateEnrich={stats['late_enrich']}"
+                    if tshark_reader else ""
+                )
                 print(f"    Cap={stats['cap']} Proc={stats['proc']} Drop={stats['drop']} Err={stats['err']} Rows={stats['rows']}{enrich_info}")
     except KeyboardInterrupt:
         print("\n[!] Dừng hệ thống...")
@@ -328,7 +413,10 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
             tshark_reader.stop()
         time.sleep(0.5)
         out_fd.close()
-        enrich_info = f" | Enriched={stats['enrich']}" if tshark_reader else ""
+        enrich_info = (
+            f" | Enriched={stats['enrich']} | LateEnrich={stats['late_enrich']}"
+            if tshark_reader else ""
+        )
         print(f"[✓] Done. Rows={stats['rows']}{enrich_info} | Output={output_file}")
 
 
