@@ -21,6 +21,7 @@ Usage:
 """
 
 import json
+import math as _math
 import numpy as np
 import argparse
 import sys
@@ -29,7 +30,12 @@ import os
 import subprocess
 from typing import Dict, List, Optional, Tuple
 from stable_baselines3 import PPO
-from env_ids import normalize_observation
+from env_ids import (
+    normalize_observation, compute_network_damage, compute_attack_signals,
+    PerIPTemporalState,
+    SOFT_SESSION_WINDOW, MISS_BUDGET, SESSION_START_L7_THRESHOLD,
+    PRESENCE_RATIO_THRESHOLD as _ENV_PRESENCE_THRESHOLD,
+)
 
 # ============================================================================
 # NIDS FEATURE KEY ORDER (matches System/main.py FlowFeatureCalculator labels)
@@ -239,26 +245,220 @@ def apply_action(src_ip: str, action: int, enforce: bool = True):
 
 
 # ============================================================================
-# STATE TRACKER (per-IP action + redirect escalation)
+# INFERENCE TEMPORAL STATE (mirrors PerIPTemporalState from env_ids.py)
 # ============================================================================
 
-REDIRECT_TTL_SECONDS  = 15.0   # Escalate Redirect → Block after this time
-MIN_ESCALATE_HOLD     = 10.0   # Min time before escalating (e.g. RateLimit→Redirect)
-CLEAN_WINDOWS_TO_DOWNGRADE = {  # Per-severity: how many clean 1s windows before downgrading
-    3: -1,  # Block: NEVER downgrade via clean_streak (only expire_stale after 60s silence)
-    2: 10,  # Redirect: 10 consecutive clean windows (10s)
-    1: 2,   # RateLimit: 2 consecutive clean windows (2s) — fast recovery for benign traffic
-}
+ACTION_HOLD_NORM_STEPS = 15.0
+CLEAN_STREAK_NORM_STEPS = 10.0
+HONEYPOT_RATIO_THRESHOLD = 0.60
+PRESENCE_RATIO_THRESHOLD = 0.50
+SERVICE_DAMAGE_CLEAN_THRESHOLD = 0.03
+
+
+class InferenceTemporalState:
+    """Legacy 30D temporal state kept for old v2 models.
+
+    New 34D models use PersistenceTemporalState below.
+    """
+
+    def __init__(self):
+        self.last_action: int = 0
+        self.action_hold_steps: int = 0
+        self.cumulative_damage: float = 0.0
+        self.damage_ema: float = 0.0
+        self.damage_trend: float = 0.0
+        self.escalation_count: int = 0
+        self.steps_since_attack: int = 0
+        self.prev_damage: float = 0.0
+        self.step_count: int = 0
+
+    def update(self, action: int, step_damage: float,
+               attack_threshold: float = 0.15, ema_alpha: float = 0.3):
+        """Update state after action decision for this IP."""
+        if action > self.last_action:
+            self.escalation_count += 1
+
+        if action == self.last_action:
+            self.action_hold_steps += 1
+        else:
+            self.action_hold_steps = 0
+
+        self.last_action = action
+        self.step_count += 1
+
+        self.cumulative_damage += step_damage
+        delta = step_damage - self.prev_damage
+        self.damage_ema = ema_alpha * step_damage + (1 - ema_alpha) * self.damage_ema
+        self.damage_trend = ema_alpha * delta + (1 - ema_alpha) * self.damage_trend
+        self.prev_damage = step_damage
+
+        if step_damage > attack_threshold:
+            self.steps_since_attack = 0
+        else:
+            self.steps_since_attack += 1
+
+    def to_obs(self) -> list:
+        """Return 10D normalized temporal feature vector, all in [0,1]."""
+        one_hot = [0.0, 0.0, 0.0, 0.0]
+        one_hot[self.last_action] = 1.0
+
+        return one_hot + [
+            min(self.action_hold_steps / 10.0, 1.0),
+            min(self.damage_ema * 5.0, 1.0),           # recent_intensity_norm — khớp env_ids.py (không tích lũy)
+            1.0 / (1.0 + np.exp(-10.0 * self.damage_trend)),
+            min(self.escalation_count / 5.0, 1.0),
+            min(self.steps_since_attack / 10.0, 1.0),
+            min(self.damage_ema, 1.0),
+        ]
+
+
+class PersistenceTemporalState(PerIPTemporalState):
+    """34D temporal state for inference — exact mirror of PerIPTemporalState in env_ids.py.
+
+    Inherits all fields and logic directly so obs [20..29] always matches training exactly:
+      [20..23] last_action one-hot
+      [24]     action_hold_norm
+      [25]     damage_ema
+      [26]     effect_trend
+      [27]     soft_window_fill_norm  = window_len / 15
+      [28]     escalation_score_norm  = escalation_score ∈ [0,1]
+      [29]     miss_budget_used_norm  = miss_count / 3
+
+    Do NOT add extra fields here — any divergence from PerIPTemporalState breaks the 34D obs.
+    """
+    pass
+
+
+# ============================================================================
+# SAFETY NET (thin wrapper — replaces old IPStateTracker state machine)
+# ============================================================================
+
 BLOCK_IDLE_TTL        = 60.0   # Auto-unblock Block after this many seconds of silence
-RATELIMIT_IDLE_TTL    = 8.0    # Auto-clear RateLimit after 8s silence (no NIDS windows emitted)
+RATELIMIT_IDLE_TTL    = 15.0   # Auto-clear RateLimit after 15s silence
 EXPIRE_CHECK_INTERVAL = 5.0    # How often to scan for idle blocked IPs (seconds)
 
-# Severity order: Allow(0) < RateLimit(1) < Redirect(2) < Block(3)
+
+class SafetyNet:
+    """Thin safety net — only handles infrastructure concerns, NOT temporal policy.
+
+    What it does (Category B+C):
+      - Track last applied action per IP (for iptables change detection)
+      - XSS/SQLi → Redirect override (honeypot intel gathering)
+      - Block hold when damage_ema is high (prevent premature unblock)
+      - expire_stale() for auto-unblocking after prolonged silence
+
+    What it does NOT do (model handles via temporal obs):
+      - Escalation timing (was REDIRECT_TTL_SECONDS)
+      - Downgrade logic (was CLEAN_WINDOWS_TO_DOWNGRADE)
+      - Attack signal detection (was _is_attack_signal)
+      - Hold gates (was MIN_ESCALATE_HOLD)
+    """
+
+    def __init__(self):
+        self._state: Dict[str, dict] = {}   # ip → {action, ts}
+
+    def apply_safety_overrides(self, src_ip: str, rl_action: int,
+                                raw: list, tstate) -> int:
+        """Apply safety overrides to model decision. Returns final action."""
+        final_action = rl_action
+
+        # Override 0: L7 attack detected but model says Allow/RateLimit → force Redirect.
+        # Root cause: model v7 damage_ema is driven by network-level damage (F1/F2).
+        # HTTP brute force / SQLi / XSS have low F1 (~6 pps) → damage_ema never rises →
+        # model sees "low damage, no prior escalation" → Allow. Override corrects this.
+        if final_action < 2 and len(raw) >= 20:
+            sqli_score = max(raw[11:17])   # F12-F17
+            xss_score  = max(raw[17:20])   # F18-F20
+            f6 = raw[5]   # URLConcentration — high = requests concentrated on 1 URL (brute force)
+            f7 = raw[6]   # HttpIatUniformity — high = bot-like uniform timing
+            brute_signal = f6 * 0.5 + f7 * 0.5
+            if sqli_score > 0.08 or xss_score > 0.08 or brute_signal > 0.6:
+                final_action = 2  # Allow/RateLimit → Redirect
+
+        # Override 1: Layer-7 attacks (SQLi/XSS) → always Redirect first, never Block directly.
+        # Rationale: honeypot captures attacker payloads; attacker doesn't know they're detected.
+        # Real-world evidence (CIC-IDS2018): high F13/F18 with low F1 → model outputs Block
+        # incorrectly because it conflates high-signal L7 with DDoS. This override corrects it.
+        # EXCEPTION: skip when block_ready_latched=True — sufficient evidence collected, let
+        # the RL model make the Block decision independently. This restores the training-inference
+        # alignment: env_ids.py has no Override 1, so the model learned "high escalation_score
+        # → Block"; keeping this override active after latch prevents that learned behavior
+        # from ever executing. soft_guard assist remains as backup if model outputs Redirect.
+        if final_action == 3 and len(raw) >= 20 and not tstate.block_ready_latched:
+            sqli_score = max(raw[11:17])   # F12-F17
+            xss_score  = max(raw[17:20])   # F18-F20
+            if sqli_score > 0.08 or xss_score > 0.08:
+                final_action = 2  # Block → Redirect
+
+        # Override 2: Block hold when damage is still high
+        if (tstate.last_action == 3 and final_action < 3
+                and tstate.damage_ema > 0.3):
+            final_action = 3
+
+        return final_action
+
+    def update(self, src_ip: str, action: int, ts: float) -> bool:
+        """Track action and return True if iptables needs to change."""
+        s = self._state.get(src_ip)
+        if s is None:
+            if action == 0:
+                return False  # No need to track Allow for new IPs
+            self._state[src_ip] = {'action': action, 'ts': ts}
+            return True
+
+        # Block-hold: once Block is correctly applied (block_ready_latched path or any Block),
+        # prevent downgrading to a less-restrictive action until the attacker goes silent.
+        # Without this, the PersistenceTemporalState session reset after correct Block causes
+        # Redirect to be re-applied to iptables 1 second later, cycling Block→Redirect→Block
+        # every ~12 windows while the attacker is still sending traffic.
+        if s.get('action') == 3 and action < 3:
+            idle = ts - s.get('ts', ts)
+            if idle < BLOCK_IDLE_TTL:
+                s['ts'] = ts  # refresh idle timer so expire_stale keeps it alive
+                return False  # suppress iptables downgrade while block is hot
+
+        changed = (action != s['action'])
+        s['action'] = action
+        s['ts'] = ts
+        return changed
+
+    def get(self, src_ip: str) -> dict:
+        return self._state.get(src_ip, {})
+
+    def expire_stale(self, now: float, enforce: bool = True):
+        """Auto-unblock IPs that have been silent for too long."""
+        for ip, s in list(self._state.items()):
+            action = s.get('action', 0)
+            if action == 0:
+                continue
+            last_seen = s.get('ts', now)
+            idle_secs = now - last_seen
+            ttl = RATELIMIT_IDLE_TTL if action == 1 else BLOCK_IDLE_TTL
+            if idle_secs >= ttl:
+                print(f"\n    [AUTO-UNBLOCK] {ip}: {ACTION_MAP[action]} expired "
+                      f"(silent {idle_secs:.0f}s >= {ttl:.0f}s) → Allow")
+                apply_action(ip, 0, enforce)
+                del self._state[ip]
+
+
+# ============================================================================
+# LEGACY STATE TRACKER (kept for --model-version v1 compatibility)
+# ============================================================================
+
+REDIRECT_TTL_SECONDS  = 15.0
+MIN_ESCALATE_HOLD     = 10.0
+CLEAN_WINDOWS_TO_DOWNGRADE = {
+    3: -1,
+    2: 10,
+    1: 2,
+}
+
 ACTION_SEVERITY = {0: 0, 1: 1, 2: 2, 3: 3}
+L7_BENIGN_MEMORY_SECONDS = 8.0
 
 
 class IPStateTracker:
-    """Track per-IP action state with hysteresis and escalation logic.
+    """LEGACY: Track per-IP action state with hysteresis and escalation logic.
 
     Key design:
       - Escalation (Allow→Block): immediate if signal is strong, short hold if weak
@@ -283,6 +483,39 @@ class IPStateTracker:
         xss  = max(obs_raw[17:20])              # F18-F20
         return (f1 > 100 or f2 > 5 or f6 > 0.5 or sqli > 0.1 or xss > 0.1)
 
+    @staticmethod
+    def _has_clear_layer7_signal(obs_raw: list) -> bool:
+        """Require stronger evidence before escalating noisy RateLimit traffic to Redirect.
+
+        Purpose:
+          - Keep spam-reload/noisy users at RateLimit
+          - Only allow Redirect when there is clear L7 evidence
+            (SQLi/XSS or a strong brute-force bot pattern)
+        """
+        if len(obs_raw) < 20:
+            return False
+
+        f4_rst  = obs_raw[3]                    # RstRatio
+        f6_url  = obs_raw[5]                    # URLConcentration
+        f7_iat  = obs_raw[6]                    # HttpIatUniformity
+        f8_size = obs_raw[7]                    # RequestSizeUniformity
+        sqli = max(obs_raw[11:17])              # F12-F17
+        xss  = max(obs_raw[17:20])              # F18-F20
+
+        # SQLi/XSS payload indicators are clear enough on their own.
+        if sqli > 0.08 or xss > 0.08:
+            return True
+
+        # Brute-force bot pattern: same endpoint, highly regular timing/size,
+        # and at least some failed-connection/abnormality signal.
+        brute_pattern = (
+            f6_url > 0.85 and
+            f7_iat > 0.75 and
+            f8_size > 0.75 and
+            f4_rst > 0.05
+        )
+        return brute_pattern
+
     def _check_redirect_escalation(self, s: dict, ts: float,
                                     obs_raw: list, src_ip: str) -> Optional[int]:
         """Check if Redirect should escalate to Block. Returns 3 or None."""
@@ -305,7 +538,7 @@ class IPStateTracker:
         return 3
 
     def update(self, src_ip: str, action: int, ts: float,
-               obs_raw: List[float]) -> Tuple[int, bool]:
+               obs_raw: List[float], force_downgrade: bool = False) -> Tuple[int, bool]:
         """
         Returns (final_action, changed).
         changed=True means iptables rule needs to be applied.
@@ -327,11 +560,24 @@ class IPStateTracker:
         new_sev = ACTION_SEVERITY[action]
         cur_sev = ACTION_SEVERITY[current_action]
 
+        if force_downgrade and new_sev < cur_sev:
+            s['action_since'] = ts
+            s['action'] = action
+            s['clean_streak'] = max(s.get('clean_streak', 0), 1)
+            s.pop('redirect_since', None)
+            self._state[src_ip] = s
+            return action, (action != current_action)
+
         if new_sev > cur_sev:
             # --- ESCALATION ---
             if cur_sev > 0:   # already restricted
                 hold_age = ts - action_since
                 strong = is_attack  # any attack signal → immediate escalation
+                if current_action == 1 and action == 2 and not self._has_clear_layer7_signal(obs_raw):
+                    print(f"\n    [HOLD-ESC] {src_ip}: keep RateLimit "
+                          f"(no clear Layer7 signal for Redirect)")
+                    self._state[src_ip] = s
+                    return current_action, False
                 if hold_age < MIN_ESCALATE_HOLD and not strong:
                     print(f"\n    [HOLD-ESC] {src_ip}: keep {ACTION_MAP[current_action]} "
                           f"(hold {hold_age:.0f}s/{MIN_ESCALATE_HOLD:.0f}s)")
@@ -412,13 +658,124 @@ class IPStateTracker:
 
 
 # ============================================================================
+# NGINX EFFECT COLLECTOR (4D effect-side feedback from nginx access.log)
+# ============================================================================
+
+import re as _re
+
+_RE_ADDR   = _re.compile(r'^(\S+)')
+_RE_TIME   = _re.compile(r'\[([^\]]+)\]')
+_RE_UADDR  = _re.compile(r'uaddr="([^"]*)"')
+_MONTHS    = {'Jan':1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,
+              'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
+NGINX_LOG_PATH   = '/tmp/router-nginx/logs/access.log'
+NGINX_WEB_UP     = '192.168.10.10:8080'
+NGINX_HONEY_UP   = '192.168.30.10:8081'
+
+
+def _parse_nginx_ts(ts_str: str) -> float:
+    try:
+        ts_str = ts_str.split(' ')[0]
+        day, mon, rest = ts_str.split('/')
+        year, h, m, s  = rest.split(':')
+        from datetime import datetime
+        return datetime(int(year), _MONTHS[mon], int(day),
+                        int(h), int(m), int(s)).timestamp()
+    except Exception:
+        return time.time()
+
+
+class NginxEffectCollector:
+    """Incrementally reads nginx access.log → 4D effect features per (src_ip, window_ts).
+
+    F21 WebHitRatio, F22 HoneypotHitRatio, F23 PresenceRatio, F24 ServiceDamage.
+    All features represent effect of the PREVIOUS step (delayed 1 step causal contract).
+    """
+
+    def __init__(self, log_path: str = NGINX_LOG_PATH, window: float = 1.0):
+        self._path   = log_path
+        self._win    = window
+        self._offset = 0
+        self._inode  = None
+        self._buckets: Dict[Tuple[str, float], dict] = {}
+
+    def ingest(self) -> int:
+        """Read new log lines since last call. Returns count of new entries."""
+        try:
+            st = os.stat(self._path)
+        except FileNotFoundError:
+            return 0
+        if st.st_ino != self._inode or st.st_size < self._offset:
+            self._offset = 0
+            self._inode  = st.st_ino
+        if st.st_size == self._offset:
+            return 0
+        count = 0
+        try:
+            with open(self._path, 'r', errors='replace') as f:
+                f.seek(self._offset)
+                for line in f:
+                    m_a = _RE_ADDR.search(line)
+                    m_t = _RE_TIME.search(line)
+                    m_u = _RE_UADDR.search(line)
+                    if not m_a:
+                        continue
+                    ip  = m_a.group(1)
+                    ts  = _parse_nginx_ts(m_t.group(1)) if m_t else time.time()
+                    ua  = m_u.group(1) if m_u else '-'
+                    dest = ('web' if NGINX_WEB_UP in ua else
+                            'honeypot' if NGINX_HONEY_UP in ua else 'none')
+                    wts = _math.floor(ts / self._win) * self._win
+                    key = (ip, wts)
+                    b   = self._buckets.setdefault(key, {'t':0,'w':0,'h':0})
+                    b['t'] += 1
+                    if dest == 'web':      b['w'] += 1
+                    elif dest == 'honeypot': b['h'] += 1
+                    count += 1
+                self._offset = f.tell()
+        except OSError:
+            pass
+        return count
+
+    def get_effect(self, src_ip: str, window_ts: float,
+                   sensor_20d: Optional[List[float]] = None) -> List[float]:
+        """Return [F21, F22, F23, F24] for (src_ip, window_ts). Zeros if no data."""
+        b = self._buckets.get((src_ip, window_ts), {'t':0,'w':0,'h':0})
+        if b['t'] == 0:
+            return [0.0, 0.0, 0.0, 0.0]
+        f21 = b['w'] / b['t']
+        f22 = b['h'] / b['t']
+        f23 = 1.0
+        if sensor_20d and len(sensor_20d) >= 20:
+            f1 = sensor_20d[0]; f2 = sensor_20d[1]; f5 = sensor_20d[4]
+            f11 = sensor_20d[10]
+            sqli = max(sensor_20d[11:17]); xss = max(sensor_20d[17:20])
+            ac = float(min(max(min(f1/200,1), min(f2/10,1),
+                              min(f5/50,1)*min(f11/50,1),
+                              min((sqli+xss)/2,1)), 1))
+        else:
+            ac = 1.0
+        f24 = float(min(0.7*ac*f21 + 0.3*ac*f23*(1-f22), 1.0))
+        return [round(f21,4), round(f22,4), round(f23,4), round(f24,4)]
+
+    def current_wts(self) -> float:
+        return _math.floor(time.time() / self._win) * self._win
+
+    def prune(self, max_age: float = 60.0):
+        cutoff = self.current_wts() - max_age
+        for k in [k for k in self._buckets if k[1] < cutoff]:
+            del self._buckets[k]
+
+
+# ============================================================================
 # INFERENCE AGENT
 # ============================================================================
 
 class IDSDefenseAgent:
-    """PPO agent with NIDS 20D input and iptables action executor."""
+    """PPO agent with 34D input (20D NIDS + 10D temporal + 4D effect) and iptables executor."""
 
-    def __init__(self, model_path: str = './policy_model', enforce: bool = True):
+    def __init__(self, model_path: str = './policy_model', enforce: bool = True,
+                 demo_safe: bool = False, soft_guard_mode: str = 'off'):
         try:
             self.model = PPO.load(model_path)
             print(f"[+] Model loaded from {model_path}.zip")
@@ -428,19 +785,221 @@ class IDSDefenseAgent:
             sys.exit(1)
 
         self.enforce = enforce
-        self.tracker = IPStateTracker()
+        self.demo_safe = demo_safe
+        self.soft_guard_mode = soft_guard_mode if soft_guard_mode in ('off', 'assist') else 'off'
+        self.l7_memory: Dict[str, dict] = {}
+
+        # Detect model version from observation space
+        obs_dim = self.model.observation_space.shape[0]
+        if obs_dim == 34:
+            self.model_version = 'v3'
+        elif obs_dim == 30:
+            self.model_version = 'v2'
+        else:
+            self.model_version = 'v1'
+        print(f"[+] Model version: {self.model_version} ({obs_dim}D observation)")
+
+        if self.model_version == 'v3':
+            self.temporal_states: Dict[str, PersistenceTemporalState] = {}
+            self.safety_net = SafetyNet()
+            self.effect_collector = NginxEffectCollector()
+            print(f"[+] Effect collector: ON (nginx log → 4D feedback)")
+        elif self.model_version == 'v2':
+            self.temporal_states: Dict[str, InferenceTemporalState] = {}
+            self.safety_net = SafetyNet()
+            self.guard_tracker = IPStateTracker()
+        else:
+            self.tracker = IPStateTracker()
 
         if enforce:
             print("[+] Action enforcement: ON (iptables via nsenter)")
         else:
             print("[+] Action enforcement: OFF (dry-run mode)")
+        if demo_safe:
+            print("[+] Demo-safe overrides: ON (benign HTTPS decrypt-miss protection)")
+        print(f"[+] Soft-guard mode: {self.soft_guard_mode.upper()} "
+              f"({'promote to Block when block_ready_latched' if self.soft_guard_mode == 'assist' else 'model decides alone'})")
+
+    @staticmethod
+    def _extract_l7_meta(row: dict) -> dict:
+        """Read optional L7 confidence metadata emitted by System/main.py."""
+        def _to_int(key: str) -> int:
+            try:
+                return int(row.get(key, 0) or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        raw_conf = row.get('meta_l7_confident', False)
+        if isinstance(raw_conf, str):
+            l7_confident = raw_conf.strip().lower() in ('1', 'true', 'yes')
+        else:
+            l7_confident = bool(raw_conf)
+
+        return {
+            'https_data_packets': _to_int('meta_https_data_packets'),
+            'https_unenriched_packets': _to_int('meta_https_unenriched_packets'),
+            'http_enriched_packets': _to_int('meta_http_enriched_packets'),
+            'l7_confident': l7_confident,
+        }
+
+    @staticmethod
+    def _is_benign_l7_profile(raw: list) -> bool:
+        """True when the window lacks both attack signals and strong network abuse."""
+        if len(raw) < 20:
+            return False
+
+        f1 = raw[0]
+        f2 = raw[1]
+        f5 = raw[4]
+        f6 = raw[5]
+        f7 = raw[6]
+        f8 = raw[7]
+        f11 = raw[10]
+        sqli = max(raw[11:17])
+        xss = max(raw[17:20])
+
+        has_layer7_attack = (sqli > 0.08 or xss > 0.08)
+        has_brute_pattern = (f6 > 0.85 and f7 > 0.75 and f8 > 0.75)
+        has_network_attack = (f1 >= 30.0 or f2 >= 3.0 or f5 >= 10.0 or f11 >= 20.0)
+        return (not has_layer7_attack and not has_brute_pattern and not has_network_attack)
+
+    def _remember_l7_context(self, src_ip: str, ts: float, raw: list, meta: dict) -> None:
+        """Cache recent trustworthy L7 observations to help identify decrypt gaps."""
+        if len(raw) < 20 or not meta.get('l7_confident'):
+            return
+
+        f6 = raw[5]
+        f7 = raw[6]
+        f8 = raw[7]
+        f9 = raw[8]
+        if f6 <= 0.0 and f9 <= 0.0:
+            return
+
+        self.l7_memory[src_ip] = {
+            'ts': ts,
+            'f6': f6,
+            'f7': f7,
+            'f8': f8,
+            'f9': f9,
+            'benign_like': self._is_benign_l7_profile(raw),
+        }
+
+    def _apply_decrypt_miss_guard(self, src_ip: str, action: int, raw: list, row: dict,
+                                  current_action: int = 0) -> Tuple[int, bool, Optional[str]]:
+        """Downgrade false restrictions caused by delayed tshark TLS decryption."""
+        if len(raw) < 20:
+            return action, False, None
+
+        ts = float(row.get('timestamp', time.time()))
+        meta = self._extract_l7_meta(row)
+        self._remember_l7_context(src_ip, ts, raw, meta)
+
+        likely_decrypt_miss = (
+            meta['https_data_packets'] > 0 and
+            meta['https_unenriched_packets'] > 0 and
+            not meta['l7_confident'] and
+            raw[5] <= 0.05 and
+            raw[8] <= 0.05
+        )
+        if not likely_decrypt_miss:
+            return action, False, None
+
+        if not self._is_benign_l7_profile(raw):
+            return action, False, None
+
+        cached = self.l7_memory.get(src_ip)
+        has_recent_benign_memory = (
+            cached is not None and
+            cached.get('benign_like') and
+            (ts - float(cached.get('ts', 0.0))) <= L7_BENIGN_MEMORY_SECONDS
+        )
+
+        if action == 0:
+            return action, False, None
+
+        if current_action >= 2 and not has_recent_benign_memory:
+            return action, False, None
+
+        reason = (
+            f"L7 decrypt miss (https={meta['https_data_packets']}, "
+            f"unenriched={meta['https_unenriched_packets']}, "
+            f"cached_benign={has_recent_benign_memory})"
+        )
+        print(f"\n    [L7-GUARD] {src_ip}: {reason} → Allow")
+        return 0, (current_action >= 2), reason
+
+    def _apply_benign_browse_guard(self, src_ip: str, action: int, raw: list,
+                                   row: dict, current_action: int = 0) -> Tuple[int, bool, Optional[str]]:
+        """Keep simple benign page browsing at Allow instead of Redirect.
+
+        Narrow scope:
+          - only downgrades Redirect
+          - requires no SQLi/XSS, no scan/flood signals
+          - only for small HTTPS page-fetch windows typical of demo menu option 1
+        """
+        if action != 2 or len(raw) < 20:
+            return action, False, None
+
+        meta = self._extract_l7_meta(row)
+        f1 = raw[0]
+        f2 = raw[1]
+        f4 = raw[3]
+        f5 = raw[4]
+        f6 = raw[5]
+        f8 = raw[7]
+        f11 = raw[10]
+        sqli = max(raw[11:17])
+        xss = max(raw[17:20])
+
+        no_attack_payload = (sqli <= 0.01 and xss <= 0.01)
+        no_network_attack = (f2 <= 1.5 and f4 <= 0.10 and f5 <= 2.0 and f11 <= 12.0)
+        looks_like_small_browse = (
+            meta['https_data_packets'] <= 4 and
+            meta['http_enriched_packets'] <= 1 and
+            f1 <= 25.0 and
+            f8 <= 0.20
+        )
+        likely_single_page_fetch = (
+            f6 >= 0.95 and
+            no_attack_payload and
+            no_network_attack and
+            looks_like_small_browse
+        )
+
+        if not likely_single_page_fetch:
+            return action, False, None
+
+        reason = (
+            f"benign page fetch (F1={f1:.1f}, F6={f6:.2f}, "
+            f"https={meta['https_data_packets']}, http={meta['http_enriched_packets']})"
+        )
+        print(f"\n    [BROWSE-GUARD] {src_ip}: {reason} → Allow")
+        return 0, (current_action >= 2), reason
+
+    def _apply_demo_safe_override(self, src_ip: str, action: int, raw: list,
+                                  current_action: int = 0) -> int:
+        """Fallback heuristic when metadata is unavailable and demo-safe is enabled."""
+        if not self.demo_safe or action not in (1, 2) or len(raw) < 20:
+            return action
+
+        f1 = raw[0]   # PacketRate
+        f6 = raw[5]   # URLConcentration
+        f9 = raw[8]   # AvgPayloadSize
+        likely_decrypt_miss = (f6 <= 0.05 and f9 <= 0.05)
+
+        if self._is_benign_l7_profile(raw) and likely_decrypt_miss and current_action < 2:
+            print(f"\n    [DEMO-SAFE] {src_ip}: benign HTTPS decrypt miss "
+                  f"(F1={f1:.1f}, F6={f6:.2f}, F9={f9:.2f}) → Allow")
+            return 0
+
+        return action
 
     def predict(self, row: dict) -> Tuple[int, str, dict]:
         """
         Parse NIDS JSONL row → RL action → apply iptables.
 
-        Args:
-            row: NIDS JSONL dict with keys like 'F1 - PacketRate', 'src_ip', etc.
+        v2 (30D): Model has temporal memory, SafetyNet only for overrides.
+        v1 (20D): Legacy IPStateTracker handles all temporal logic.
 
         Returns:
             (action_id, action_name, info_dict)
@@ -448,33 +1007,248 @@ class IDSDefenseAgent:
         ts     = float(row.get('timestamp', time.time()))
         src_ip = str(row.get('src_ip', 'unknown'))
 
-        # Skip whitelisted IPs (server, router, internal infra) — no display, no iptables
+        # Skip whitelisted IPs (server, router, internal infra)
         if src_ip in WHITELIST_IPS or src_ip.startswith('192.168.10.'):
             return 0, 'Allow', {'rl_action': 0, 'rl_action_name': 'Allow',
                                 'final_action': 0, 'final_action_name': 'Allow',
                                 'normalized_obs': [], 'src_ip': src_ip, 'timestamp': ts,
                                 'whitelisted': True}
 
-        obs, raw = parse_nids_row(row)
+        obs_20d, raw = parse_nids_row(row)
 
+        if self.model_version == 'v3':
+            return self._predict_v3(obs_20d, raw, src_ip, ts, row)
+        elif self.model_version == 'v2':
+            return self._predict_v2(obs_20d, raw, src_ip, ts, row)
+        else:
+            return self._predict_v1(obs_20d, raw, src_ip, ts, row)
+
+    def _predict_v2(self, obs_20d: np.ndarray, raw: list,
+                     src_ip: str, ts: float, row: dict) -> Tuple[int, str, dict]:
+        """30D model with temporal memory — model makes temporal decisions."""
+        # Get or create temporal state for this IP
+        if src_ip not in self.temporal_states:
+            self.temporal_states[src_ip] = InferenceTemporalState()
+        tstate = self.temporal_states[src_ip]
+
+        # Build 30D observation: 20D base + 10D temporal
+        temporal_10d = tstate.to_obs()
+        obs_30d = np.concatenate([obs_20d, np.array(temporal_10d, dtype=np.float32)])
+
+        # Model prediction on full 30D observation
+        rl_action, _ = self.model.predict(obs_30d, deterministic=True)
+        rl_action = int(rl_action)
+        current_action = self.guard_tracker.get(src_ip).get('action', 0)
+        forced_downgrade = False
+        decrypt_miss_reason = None
+        rl_action, forced_downgrade, decrypt_miss_reason = self._apply_decrypt_miss_guard(
+            src_ip, rl_action, raw, row, current_action
+        )
+        browse_guard_reason = None
+        rl_action, browse_forced, browse_guard_reason = self._apply_benign_browse_guard(
+            src_ip, rl_action, raw, row, current_action
+        )
+        forced_downgrade = forced_downgrade or browse_forced
+        rl_action = self._apply_demo_safe_override(src_ip, rl_action, raw, current_action)
+
+        # Safety net overrides (thin guardrails only)
+        guarded_action = self.safety_net.apply_safety_overrides(
+            src_ip, rl_action, raw, tstate)
+
+        # Reuse legacy hysteresis/hold logic to make v2 behavior easier to explain/demo:
+        # Redirect hold/escalation, downgrade streaks, and "don't jump Block -> Allow".
+        final_action, changed = self.guard_tracker.update(
+            src_ip, guarded_action, ts, raw, force_downgrade=forced_downgrade
+        )
+
+        # Compute step damage for temporal state update
+        step_damage = compute_network_damage(raw)
+
+        # Update temporal state with final action
+        tstate.update(final_action, step_damage)
+
+        # Apply iptables only when action changes
+        if changed:
+            apply_action(src_ip, final_action, enforce=self.enforce)
+
+        action_name = ACTION_MAP[final_action]
+        info = {
+            'rl_action': rl_action,
+            'rl_action_name': ACTION_MAP[rl_action],
+            'final_action': final_action,
+            'final_action_name': action_name,
+            'normalized_obs': obs_30d.tolist(),
+            'src_ip': src_ip,
+            'timestamp': ts,
+            'model_version': self.model_version,
+            't_last_action': tstate.last_action,
+            't_last_action_name': ACTION_MAP[tstate.last_action],
+            't_action_hold_steps': tstate.action_hold_steps,
+            't_damage_ema': tstate.damage_ema,
+            't_damage_trend': tstate.damage_trend,
+            't_escalation_count': tstate.escalation_count,
+            't_steps_since_attack': tstate.steps_since_attack,
+            't_step_damage': step_damage,
+            'decrypt_miss_guard': decrypt_miss_reason,
+            'browse_guard': browse_guard_reason,
+        }
+        return final_action, action_name, info
+
+    def _predict_v3(self, obs_20d: np.ndarray, raw: list,
+                     src_ip: str, ts: float, row: dict) -> Tuple[int, str, dict]:
+        """34D model: 20D sensor + 10D temporal + 4D effect (nginx feedback).
+
+        Temporal obs [20..29] mirrors PerIPTemporalState.to_obs() exactly:
+          [20..23] last_action one-hot
+          [24]     action_hold_norm
+          [25]     damage_ema
+          [26]     effect_trend
+          [27]     soft_window_fill_norm  (window_len / 15)
+          [28]     escalation_score_norm
+          [29]     miss_budget_used_norm  (miss_count / 3)
+        """
+        # Temporal state — PersistenceTemporalState inherits PerIPTemporalState exactly
+        if src_ip not in self.temporal_states:
+            self.temporal_states[src_ip] = PersistenceTemporalState()
+        tstate = self.temporal_states[src_ip]
+
+        # Read nginx effect window aligned with the current sensor row.
+        # This is effect of PREVIOUS action (delayed 1 step — safe to include in obs_t).
+        self.effect_collector.ingest()
+        current_wts = _math.floor(ts / 1.0) * 1.0
+        effect_prev = self.effect_collector.get_effect(src_ip, current_wts, raw)
+
+        # observe_effect must be called BEFORE stage_action to mirror env step() order:
+        # env: observe_effect uses last_action (previous step) → then stage_action updates it
+        tstate.observe_effect(effect_prev)
+        temporal_10d = tstate.to_obs()
+
+        # Build 34D obs: [20D sensor | 10D temporal | 4D effect_{t-1}]
+        obs_34d = np.concatenate([
+            obs_20d,
+            np.array(temporal_10d, dtype=np.float32),
+            np.array(effect_prev,  dtype=np.float32),
+        ])
+
+        # Model prediction — also capture action probability distribution for transparency
+        rl_action, _ = self.model.predict(obs_34d, deterministic=True)
+        rl_action = int(rl_action)
+        try:
+            import torch as _th
+            _obs_t, _ = self.model.policy.obs_to_tensor(obs_34d)
+            with _th.no_grad():
+                _dist = self.model.policy.get_distribution(_obs_t)
+                _probs = _dist.distribution.probs.cpu().numpy().flatten()
+            action_probs = {ACTION_MAP[i]: round(float(p), 4) for i, p in enumerate(_probs)}
+        except Exception:
+            action_probs = None
+        current_action = self.safety_net.get(src_ip).get('action', 0)
+
+        # Safety guards (infrastructure-level overrides, not temporal policy)
+        rl_action, _, decrypt_miss_reason = self._apply_decrypt_miss_guard(
+            src_ip, rl_action, raw, row, current_action)
+        rl_action, browse_forced, browse_guard_reason = self._apply_benign_browse_guard(
+            src_ip, rl_action, raw, row, current_action)
+        rl_action = self._apply_demo_safe_override(src_ip, rl_action, raw, current_action)
+        guarded_action = self.safety_net.apply_safety_overrides(src_ip, rl_action, raw, tstate)
+        final_action = guarded_action
+
+        # soft_guard_mode=assist: promote to Block if session evidence is complete.
+        # Only fires when block_ready_latched=True AND attacker still present (F23>=0.5).
+        # Does NOT intervene for benign/noisy/scan/syn_flood — only for L7 session IPs.
+        soft_guard_promoted = False
+        if (self.soft_guard_mode == 'assist'
+                and final_action < 3
+                and tstate.block_ready_latched
+                and len(effect_prev) >= 3
+                and float(effect_prev[2]) >= _ENV_PRESENCE_THRESHOLD):
+            final_action = 3
+            soft_guard_promoted = True
+
+        # l7_signal for session start/continuation — must be computed from raw (pre-action)
+        l7_signal = float(compute_attack_signals(raw)['l7_presence']) if len(raw) >= 20 else 0.0
+
+        # stage_action AFTER all overrides so temporal state reflects the actual applied action
+        tstate.stage_action(final_action, l7_signal=l7_signal)
+        changed = self.safety_net.update(src_ip, final_action, ts)
+
+        # Prune old nginx log buckets periodically
+        if int(ts) % 30 == 0:
+            self.effect_collector.prune()
+
+        if changed:
+            apply_action(src_ip, final_action, enforce=self.enforce)
+
+        action_name = ACTION_MAP[final_action]
+        info = {
+            'rl_action': rl_action,
+            'rl_action_name': ACTION_MAP[rl_action],
+            'final_action': final_action,
+            'final_action_name': action_name,
+            'normalized_obs': obs_34d.tolist(),
+            'src_ip': src_ip,
+            'timestamp': ts,
+            'window_ts': current_wts,
+            'model_version': self.model_version,
+            'effect_prev': effect_prev,
+            'effect': effect_prev,
+            # Soft-session temporal state fields (mirrors plan.md §5 log fields)
+            't_last_action': tstate.last_action,
+            't_last_action_name': ACTION_MAP[tstate.last_action],
+            't_action_hold_steps': tstate.action_hold_steps,
+            't_damage_ema': round(tstate.damage_ema, 4),
+            't_damage_trend': round(tstate.damage_trend, 4),
+            't_session_active': tstate.session_active,
+            't_soft_window_len': tstate.window_len,
+            't_redirect_hits': tstate.redirect_hits,
+            't_presence_hits': tstate.presence_hits,
+            't_honeypot_hits': tstate.honeypot_hits,
+            't_miss_count': tstate.miss_count,
+            't_escalation_score': round(tstate.escalation_score, 4),
+            't_block_ready': tstate.block_ready_latched,
+            't_clean_streak': tstate.clean_streak,
+            # Guard metadata
+            'soft_guard_promoted': soft_guard_promoted,
+            'decrypt_miss_guard': decrypt_miss_reason,
+            'browse_guard': browse_guard_reason,
+            'browse_forced': browse_forced,
+            # Transparency: raw neural network output — proves RL made the decision
+            'action_probs': action_probs,
+            'normalized_obs': obs_34d.tolist(),
+        }
+        return final_action, action_name, info
+
+    def _predict_v1(self, obs: np.ndarray, raw: list,
+                     src_ip: str, ts: float, row: dict) -> Tuple[int, str, dict]:
+        """Legacy 20D model — full IPStateTracker handles temporal logic."""
         rl_action, _ = self.model.predict(obs, deterministic=True)
         rl_action = int(rl_action)
 
-        # Attack-type policy override:
-        # Layer-7 attacks (XSS/SQLi) → always Redirect to honeypot FIRST.
-        # Rationale: honeypot gathers attacker payloads + attacker doesn't know
-        # they've been detected. Block escalation happens after REDIRECT_TTL_SECONDS.
-        # DDoS/SYN flood (high F1/F2, no payload) → Block is correct.
+        # Legacy policy overrides
         if rl_action == 3 and len(raw) >= 20:
-            xss_score  = max(raw[17:20])   # F18-F20
-            sqli_score = max(raw[11:17])   # F12-F17
-            if xss_score > 0.1 or sqli_score > 0.1:
-                rl_action = 2  # XSS/SQLi → Redirect (not Block)
+            xss_score   = max(raw[17:20])
+            sqli_score  = max(raw[11:17])
+            brute_score = max(raw[5], raw[6], raw[7])
+            if xss_score > 0.1 or sqli_score > 0.1 or brute_score > 0.5:
+                rl_action = 2
 
-        # Apply escalation logic
-        final_action, changed = self.tracker.update(src_ip, rl_action, ts, raw)
+        current_action = self.tracker.get(src_ip).get('action', 0)
+        forced_downgrade = False
+        decrypt_miss_reason = None
+        rl_action, forced_downgrade, decrypt_miss_reason = self._apply_decrypt_miss_guard(
+            src_ip, rl_action, raw, row, current_action
+        )
+        browse_guard_reason = None
+        rl_action, browse_forced, browse_guard_reason = self._apply_benign_browse_guard(
+            src_ip, rl_action, raw, row, current_action
+        )
+        forced_downgrade = forced_downgrade or browse_forced
+        rl_action = self._apply_demo_safe_override(src_ip, rl_action, raw, current_action)
 
-        # FIX Bug#4: Only touch iptables when action actually changes
+        final_action, changed = self.tracker.update(
+            src_ip, rl_action, ts, raw, force_downgrade=forced_downgrade
+        )
+
         if changed:
             apply_action(src_ip, final_action, enforce=self.enforce)
 
@@ -487,6 +1261,9 @@ class IDSDefenseAgent:
             'normalized_obs': obs.tolist(),
             'src_ip': src_ip,
             'timestamp': ts,
+            'model_version': self.model_version,
+            'decrypt_miss_guard': decrypt_miss_reason,
+            'browse_guard': browse_guard_reason,
         }
         return final_action, action_name, info
 
@@ -495,7 +1272,13 @@ class IDSDefenseAgent:
 # REAL-TIME JSONL WATCHER
 # ============================================================================
 
-VALID_LABELS = ['normal', 'scan', 'syn_flood', 'brute_force', 'sqli_xss', 'grayzone']
+VALID_LABELS = [
+    'normal', 'benign', 'noisy_normal',
+    'scan', 'syn_flood',
+    'brute_force', 'brute_force_ka',
+    'sqli', 'xss', 'sqli_xss',
+    'grayzone',
+]
 
 
 def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
@@ -585,12 +1368,36 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
 
                                 log = {
                                     'timestamp': ts,
+                                    'window_ts': info.get('window_ts', ts),
                                     'src_ip': src,
                                     'rl_action': info['rl_action'],
                                     'rl_action_name': info['rl_action_name'],
                                     'final_action': final_action,
                                     'final_action_name': action_name,
                                 }
+                                if 't_last_action' in info:
+                                    log.update({
+                                        'model_version': info['model_version'],
+                                        't_last_action': info['t_last_action'],
+                                        't_last_action_name': info['t_last_action_name'],
+                                        't_action_hold_steps': info['t_action_hold_steps'],
+                                        't_damage_ema': info['t_damage_ema'],
+                                        't_damage_trend': info['t_damage_trend'],
+                                        't_clean_streak': info.get('t_clean_streak'),
+                                        # v3 escalation fields
+                                        't_window_len': info.get('t_soft_window_len'),
+                                        't_redirect_hits': info.get('t_redirect_hits'),
+                                        't_presence_hits': info.get('t_presence_hits'),
+                                        't_honeypot_hits': info.get('t_honeypot_hits'),
+                                        't_escalation_score': info.get('t_escalation_score'),
+                                        't_block_ready': info.get('t_block_ready'),
+                                        'soft_guard_promoted': info.get('soft_guard_promoted'),
+                                        # Neural network transparency fields
+                                        'action_probs': info.get('action_probs'),
+                                        'normalized_obs': info.get('normalized_obs'),
+                                    })
+                                elif 'model_version' in info:
+                                    log['model_version'] = info['model_version']
                                 out_f.write(json.dumps(log) + '\n')
                                 out_f.flush()
 
@@ -600,9 +1407,14 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
                                     # Labeled collection (--label mode)
                                     train_record = {
                                         'timestamp': ts,
+                                        'window_ts': info.get('window_ts', ts),
                                         'src_ip': src,
                                         'label': label,
+                                        'final_action': final_action,
                                         'features': raw_features,
+                                        'effect_source': 'observed_prev_window',
+                                        'effect_prev_4d': info.get('effect_prev'),
+                                        'effect_4d': info.get('effect'),
                                     }
                                     train_f.write(json.dumps(train_record) + '\n')
                                     train_f.flush()
@@ -611,10 +1423,15 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
                                     # Passive collection (--collect mode): no label, review later
                                     collect_record = {
                                         'timestamp': ts,
+                                        'window_ts': info.get('window_ts', ts),
                                         'src_ip': src,
                                         'label': None,   # to be filled by admin later
                                         'ai_action': action_name,
+                                        'final_action': final_action,
                                         'features': raw_features,
+                                        'effect_source': 'observed_prev_window',
+                                        'effect_prev_4d': info.get('effect_prev'),
+                                        'effect_4d': info.get('effect'),
                                     }
                                     collect_f.write(json.dumps(collect_record) + '\n')
                                     collect_f.flush()
@@ -645,7 +1462,12 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
                         # Periodically auto-unblock idle IPs
                         now = time.time()
                         if now - last_expire_check >= EXPIRE_CHECK_INTERVAL:
-                            agent.tracker.expire_stale(now, enforce=agent.enforce)
+                            if agent.model_version == 'v3':
+                                agent.safety_net.expire_stale(now, enforce=agent.enforce)
+                            elif agent.model_version == 'v2':
+                                agent.guard_tracker.expire_stale(now, enforce=agent.enforce)
+                            else:
+                                agent.tracker.expire_stale(now, enforce=agent.enforce)
                             last_expire_check = now
 
                 except FileNotFoundError:
@@ -710,6 +1532,9 @@ Examples:
   # Dry-run (no iptables)
   python3 infer.py --watch /tmp/sniffer_output.jsonl --no-enforce
 
+  # Demo-safe mode (benign HTTPS decrypt-miss protection)
+  python3 infer.py --watch /tmp/sniffer_output.jsonl --demo-safe
+
   # Interactive
   python3 infer.py --interactive
         """
@@ -718,6 +1543,11 @@ Examples:
     parser.add_argument('--from-begin', action='store_true', help='Process entire file from start')
     parser.add_argument('--interactive', action='store_true', help='Interactive testing mode')
     parser.add_argument('--no-enforce', action='store_true', help='Dry-run: print actions, no iptables')
+    parser.add_argument('--demo-safe', action='store_true',
+                        help='Demo-only guardrail: downgrade false benign HTTPS RateLimit caused by delayed tshark decrypt')
+    parser.add_argument('--soft-guard', type=str, default='off', choices=['off', 'assist'],
+                        help='Soft-guard mode (default: off). '
+                             '"assist": promote to Block when block_ready_latched=True and attacker still present')
     parser.add_argument('--model', type=str, default='./policy_model', help='Model path (without .zip)')
     parser.add_argument('--output', type=str, default='actions.log', help='Output log file')
     parser.add_argument('--label', type=str, choices=VALID_LABELS, default=None,
@@ -736,7 +1566,9 @@ Examples:
 
     agent = IDSDefenseAgent(
         model_path=args.model,
-        enforce=not args.no_enforce
+        enforce=not args.no_enforce,
+        demo_safe=args.demo_safe,
+        soft_guard_mode=args.soft_guard,
     )
 
     if args.watch:

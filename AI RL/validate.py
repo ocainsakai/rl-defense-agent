@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import sys
+from collections import defaultdict
 
 import numpy as np
 
@@ -40,7 +41,9 @@ LABEL_TO_ACTION = {
     'scan':         3,  # Block
     'syn_flood':    3,  # Block
     'brute_force':  2,  # Redirect
-    'sqli_xss':     2,  # Redirect
+    'sqli_xss':     2,  # Redirect (legacy combined label)
+    'sqli':         2,  # Redirect
+    'xss':          2,  # Redirect
 }
 
 LABELS = ['normal', 'noisy_normal', 'scan', 'syn_flood', 'brute_force', 'sqli_xss']
@@ -93,12 +96,21 @@ def validate_from_logs(actions_log: str, expected_json: str):
 # ============================================================================
 
 def validate_from_training_data(training_data: str, model_path: str):
-    """Load training_data.jsonl, chạy model predict, so sánh với expected action."""
+    """Load training_data.jsonl, chạy model predict, so sánh với expected action.
+
+    Supports:
+      - legacy 20D models: direct normalized feature vector
+      - 30D models: 20D normalized feature vector + legacy temporal state
+      - 34D models: 20D normalized feature vector + persistence temporal state + effect_prev_4d
+    """
     from stable_baselines3 import PPO
-    from env_ids import normalize_observation
+    from env_ids import normalize_observation, compute_network_damage
+    from infer import InferenceTemporalState, PersistenceTemporalState
 
     print(f"[*] Loading model: {model_path}")
     model = PPO.load(model_path)
+    obs_dim = int(np.prod(model.observation_space.shape))
+    print(f"[*] Model observation dim: {obs_dim}")
 
     records = []
     with open(training_data) as f:
@@ -117,10 +129,17 @@ def validate_from_training_data(training_data: str, model_path: str):
         print(f"[ERROR] Không có records hợp lệ trong {training_data}")
         return
 
+    records.sort(key=lambda rec: (
+        float(rec.get('window_ts', rec.get('timestamp', 0.0))),
+        float(rec.get('timestamp', 0.0)),
+        str(rec.get('src_ip', 'unknown')),
+    ))
     print(f"[*] {len(records)} records loaded from {training_data}")
 
     y_true, y_pred = [], []
     label_unknown = []
+    temporal_states = defaultdict(InferenceTemporalState)
+    persistence_states = defaultdict(PersistenceTemporalState)
     for rec in records:
         label = rec.get('label', '')
         if label not in LABEL_TO_ACTION:
@@ -129,10 +148,37 @@ def validate_from_training_data(training_data: str, model_path: str):
         features = rec['features']
         if len(features) != 20:
             continue
-        obs = normalize_observation(features)
+
+        obs_20 = normalize_observation(features)
+        if obs_dim == 34:
+            src_ip = str(rec.get('src_ip', 'unknown'))
+            effect_prev = rec.get('effect_prev_4d') or [0.0, 0.0, 0.0, 0.0]
+            pstate = persistence_states[src_ip]
+            pstate.observe_effect(effect_prev)
+            obs = np.concatenate([
+                obs_20,
+                np.array(pstate.to_obs(), dtype=np.float32),
+                np.array(effect_prev[:4], dtype=np.float32),
+            ])
+        elif obs_dim == 30:
+            src_ip = str(rec.get('src_ip', 'unknown'))
+            tstate = temporal_states[src_ip]
+            obs = np.concatenate([obs_20, np.array(tstate.to_obs(), dtype=np.float32)])
+        elif obs_dim == 20:
+            obs = obs_20
+        else:
+            print(f"[ERROR] Unsupported observation dim: {obs_dim}")
+            return
+
         action, _ = model.predict(obs.reshape(1, -1), deterministic=True)
+        action = int(np.asarray(action).reshape(-1)[0])
+        if obs_dim == 34:
+            persistence_states[src_ip].stage_action(action)
+        elif obs_dim == 30:
+            damage = compute_network_damage(features)
+            temporal_states[src_ip].update(action, damage)
         y_true.append(LABEL_TO_ACTION[label])
-        y_pred.append(int(action))
+        y_pred.append(action)
 
     if label_unknown:
         unknown_set = set(label_unknown)

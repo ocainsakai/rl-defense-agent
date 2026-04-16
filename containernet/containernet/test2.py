@@ -386,6 +386,12 @@ EOF
     info('    attacker SSLKEYLOGFILE=/tmp/tls_keys.log curl -k "https://192.168.10.10/"\n')
     info('    attacker SSLKEYLOGFILE=/tmp/tls_keys.log curl -k "https://192.168.10.10/?id=1%27 OR 1=1--"\n')
 
+    info('*** Opening node terminals\n')
+    for node_name in ['webserver', 'honeypot', 'attacker', 'router']:
+        net.get(node_name).cmd(
+            f'xfce4-terminal --disable-server --title="Node: {node_name}" &'
+        )
+
     info('*** Running CLI\n')
     CLI(net)
 
