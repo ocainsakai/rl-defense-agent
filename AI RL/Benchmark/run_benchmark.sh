@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Full Benchmark Pipeline — Run from AI RL/Benchmark/
-# Total time: ~75 min (19 seeds × ~4 min/seed)
+# Full Benchmark Pipeline — PPO vs A2C vs DQN vs Rule-Based
+# Track: sb3_strict_default_final_primary
+# Env: env_ids_harder.py (34D, missing_prob=0.08, drift_max=0.35)
+# 3 algos × 5 seeds = 15 training runs (~45-60 min total)
+# n_envs=1 for all algos — strict fair comparison
 #
 # Usage:
 #   cd "AI RL/Benchmark"
@@ -11,44 +14,27 @@ set -e
 cd "$(dirname "$0")"
 
 echo "========================================"
-echo "RL BENCHMARK — Full Training Pipeline"
+echo "RL BENCHMARK — PPO vs A2C vs DQN"
+echo "Track: sb3_strict_default_final_primary"
+echo "Env: env_ids_harder (34D, harder params)"
+echo "n_envs=1, checkpoint=final (not best)"
 echo "========================================"
 
-# Step 1: Train PPO-Tuned seed42 (harder env — not copying from run_final_v4)
-if [ ! -f models/ppo_tuned_seed42.zip ]; then
-    echo "[*] Training PPO-Tuned seed42 on harder env..."
-    python3 train_ppo_tuned.py --seed 42
-else
-    echo "[+] models/ppo_tuned_seed42.zip already exists — skip"
-fi
-
-# Step 2: Train PPO-Tuned seeds 123, 456, 789, 1337
+# Step 1: Train PPO × 5 seeds
 echo ""
-echo "[STEP 2] Training PPO-Tuned (4 additional seeds)..."
-for seed in 123 456 789 1337; do
-    if [ ! -f "models/ppo_tuned_seed${seed}.zip" ]; then
-        echo "  [*] ppo_tuned seed=$seed"
-        python3 train_ppo_tuned.py --seed $seed
-    else
-        echo "  [+] ppo_tuned seed=$seed already exists — skip"
-    fi
-done
-
-# Step 3: Train PPO-Default × 5 seeds
-echo ""
-echo "[STEP 3] Training PPO-Default (5 seeds)..."
+echo "[STEP 1] Training PPO (5 seeds)..."
 for seed in 42 123 456 789 1337; do
-    if [ ! -f "models/ppo_default_seed${seed}.zip" ]; then
-        echo "  [*] ppo_default seed=$seed"
+    if [ ! -f "models/ppo_seed${seed}.zip" ]; then
+        echo "  [*] ppo seed=$seed"
         python3 train_ppo_default.py --seed $seed
     else
-        echo "  [+] ppo_default seed=$seed already exists — skip"
+        echo "  [+] ppo seed=$seed already exists — skip"
     fi
 done
 
-# Step 4: Train A2C × 5 seeds
+# Step 2: Train A2C × 5 seeds
 echo ""
-echo "[STEP 4] Training A2C (5 seeds)..."
+echo "[STEP 2] Training A2C (5 seeds)..."
 for seed in 42 123 456 789 1337; do
     if [ ! -f "models/a2c_seed${seed}.zip" ]; then
         echo "  [*] a2c seed=$seed"
@@ -58,9 +44,9 @@ for seed in 42 123 456 789 1337; do
     fi
 done
 
-# Step 5: Train DQN × 5 seeds
+# Step 3: Train DQN × 5 seeds
 echo ""
-echo "[STEP 5] Training DQN (5 seeds)..."
+echo "[STEP 3] Training DQN (5 seeds)..."
 for seed in 42 123 456 789 1337; do
     if [ ! -f "models/dqn_seed${seed}.zip" ]; then
         echo "  [*] dqn seed=$seed"
@@ -72,13 +58,13 @@ done
 
 echo ""
 echo "========================================"
-echo "[STEP 6] Running Unified Evaluation..."
+echo "[STEP 4] Running Unified Evaluation..."
 echo "========================================"
 python3 evaluate_all.py
 
 echo ""
 echo "========================================"
-echo "[STEP 7] Generating Charts..."
+echo "[STEP 5] Generating Charts..."
 echo "========================================"
 python3 plot_results.py
 
