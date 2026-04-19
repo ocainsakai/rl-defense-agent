@@ -139,14 +139,15 @@ def plot_reward_ci_by_mode(results):
                     ecolor="black", elinewidth=1.2, capsize=4, capthick=1.2)
         for bar, v, ci in zip(bars, means, cis):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + ci + 0.005,
-                    f"{v:.3f}", ha="center", va="bottom", fontsize=7)
+                    f"{v:.3f}", ha="center", va="bottom", fontsize=7, fontweight="bold",
+                    )
 
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
     ax.set_ylabel("Mean Episode Reward")
     ax.set_title("Mean Episode Reward ± 95% CI\n(5 seeds × 30 eval episodes each, higher is better)")
     ax.axhline(0, color="gray", linewidth=0.8, linestyle="--", alpha=0.5)
-    ax.legend(loc="lower right")
+    ax.legend(loc="upper right")
     ax.grid(axis="y", alpha=0.3)
     sns.despine(ax=ax)
     fig.tight_layout()
@@ -190,7 +191,8 @@ def plot_response_quality(results):
         sns.despine(ax=ax)
         for bar, v in zip(bars, vals):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
-                    f"{v:.1f}", ha="center", va="bottom", fontsize=8)
+                    f"{v:.1f}", ha="center", va="bottom", fontsize=8, fontweight="bold",
+                    )
 
     fig.suptitle("Response Quality Metrics — Round-Robin Eval", fontsize=13, y=1.02)
     fig.tight_layout()
@@ -225,7 +227,8 @@ def plot_operational_safety(results):
         for bar, v in zip(bars, vals):
             if v > 0.5:
                 ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.2,
-                        f"{v:.1f}", ha="center", va="bottom", fontsize=7)
+                        f"{v:.1f}", ha="center", va="bottom", fontsize=7, fontweight="bold",
+                        )
 
     ax.set_xticks(x)
     ax.set_xticklabels([ml for _, ml in metrics], rotation=12, ha="right")
@@ -265,7 +268,8 @@ def plot_service_damage(results):
                     ecolor="black", elinewidth=1.2, capsize=4, capthick=1.2)
         for bar, v in zip(bars, vals):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001,
-                    f"{v:.4f}", ha="center", va="bottom", fontsize=7)
+                    f"{v:.4f}", ha="center", va="bottom", fontsize=8, fontweight="bold",
+                    )
 
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
@@ -412,9 +416,15 @@ def _delta_panel(ax, results, base_mode, stress_mode, mkey, mlabel, higher_delta
     ax.grid(axis="y", alpha=0.3)
     sns.despine(ax=ax)
     for bar, v in zip(bars, deltas):
-        ypos = max(v, 0) + abs(v)*0.05 + 0.001
+        if v >= 0:
+            ypos = v + abs(v)*0.05 + 0.001
+            va = "bottom"
+        else:
+            ypos = v - abs(v)*0.05 - 0.001
+            va = "top"
         ax.text(bar.get_x() + bar.get_width()/2, ypos,
-                f"{v:+.3f}", ha="center", va="bottom", fontsize=7.5)
+                f"{v:+.3f}", ha="center", va=va, fontsize=7.5, fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7))
 
 
 def plot_robustness_delta(results):
@@ -446,7 +456,7 @@ def plot_robustness_delta(results):
                  "Green = change is favourable; red = change is unfavourable",
                  fontsize=11)
     fig.tight_layout()
-    savefig(fig, os.path.join(MAIN_DIR, "07_robustness_stress_delta.png"))
+    savefig(fig, os.path.join(MAIN_DIR, "07_closed_loop_robustness_delta.png"))
 
 # ============================================================================
 # APPENDIX — Action Distribution (stacked bar)
@@ -572,6 +582,7 @@ def plot_honeypot_overblock_tradeoff(results):
     # Draw ideal corner marker
     ax.axvline(0, color="green", linewidth=0.7, linestyle=":", alpha=0.5)
     ax.axhline(100, color="green", linewidth=0.7, linestyle=":", alpha=0.5)
+    ax.legend(loc="upper right")
     fig.tight_layout()
     savefig(fig, os.path.join(APND_DIR, "appendix_honeypot_overblock_tradeoff.png"))
 
@@ -597,6 +608,7 @@ def plot_benign_safety_tradeoff(results):
     ax.set_ylabel("Mean Reward ↑ higher is better")
     ax.set_title("Benign Safety vs Reward Tradeoff\n"
                  "(ideal = top-left: low intervention + high reward)")
+    ax.legend(loc="upper right")
     ax.grid(alpha=0.3); sns.despine(ax=ax)
     fig.tight_layout()
     savefig(fig, os.path.join(APND_DIR, "appendix_benign_safety_tradeoff.png"))
@@ -636,6 +648,9 @@ def plot_seed_variability(results):
     ax.set_title("Seed Variability — Mean Reward Distribution\n"
                  "(points = individual train seeds, box = seed distribution)")
     ax.grid(axis="y", alpha=0.3); sns.despine(ax=ax)
+    legend_patches = [mpatches.Patch(color=COLORS[a], alpha=0.7, label=ALGO_LABELS[a])
+                      for a in algos]
+    ax.legend(handles=legend_patches, loc="upper right")
     fig.tight_layout()
     savefig(fig, os.path.join(APND_DIR, "appendix_seed_variability_boxplot.png"))
 
@@ -686,11 +701,25 @@ def plot_effect_size_forest(results):
             labels_m.append(mlabel)
 
         ax.barh(ys, ds, color=colors_dot, alpha=0.75, edgecolor="black", linewidth=0.5)
-        # Label each bar with direction-adjusted Cohen's d
+        # Auto-expand xlim to fit all bars
+        max_pos = max((d for d in ds if d >= 0), default=0)
+        max_neg = min((d for d in ds if d < 0), default=0)
+        cur_l, cur_r = ax.get_xlim()
+        ax.set_xlim(min(cur_l, max_neg * 1.2 if max_neg < 0 else cur_l),
+                    max(cur_r, max_pos * 1.2 if max_pos > 0 else cur_r))
         for y, d_val in zip(ys, ds):
-            ax.text(d_val + (0.02 if d_val >= 0 else -0.02), y,
-                    f"{d_val:+.2f}", va="center",
-                    ha="left" if d_val >= 0 else "right", fontsize=7.5)
+            xlim = ax.get_xlim()
+            pad = 0.05
+            if d_val >= 0:
+                x_pos, ha = d_val + pad, "left"
+                if x_pos > xlim[1] - pad:   # tràn phải → lật vào trong
+                    x_pos, ha = d_val - pad, "right"
+            else:
+                x_pos, ha = d_val - pad, "right"
+                if x_pos < xlim[0] + pad:   # tràn trái → lật vào phải
+                    x_pos, ha = d_val + pad, "left"
+            ax.text(x_pos, y, f"{d_val:+.2f}", va="center", ha=ha,
+                    fontsize=7.5, clip_on=False)
         ax.axvline(0, color="black", linewidth=0.8)
         ax.axvline( 0.8, color="gray", linewidth=0.6, linestyle="--", alpha=0.5)
         ax.axvline(-0.8, color="gray", linewidth=0.6, linestyle="--", alpha=0.5)
@@ -754,7 +783,8 @@ def plot_dynamic_response(results):
                     elinewidth=1.2, capsize=3)
         for bar, v in zip(bars, vals):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                    f"{v:.1f}", ha="center", va="bottom", fontsize=7.5)
+                    f"{v:.1f}", ha="center", va="bottom", fontsize=7.5, fontweight="bold",
+                    )
 
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
@@ -825,7 +855,8 @@ def plot_l7_escalation_quality(results):
         sns.despine(ax=ax)
         for bar, v in zip(bars, vals):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                    f"{v:.1f}", ha="center", va="bottom", fontsize=8)
+                    f"{v:.1f}", ha="center", va="bottom", fontsize=8, fontweight="bold",
+                    )
 
     fig.suptitle("L7 Escalation Quality — Phase-Aware Metrics\n"
                  "Round-Robin Eval (5 seeds × 30 episodes)", y=1.02)
