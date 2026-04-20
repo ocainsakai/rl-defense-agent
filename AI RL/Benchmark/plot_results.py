@@ -123,8 +123,10 @@ def plot_reward_ci_by_mode(results):
     bar_w = 0.35
     offsets = np.linspace(-(n_modes-1)/2, (n_modes-1)/2, n_modes) * bar_w
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(9, 5.5))
     mode_hatches = ["", "//"]
+    all_tops = []  # track top of each errorbar to set ylim
+    bar_records = []  # (x_center, top_of_whisker, label_text, mode_idx)
     for mi, mode in enumerate(primary_modes):
         means, cis, cols = [], [], []
         for algo in algos:
@@ -138,15 +140,26 @@ def plot_reward_ci_by_mode(results):
         ax.errorbar(x + offsets[mi], means, yerr=cis, fmt="none",
                     ecolor="black", elinewidth=1.2, capsize=4, capthick=1.2)
         for bar, v, ci in zip(bars, means, cis):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + ci + 0.005,
-                    f"{v:.3f}", ha="center", va="bottom", fontsize=7)
+            whisker_top = v + ci
+            all_tops.append(whisker_top)
+            bar_records.append((bar.get_x() + bar.get_width()/2, whisker_top, f"{v:.1f}", mi))
+
+    # Set ylim first so label placement is accurate
+    y_max = max(all_tops) if all_tops else 70
+    ax.set_ylim(0, y_max * 1.15)
+
+    # Place labels just above the whisker top, no overlap with bar
+    for xc, top, txt, mi in bar_records:
+        ax.text(xc, top + y_max * 0.015, txt, ha="center", va="bottom",
+                fontsize=7.5, color="#333333")
 
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
     ax.set_ylabel("Mean Episode Reward")
     ax.set_title("Mean Episode Reward ± 95% CI\n(5 seeds × 30 eval episodes each, higher is better)")
     ax.axhline(0, color="gray", linewidth=0.8, linestyle="--", alpha=0.5)
-    ax.legend(loc="lower right")
+    # Legend outside plot area to avoid covering bars
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), framealpha=0.9)
     ax.grid(axis="y", alpha=0.3)
     sns.despine(ax=ax)
     fig.tight_layout()
@@ -165,7 +178,7 @@ def plot_response_quality(results):
     algos = [a for a in ALGO_ORDER if get_agg(results, a)]
     mode = "round_robin"
 
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4.5), sharey=False)
+    fig, axes = plt.subplots(1, 3, figsize=(13, 5), sharey=False)
     for ax, (mkey, mlabel, direction) in zip(axes, metrics):
         vals, cis, cols = [], [], []
         for algo in algos:
@@ -188,12 +201,18 @@ def plot_response_quality(results):
         ax.set_title(f"{mlabel}\n({direction} better)")
         ax.grid(axis="y", alpha=0.3)
         sns.despine(ax=ax)
-        for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
-                    f"{v:.1f}", ha="center", va="bottom", fontsize=8)
+        # Place label ABOVE the errorbar whisker top, not just above bar
+        y_max = max(v + ci for v, ci in zip(vals, cis)) if vals else 100
+        ax.set_ylim(0, y_max * 1.14)
+        for bar, v, ci in zip(bars, vals, cis):
+            whisker_top = v + ci
+            ax.text(bar.get_x() + bar.get_width()/2,
+                    whisker_top + y_max * 0.012,
+                    f"{v:.1f}", ha="center", va="bottom", fontsize=8,
+                    color="#333333")
 
-    fig.suptitle("Response Quality Metrics — Round-Robin Eval", fontsize=13, y=1.02)
-    fig.tight_layout()
+    fig.suptitle("Response Quality Metrics — Round-Robin Eval", fontsize=13)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, os.path.join(MAIN_DIR, "02_response_quality_metrics.png"))
 
 # ============================================================================
@@ -249,8 +268,11 @@ def plot_service_damage(results):
     bar_w = 0.35
     offsets = np.linspace(-(n_modes-1)/2, (n_modes-1)/2, n_modes) * bar_w
 
-    fig, ax = plt.subplots(figsize=(8, 4.5))
+    fig, ax = plt.subplots(figsize=(9, 5))
     mode_hatches = ["", "//"]
+    all_vals = []
+    all_cis = []
+    bar_records = []  # (xc, v, ci, mi) — collect first, label after ylim is set
     for mi, mode in enumerate(primary_modes):
         vals, cis, cols = [], [], []
         for algo in algos:
@@ -258,14 +280,34 @@ def plot_service_damage(results):
             vals.append(agg.get("service_damage_auc", 0) if agg else 0)
             cis.append(agg.get("service_damage_auc_ci95", 0) if agg else 0)
             cols.append(COLORS[algo])
+        all_vals.extend(vals)
+        all_cis.extend(cis)
         bars = ax.bar(x + offsets[mi], vals, bar_w, color=cols, alpha=0.8,
                       edgecolor="black", linewidth=0.6, hatch=mode_hatches[mi],
                       label=MODE_LABELS[mode])
         ax.errorbar(x + offsets[mi], vals, yerr=cis, fmt="none",
                     ecolor="black", elinewidth=1.2, capsize=4, capthick=1.2)
-        for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001,
-                    f"{v:.4f}", ha="center", va="bottom", fontsize=7)
+        for bar, v, ci in zip(bars, vals, cis):
+            bar_records.append((bar.get_x() + bar.get_width()/2, v, ci, mi))
+
+    # Set ylim FIRST so we can clamp labels inside
+    whisker_bottoms = [v - ci for v, ci in zip(all_vals, all_cis)]
+    y_min = max(0, min(whisker_bottoms) * 0.97)
+    y_max = (max(v + ci for v, ci in zip(all_vals, all_cis))) * 1.20
+    ax.set_ylim(y_min, y_max)
+
+    # Now place labels — clamp to inside y_max so they never fly out
+    for xc, v, ci, mi in bar_records:
+        whisker_top = v + ci
+        label_y = whisker_top + (y_max - y_min) * 0.012
+        # If label would exceed plot top, place it INSIDE the bar instead
+        if label_y > y_max * 0.98:
+            label_y = v - (y_max - y_min) * 0.015
+            va = "top"
+        else:
+            va = "bottom"
+        ax.text(xc, label_y, f"{v:.3f}", ha="center", va=va,
+                fontsize=7, color="#222222")
 
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
@@ -321,21 +363,29 @@ def plot_radar(results):
     angles = np.linspace(0, 2*np.pi, N, endpoint=False).tolist()
     angles += angles[:1]
 
-    fig, ax = plt.subplots(figsize=(6.5, 6.5), subplot_kw=dict(polar=True))
+    # Different line styles to distinguish overlapping algorithms (e.g., PPO vs DQN)
+    linestyles = {"ppo": "-", "a2c": "-", "dqn": "--", "rule_based": ":"}
+    linewidths  = {"ppo": 2.5, "a2c": 2.0, "dqn": 2.5, "rule_based": 2.0}
+
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
     for algo, vals in norm.items():
         v = vals + vals[:1]
-        ax.plot(angles, v, linewidth=2, label=ALGO_LABELS[algo], color=COLORS[algo])
+        ax.plot(angles, v, linewidth=linewidths.get(algo, 2),
+                linestyle=linestyles.get(algo, "-"),
+                label=ALGO_LABELS[algo], color=COLORS[algo])
         ax.fill(angles, v, alpha=0.07, color=COLORS[algo])
 
     ax.set_xticks(angles[:-1])
+    # Add extra padding to axis labels to prevent clipping
     ax.set_xticklabels(axis_labels, size=9)
+    ax.tick_params(pad=10)  # push tick labels outward
     ax.set_ylim(0, 1)
     ax.set_yticks([0.25, 0.5, 0.75, 1.0])
     ax.set_yticklabels(["25%", "50%", "75%", "100%"], size=7)
     ax.set_title("Operational Profile Radar\n"
-                 "(normalized; all axes: outer edge = best performance)", pad=20)
-    ax.legend(loc="lower right", bbox_to_anchor=(1.35, -0.05), framealpha=0.9)
-    fig.tight_layout()
+                 "(normalized; all axes: outer edge = best performance)", pad=25)
+    ax.legend(loc="lower right", bbox_to_anchor=(1.4, -0.05), framealpha=0.9)
+    fig.tight_layout(pad=2.0)
     savefig(fig, os.path.join(MAIN_DIR, "05_operational_profile_radar.png"))
 
 # ============================================================================
@@ -388,7 +438,8 @@ def plot_ip_type_heatmap(results):
 # MAIN 07 — Closed-Loop Robustness Delta (session_20 − round_robin)
 # ============================================================================
 
-def _delta_panel(ax, results, base_mode, stress_mode, mkey, mlabel, higher_delta_better):
+def _delta_panel(ax, results, base_mode, stress_mode, mkey, mlabel, higher_delta_better,
+                 use_symlog=False):
     algos = [a for a in ALGO_ORDER if
              get_agg(results, a, base_mode) and get_agg(results, a, stress_mode)]
     deltas = []
@@ -405,16 +456,26 @@ def _delta_panel(ax, results, base_mode, stress_mode, mkey, mlabel, higher_delta
     x = np.arange(len(algos))
     bars = ax.bar(x, deltas, color=bar_colors, alpha=0.85, edgecolor="black", linewidth=0.6)
     ax.axhline(0, color="black", linewidth=0.8)
+    if use_symlog:
+        ax.set_yscale("symlog", linthresh=1.0)
     ax.set_xticks(x)
-    ax.set_xticklabels([ALGO_LABELS[a] for a in algos], rotation=10)
+    ax.set_xticklabels([ALGO_LABELS[a] for a in algos], rotation=10, fontsize=7.5)
     good = "↑" if higher_delta_better else "↓"
-    ax.set_title(f"{mlabel}\n(green={good} better under stress)")
+    ax.set_title(f"{mlabel}\n({good} better)", pad=8, fontsize=8.5)
     ax.grid(axis="y", alpha=0.3)
     sns.despine(ax=ax)
+    # Label placement: use axes-fraction offset so it never overlaps title
+    y0, y1 = ax.get_ylim()
+    span = y1 - y0 if (y1 - y0) != 0 else 1
     for bar, v in zip(bars, deltas):
-        ypos = max(v, 0) + abs(v)*0.05 + 0.001
+        if v >= 0:
+            ypos = bar.get_height() + span * 0.03
+            va = "bottom"
+        else:
+            ypos = bar.get_height() - span * 0.03
+            va = "top"
         ax.text(bar.get_x() + bar.get_width()/2, ypos,
-                f"{v:+.3f}", ha="center", va="bottom", fontsize=7.5)
+                f"{v:+.3f}", ha="center", va=va, fontsize=6.5)
 
 
 def plot_robustness_delta(results):
@@ -435,17 +496,21 @@ def plot_robustness_delta(results):
         ("session_20",   "session_20_stress",   "S20: stress − normal"),
     ]
 
+    # Use symlog scale for mitigation_efficiency due to large outlier values
+    symlog_metrics = {"mitigation_efficiency"}
+
     fig, axes = plt.subplots(len(pairs), len(metrics),
-                             figsize=(14, 7), sharey=False)
+                             figsize=(16, 9), sharey=False)
     for ri, (base, stress, row_title) in enumerate(pairs):
         for ci, (mkey, mlabel, hib) in enumerate(metrics):
-            _delta_panel(axes[ri, ci], results, base, stress, mkey, mlabel, hib)
-        axes[ri, 0].set_ylabel(row_title, fontsize=9)
+            _delta_panel(axes[ri, ci], results, base, stress, mkey, mlabel, hib,
+                         use_symlog=(mkey in symlog_metrics))
+        axes[ri, 0].set_ylabel(row_title, fontsize=9, labelpad=6)
 
     fig.suptitle("Noise/Drift Stress Impact (stress − normal, same session type)\n"
-                 "Green = change is favourable; red = change is unfavourable",
-                 fontsize=11)
-    fig.tight_layout()
+                 "Green = favourable change; red = unfavourable change",
+                 fontsize=11, y=0.98)
+    fig.subplots_adjust(top=0.88, hspace=0.75, wspace=0.38)
     savefig(fig, os.path.join(MAIN_DIR, "07_robustness_stress_delta.png"))
 
 # ============================================================================
@@ -458,7 +523,7 @@ def plot_action_distribution(results):
     labels = [ALGO_LABELS[a] for a in algos]
     dists  = np.array([get_agg(results, a, mode)["action_dist_mean"] for a in algos])
 
-    fig, ax = plt.subplots(figsize=(7, 4.5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     x = np.arange(len(labels))
     bottoms = np.zeros(len(labels))
     patches = []
@@ -470,7 +535,9 @@ def plot_action_distribution(results):
     ax.set_xticks(x); ax.set_xticklabels(labels)
     ax.set_ylabel("Action Proportion (%)"); ax.set_ylim(0, 100)
     ax.set_title("Action Distribution by Algorithm (Round-Robin)")
-    ax.legend(handles=patches, loc="upper right", ncol=2)
+    # Legend outside plot area to avoid overlapping bars
+    ax.legend(handles=patches, loc="upper left", bbox_to_anchor=(1.01, 1),
+              framealpha=0.9, ncol=1)
     ax.grid(axis="y", alpha=0.3); sns.despine(ax=ax)
     fig.tight_layout()
     savefig(fig, os.path.join(APND_DIR, "appendix_action_distribution.png"))
@@ -486,7 +553,7 @@ def plot_confusion_matrix_grid(results):
     n = len(algos)
     ncols = 2; nrows = math.ceil(n / ncols)
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols*4.5, nrows*4))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols*5.2, nrows*4.5))
     axes_flat = axes.flatten() if n > 1 else [axes]
     for ax, algo in zip(axes_flat, algos):
         agg = get_agg(results, algo, mode)
@@ -496,16 +563,16 @@ def plot_confusion_matrix_grid(results):
         cm_norm = cm / row_sums * 100
         sns.heatmap(cm_norm, annot=True, fmt=".1f", cmap="Blues",
                     xticklabels=ACTION_TICK, yticklabels=ACTION_TICK,
-                    ax=ax, linewidths=0.5, cbar_kws={"label": "Row %"},
+                    ax=ax, linewidths=0.5, cbar_kws={"label": "Row %", "shrink": 0.85},
                     vmin=0, vmax=100)
         ax.set_xlabel("Predicted Action")
         ax.set_ylabel("Optimal Action")
-        ax.set_title(f"{ALGO_LABELS[algo]}")
+        ax.set_title(f"{ALGO_LABELS[algo]}", pad=8)
 
     for ax in axes_flat[n:]:
         ax.set_visible(False)
     fig.suptitle("Confusion Matrix — Row-Normalized % (avg 5 seeds, Round-Robin)", y=1.02)
-    fig.tight_layout()
+    fig.tight_layout(pad=2.0, h_pad=3.0, w_pad=3.0)
     savefig(fig, os.path.join(APND_DIR, "appendix_confusion_matrix_grid.png"))
 
 # ============================================================================
@@ -552,26 +619,47 @@ def plot_eval_reward_trace(results):
 
 def plot_honeypot_overblock_tradeoff(results):
     mode = "round_robin"
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+
+    points = {}
     for algo in ALGO_ORDER:
         agg = get_agg(results, algo, mode)
         if agg is None:
             continue
-        x_val = agg.get("l7_over_block_rate", 0)
-        y_val = agg.get("honeypot_capture_rate", 0)
-        ax.scatter(x_val, y_val, s=120, color=COLORS[algo],
+        points[algo] = (agg.get("l7_over_block_rate", 0),
+                        agg.get("honeypot_capture_rate", 0))
+
+    # Collect coords to compute adaptive offsets
+    coords = list(points.values())
+    # Labels below marker; PPO/DQN cluster at same x so shift horizontally to avoid overlap
+    _label_offsets = {
+        "ppo":        ( 20, -18),   # right of DQN
+        "dqn":        (-20, -18),   # left of PPO
+        "a2c":        (  0, -18),
+        "rule_based": (0, 18),   # shift left so label centers under marker
+    }
+
+    for algo, (x_val, y_val) in points.items():
+        ax.scatter(x_val, y_val, s=160, color=COLORS[algo],
                    label=ALGO_LABELS[algo], zorder=3)
         ax.annotate(ALGO_LABELS[algo], (x_val, y_val),
-                    textcoords="offset points", xytext=(6, 4), fontsize=9)
+                    textcoords="offset points",
+                    xytext=_label_offsets.get(algo, (0, -18)),
+                    fontsize=10, fontweight="bold", color=COLORS[algo],
+                    ha="center", va="top")
 
     ax.set_xlabel("L7 Over-Block Rate (%) ← lower is better")
     ax.set_ylabel("Honeypot Capture Rate (%) ↑ higher is better")
     ax.set_title("Honeypot Capture vs L7 Over-Block Tradeoff\n"
                  "(ideal = top-left corner)")
+    # Legend in lower-right — always empty in this chart
+    ax.legend(loc="lower right", fontsize=9, framealpha=0.9)
     ax.grid(alpha=0.3); sns.despine(ax=ax)
-    # Draw ideal corner marker
     ax.axvline(0, color="green", linewidth=0.7, linestyle=":", alpha=0.5)
     ax.axhline(100, color="green", linewidth=0.7, linestyle=":", alpha=0.5)
+    # Extra right margin so PPO label is never clipped
+    x_vals = [v[0] for v in points.values()]
+    ax.set_xlim(right=max(x_vals) * 1.25)
     fig.tight_layout()
     savefig(fig, os.path.join(APND_DIR, "appendix_honeypot_overblock_tradeoff.png"))
 
@@ -581,23 +669,42 @@ def plot_honeypot_overblock_tradeoff(results):
 
 def plot_benign_safety_tradeoff(results):
     mode = "round_robin"
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+
+    points = {}
     for algo in ALGO_ORDER:
         agg = get_agg(results, algo, mode)
         if agg is None:
             continue
-        x_val = agg.get("benign_intervention_rate", 0)
-        y_val = agg.get("mean_reward", 0)
-        ax.scatter(x_val, y_val, s=120, color=COLORS[algo],
+        points[algo] = (agg.get("benign_intervention_rate", 0),
+                        agg.get("mean_reward", 0))
+
+    # DQN and PPO both cluster near x≈0 top-left — split them clearly
+    _label_offsets = {
+        "dqn":        ( 10,  14),   # above-right DQN
+        "ppo":        ( 10, -24),   # below-right PPO
+        "a2c":        ( 10,  8),    # right of A2C
+        "rule_based": (-95,  8),    # left of Rule-Based (far right x)
+    }
+
+    for algo, (x_val, y_val) in points.items():
+        ax.scatter(x_val, y_val, s=160, color=COLORS[algo],
                    label=ALGO_LABELS[algo], zorder=3)
         ax.annotate(ALGO_LABELS[algo], (x_val, y_val),
-                    textcoords="offset points", xytext=(6, 4), fontsize=9)
+                    textcoords="offset points",
+                    xytext=_label_offsets.get(algo, (10, 8)),
+                    fontsize=10, fontweight="bold", color=COLORS[algo])
 
     ax.set_xlabel("Benign Intervention Rate (%) ← lower is better")
     ax.set_ylabel("Mean Reward ↑ higher is better")
     ax.set_title("Benign Safety vs Reward Tradeoff\n"
                  "(ideal = top-left: low intervention + high reward)")
+    # Legend in center-right — stays away from clustered top-left and bottom-right points
+    ax.legend(loc="center right", fontsize=9, framealpha=0.9)
     ax.grid(alpha=0.3); sns.despine(ax=ax)
+    # Extra right margin so Rule-Based label is never clipped
+    x_vals = [v[0] for v in points.values()]
+    ax.set_xlim(left=min(x_vals) - 3, right=max(x_vals) * 1.12)
     fig.tight_layout()
     savefig(fig, os.path.join(APND_DIR, "appendix_benign_safety_tradeoff.png"))
 
@@ -686,11 +793,15 @@ def plot_effect_size_forest(results):
             labels_m.append(mlabel)
 
         ax.barh(ys, ds, color=colors_dot, alpha=0.75, edgecolor="black", linewidth=0.5)
-        # Label each bar with direction-adjusted Cohen's d
+        # Label each bar — placed outside the bar, clip_on=False so they never get cut
+        abs_max = max(abs(d) for d in ds) if ds else 1
+        ax.set_xlim(-abs_max * 1.35, abs_max * 1.35)
         for y, d_val in zip(ys, ds):
-            ax.text(d_val + (0.02 if d_val >= 0 else -0.02), y,
+            offset = abs_max * 0.04
+            ax.text(d_val + (offset if d_val >= 0 else -offset), y,
                     f"{d_val:+.2f}", va="center",
-                    ha="left" if d_val >= 0 else "right", fontsize=7.5)
+                    ha="left" if d_val >= 0 else "right",
+                    fontsize=7.5, clip_on=False)
         ax.axvline(0, color="black", linewidth=0.8)
         ax.axvline( 0.8, color="gray", linewidth=0.6, linestyle="--", alpha=0.5)
         ax.axvline(-0.8, color="gray", linewidth=0.6, linestyle="--", alpha=0.5)
@@ -752,17 +863,21 @@ def plot_dynamic_response(results):
                       edgecolor="black", linewidth=0.5, hatch=hatch, label=label)
         ax.errorbar(offs, vals, yerr=cis, fmt="none", ecolor="black",
                     elinewidth=1.2, capsize=3)
-        for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                    f"{v:.1f}", ha="center", va="bottom", fontsize=7.5)
+        for bar, v, ci in zip(bars, vals, cis):
+            # Place label above the CI whisker top to avoid errorbar overlap
+            whisker_top = v + ci
+            ax.text(bar.get_x() + bar.get_width()/2, whisker_top + 0.8,
+                    f"{v:.1f}", ha="center", va="bottom", fontsize=7.5,
+                    color="#333333")
 
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
     ax.set_ylabel("% of Active Steps")
-    ax.set_ylim(0, 105)
+    ax.set_ylim(0, 110)  # extra headroom so labels above 100 bars are visible
     ax.set_title("Static vs Phase-Aware (Dynamic) Exact Response Rate\n"
                  "Dynamic: Redirect=optimal when not block_ready, Block=optimal when block_ready")
-    ax.legend()
+    # Legend outside plot area to avoid covering bars
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), framealpha=0.9)
     ax.grid(axis="y", alpha=0.3)
     sns.despine(ax=ax)
     fig.tight_layout()
@@ -800,6 +915,9 @@ def plot_l7_escalation_quality(results):
         print("  [SKIP] l7_redirect_hold_rate not found — run evaluate_all.py first")
         return
 
+    # y-limits per subplot: left (redirect ~100%), right (on-time block ~0-5%)
+    ylims = [105, None]  # None = auto-scale for the block subplot
+
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
     for ax_i, (ax, (mkey, mlabel, col)) in enumerate(
@@ -819,12 +937,17 @@ def plot_l7_escalation_quality(results):
         ax.set_xticks(x)
         ax.set_xticklabels([ALGO_LABELS[a] for a in algos])
         ax.set_ylabel("% of L7 Steps")
-        ax.set_ylim(0, 105)
+        # Rescale right subplot independently so small values are visible
+        if ylims[ax_i] is not None:
+            ax.set_ylim(0, ylims[ax_i])
+        else:
+            max_v = max(vals) if vals else 1
+            ax.set_ylim(0, max(max_v * 1.35, 1.5))  # at least 1.5 so labels fit
         ax.set_title(f"{mlabel}\n(↑ better)")
         ax.grid(axis="y", alpha=0.3)
         sns.despine(ax=ax)
         for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(max(vals)*0.01, 0.05),
                     f"{v:.1f}", ha="center", va="bottom", fontsize=8)
 
     fig.suptitle("L7 Escalation Quality — Phase-Aware Metrics\n"
@@ -853,27 +976,62 @@ def plot_premature_vs_ontime_block(results):
         print("  [SKIP] premature block rate not found — run evaluate_all.py first")
         return
 
-    fig, ax = plt.subplots(figsize=(6, 5))
+    # Collect all data first so we can compute smart label offsets
+    point_data = []
     for a in algos:
         agg = get_agg(results, a, mode)
         if not agg:
             continue
-        x_val = agg.get("l7_premature_block_rate") or 0
-        y_val = agg.get("l7_ontime_block_rate") or 0
-        ci_x  = agg.get("l7_premature_block_rate_ci95") or 0
-        ci_y  = agg.get("l7_ontime_block_rate_ci95") or 0
-        ax.errorbar(x_val, y_val, xerr=ci_x, yerr=ci_y,
-                    fmt="o", color=COLORS[a], markersize=9,
-                    label=ALGO_LABELS[a], linewidth=1.5)
+        point_data.append((
+            a,
+            agg.get("l7_premature_block_rate") or 0,
+            agg.get("l7_ontime_block_rate") or 0,
+            agg.get("l7_premature_block_rate_ci95") or 0,
+            agg.get("l7_ontime_block_rate_ci95") or 0,
+        ))
+
+    # Per-algo label offsets (points).
+    # PPO goes BELOW its marker so it doesn't float into the title area.
+    # DQN goes far left so it doesn't overlap PPO text.
+    label_offsets = {
+        "ppo":        (10,  -22),  # below-right PPO
+        "a2c":        (10,  -22),  # below-right A2C
+        "dqn":        (-55, -22),  # below-left DQN (away from PPO)
+        "rule_based": (12,   12),  # upper-right Rule-Based
+    }
+
+    fig, ax = plt.subplots(figsize=(8.5, 5.5))
+    all_y, all_x = [], []
+    for a, x_val, y_val, ci_x, ci_y in point_data:
+        ax.scatter(x_val, y_val, s=120, color=COLORS[a],
+                   label=ALGO_LABELS[a], zorder=3)
+        all_y.append(y_val)
+        all_x.append(x_val)
+        dx, dy = label_offsets.get(a, (12, 12))
         ax.annotate(ALGO_LABELS[a], (x_val, y_val),
-                    textcoords="offset points", xytext=(6, 4), fontsize=9)
+                    textcoords="offset points", xytext=(dx, dy),
+                    fontsize=9.5, color=COLORS[a], fontweight="bold")
+
+    # Headroom on all sides so labels never clip at axis edges
+    y_min, y_max = min(all_y), max(all_y)
+    x_min, x_max = min(all_x), max(all_x)
+    y_pad = (y_max - y_min) * 0.30 if (y_max - y_min) > 0 else 1.0
+    x_pad = (x_max - x_min) * 0.20 if (x_max - x_min) > 0 else 0.5
+    ax.set_ylim(y_min - y_pad * 0.5, y_max + y_pad)
+    ax.set_xlim(x_min - x_pad * 2.5, x_max + x_pad * 1.5)  # extra left space for DQN label
+
+    # Annotate ideal region
+    ax.annotate("← Ideal", xytext=(0.55, 0.05), textcoords="axes fraction",
+                xy=(0.55, 0.05),   # dummy xy since we use axes fraction
+                fontsize=8, color="gray", style="italic",
+                annotation_clip=False)
 
     ax.set_xlabel("Premature Block Rate % (↓ better)")
     ax.set_ylabel("On-Time Block Rate % (↑ better)")
     ax.set_title("L7 Escalation Precision\nPremature vs On-Time Block\n"
                  "(ideal: bottom-right → high on-time, low premature)")
     ax.grid(alpha=0.3)
-    ax.legend()
+    ax.legend(loc="center right")
     sns.despine(ax=ax)
     fig.tight_layout()
     savefig(fig, os.path.join(MAIN_DIR, "10_premature_vs_ontime_block.png"))
@@ -896,6 +1054,15 @@ def _efficiency_scatter_ax(ax, results, mode, x_key, y_key, size_key, x_label, s
     ]
     max_eff = max(finite_effs) if finite_effs else 1
 
+    # DQN/PPO/A2C all cluster near x≈0, y≈96-101 — use wide offsets to separate labels
+    # Rule-Based isolated at far-right low-y
+    _scatter_offsets = {
+        "dqn":        ( 14,  22),   # above-right DQN
+        "ppo":        (-60,  22),   # above-left PPO
+        "a2c":        (-60, -28),   # below-left A2C
+        "rule_based": (-75,  10),   # left of Rule-Based
+    }
+
     for a in algos:
         agg = get_agg(results, a, mode)
         if not agg:
@@ -915,15 +1082,15 @@ def _efficiency_scatter_ax(ax, results, mode, x_key, y_key, size_key, x_label, s
                    edgecolors="black", linewidths=0.8,
                    label=f"{ALGO_LABELS[a]} ({size_label}={eff:.0f})", zorder=5)
         ax.annotate(ALGO_LABELS[a], (x_val, y_val),
-                    textcoords="offset points", xytext=(8, 4), fontsize=9,
+                    textcoords="offset points",
+                    xytext=_scatter_offsets.get(a, (12, 6)), fontsize=9,
                     color=COLORS[a], fontweight="bold")
 
-    ax.annotate("← Ideal region\n(high mitigation, low benign disruption)",
-                xy=(0, ax.get_ylim()[1] if ax.get_ylim()[1] > 0 else 100),
-                xytext=(0.05, 99.2), fontsize=7.5, color="gray", style="italic")
     ax.set_xlabel(x_label)
     ax.set_ylabel("Mitigation Rate % (↑ better)")
-    ax.legend(loc="lower right", fontsize=8)
+    # Legend below the plot — avoids all data clusters
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.22),
+              ncol=2, fontsize=8, framealpha=0.9)
     ax.grid(alpha=0.25)
     sns.despine(ax=ax)
 
@@ -939,7 +1106,7 @@ def plot_efficiency_scatter(results):
     if not algos:
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5.5))
 
     _efficiency_scatter_ax(
         axes[0], results, mode,
@@ -969,7 +1136,86 @@ def plot_efficiency_scatter(results):
                  "DQN leads on raw mitigation; PPO achieves higher efficiency ratios.",
                  y=1.02)
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.22)
     savefig(fig, os.path.join(APND_DIR, "appendix_efficiency_scatter.png"))
+
+
+# ============================================================================
+# MAIN 07b — Closed-Loop Robustness Delta (session_20 − round_robin)
+# ============================================================================
+
+def plot_closed_loop_robustness(results):
+    """
+    Single-row 4-panel chart: session_20 minus round_robin for 4 key metrics.
+    Shows how much the algorithm's performance shifts when moving from
+    round-robin to session-20 (closed-loop) evaluation.
+    """
+    metrics = [
+        ("mean_reward",             "Reward Delta",            True),
+        ("exact_response_rate",     "Exact Response \u0394 (%)",  True),
+        ("service_damage_auc",      "Damage AUC \u0394",         False),
+        ("action_oscillation_rate", "Oscillation \u0394 (%)",    False),
+    ]
+    base_mode   = "round_robin"
+    stress_mode = "session_20"
+
+    algos = [a for a in ALGO_ORDER if
+             get_agg(results, a, base_mode) and get_agg(results, a, stress_mode)]
+    if not algos:
+        print("  [SKIP] closed-loop robustness — insufficient data")
+        return
+
+    fig, axes = plt.subplots(1, len(metrics), figsize=(15, 5), sharey=False)
+
+    for ax, (mkey, mlabel, higher_better) in zip(axes, metrics):
+        deltas, bar_colors = [], []
+        for a in algos:
+            base_v   = (get_agg(results, a, base_mode)   or {}).get(mkey, 0)
+            stress_v = (get_agg(results, a, stress_mode) or {}).get(mkey, 0)
+            d = stress_v - base_v
+            deltas.append(d)
+            if higher_better:
+                bar_colors.append("#2ca02c" if d >= 0 else "#d62728")
+            else:
+                bar_colors.append("#2ca02c" if d <= 0 else "#d62728")
+
+        x = np.arange(len(algos))
+        bars = ax.bar(x, deltas, color=bar_colors, alpha=0.85,
+                      edgecolor="black", linewidth=0.6)
+        ax.axhline(0, color="black", linewidth=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels([ALGO_LABELS[a] for a in algos], fontsize=8)
+        good = "\u2191" if higher_better else "\u2193"
+        ax.set_title(f"{mlabel}\n(green={good} better in session)",
+                     pad=10, fontsize=9)
+        ax.grid(axis="y", alpha=0.3)
+        sns.despine(ax=ax)
+
+        # Expand ylim so labels never clip at axis edges
+        raw_min = min(deltas)
+        raw_max = max(deltas)
+        pad = (raw_max - raw_min) * 0.18 if (raw_max - raw_min) != 0 else 0.1
+        ax.set_ylim(raw_min - pad, raw_max + pad)
+
+        # Labels outside bar, using span-relative offset
+        y0, y1 = ax.get_ylim()
+        span = (y1 - y0) if (y1 - y0) != 0 else 1
+        for bar, v in zip(bars, deltas):
+            if v >= 0:
+                ypos = bar.get_height() + span * 0.04
+                va = "bottom"
+            else:
+                ypos = bar.get_height() - span * 0.04
+                va = "top"
+            ax.text(bar.get_x() + bar.get_width()/2, ypos,
+                    f"{v:+.3f}", ha="center", va=va, fontsize=7,
+                    color="#222222")
+
+    fig.suptitle("Closed-Loop Robustness Delta (Session-20 \u2212 Round-Robin)\n"
+                 "Green = performs better under closed-loop evaluation",
+                 fontsize=11, y=1.02)
+    fig.tight_layout()
+    savefig(fig, os.path.join(MAIN_DIR, "07_closed_loop_robustness_delta.png"))
 
 
 # ============================================================================
@@ -993,6 +1239,7 @@ def main():
     plot_radar(results)
     plot_ip_type_heatmap(results)
     plot_robustness_delta(results)
+    plot_closed_loop_robustness(results)
 
     print("\n[*] Thesis-control charts →", MAIN_DIR)
     plot_dynamic_response(results)
@@ -1009,7 +1256,7 @@ def main():
     plot_effect_size_forest(results)
     plot_efficiency_scatter(results)
 
-    print(f"\n[+] Done. charts/main/ ({10} files) + charts/appendix/ ({8} files)")
+    print(f"\n[+] Done. charts/main/ ({11} files) + charts/appendix/ ({8} files)")
 
 
 if __name__ == "__main__":
