@@ -71,26 +71,22 @@ def plot_recall_comparison(day_data: dict, out_dir: str):
     bars2 = ax.bar(x + width/2, recalls_l2, width, label='L2 — AI Agent (stateless)',
                    color='#43A047', alpha=0.85, zorder=3)
 
-    # Value labels
-    for bar in bars1:
+    # Value labels — always inside bar, white text
+    for bar in list(bars1) + list(bars2):
         h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2, h + 0.5,
-                f'{h:.1f}%', ha='center', va='bottom', fontsize=9, color='#1565C0', fontweight='bold')
-    for bar in bars2:
-        h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2, h + 0.5,
-                f'{h:.1f}%', ha='center', va='bottom', fontsize=9, color='#2E7D32', fontweight='bold')
-
-    # Sample size annotation
-    for i, (lbl, n) in enumerate(zip(display, samples)):
-        ax.text(i, -7, f'n={n}', ha='center', va='top', fontsize=8, color='gray')
+        if h < 5:
+            continue  # skip near-zero bars
+        ax.text(bar.get_x() + bar.get_width()/2, h - 2.5,
+                f'{h:.1f}%', ha='center', va='top', fontsize=9,
+                color='white', fontweight='bold')
 
     ax.set_xlabel('Traffic Type', fontsize=11)
     ax.set_ylabel('Recall (%)', fontsize=11)
     ax.set_title('Per-class Recall: L1 Raw PPO vs L2 AI Agent\n(CIC-IDS2018 Thursday)', fontsize=12, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(display, fontsize=11)
-    ax.set_ylim(0, 115)
+    xlabels1 = [f'{d}\n(n={n:,})' for d, n in zip(display, samples)]
+    ax.set_xticklabels(xlabels1, fontsize=10)
+    ax.set_ylim(0, 100)
     ax.yaxis.grid(True, linestyle='--', alpha=0.5, zorder=0)
     ax.set_axisbelow(True)
     ax.legend(fontsize=10)
@@ -220,7 +216,7 @@ def plot_pred_distribution(day_data: dict, out_dir: str):
     display = [LABEL_DISPLAY.get(l, l) for l in labels_order]
     actions = ['Allow', 'RateLimit', 'Redirect', 'Block']
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(7, 4))
     x = np.arange(len(labels_order))
     bottoms = np.zeros(len(labels_order))
 
@@ -230,29 +226,27 @@ def plot_pred_distribution(day_data: dict, out_dir: str):
             pd = l1.get(lbl, {}).get('pred_dist', {})
             total = l1.get(lbl, {}).get('total', 1)
             counts.append(pd.get(action, 0) / total * 100)
-        bars = ax.bar(x, counts, bottom=bottoms, label=action,
+        bars = ax.bar(x, counts, width=0.5, bottom=bottoms, label=action,
                       color=ACTION_COLORS[action], alpha=0.88, zorder=3)
-        # Label nếu phần đủ lớn
         for i, (c, b) in enumerate(zip(counts, bottoms)):
-            if c >= 2.0:
+            if c >= 3.0:
                 ax.text(i, b + c/2, f'{c:.1f}%', ha='center', va='center',
-                        fontsize=9, color='white', fontweight='bold')
+                        fontsize=8.5, color='white', fontweight='bold')
         bottoms = bottoms + np.array(counts)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(display, fontsize=11)
-    ax.set_ylabel('Proportion of predictions (%)', fontsize=11)
-    ax.set_ylim(0, 110)
-    ax.set_title('Prediction Distribution per Traffic Type — L1 Raw PPO\n(CIC-IDS2018 Thursday)', fontsize=12, fontweight='bold')
+    # n= dưới tên traffic type, không dùng ax.text âm
+    xlabels = [f'{d}\n(n={l1.get(lbl,{}).get("total",0):,})'
+               for d, lbl in zip(display, labels_order)]
+    ax.set_xticklabels(xlabels, fontsize=10)
+    ax.set_ylabel('Proportion of predictions (%)', fontsize=10)
+    ax.set_ylim(0, 100)
+    ax.set_title('Prediction Distribution per Traffic Type — L1 Raw PPO\n(CIC-IDS2018 Thursday)',
+                 fontsize=11, fontweight='bold')
     ax.yaxis.grid(True, linestyle='--', alpha=0.4, zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(fontsize=10, loc='upper right',
+    ax.legend(fontsize=9, loc='upper right',
               handles=[mpatches.Patch(color=ACTION_COLORS[a], label=a) for a in actions])
-
-    # Sample size
-    for i, lbl in enumerate(labels_order):
-        n = l1.get(lbl, {}).get('total', 0)
-        ax.text(i, -6, f'n={n}', ha='center', fontsize=8, color='gray')
 
     plt.tight_layout()
     out = os.path.join(out_dir, 'chart4_pred_distribution_L1.png')
@@ -280,14 +274,16 @@ def plot_mitigate_rate(day_data: dict, out_dir: str):
         bars = ax.bar(x + offset, rates, width, label=mode_label,
                       color=colors[i], alpha=0.85, zorder=3)
         for bar, r in zip(bars, rates):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                    f'{r:.1f}%', ha='center', va='bottom', fontsize=8.5,
-                    color=colors[i], fontweight='bold')
+            if r < 5:
+                continue  # skip near-zero bars
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() - 2.5,
+                    f'{r:.1f}%', ha='center', va='top', fontsize=8.5,
+                    color='white', fontweight='bold')
 
     ax.set_xticks(x)
     ax.set_xticklabels(display, fontsize=11)
     ax.set_ylabel('Recall — Correct Action (%)', fontsize=11)
-    ax.set_ylim(60, 115)
+    ax.set_ylim(0, 100)
     ax.set_title('Per-class Recall Across 3 Evaluation Layers\n(CIC-IDS2018 Thursday)', fontsize=12, fontweight='bold')
     ax.yaxis.grid(True, linestyle='--', alpha=0.4, zorder=0)
     ax.set_axisbelow(True)

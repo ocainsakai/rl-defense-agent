@@ -1,0 +1,103 @@
+{
+  "Thursday-22-02-2018": {
+    "overall_accuracy": 0.0803,
+    "total_rows": 6691,
+    "correct_rows": 537,
+    "per_class": {
+      "benign": {
+        "total": 500,
+        "correct": 494,
+        "accuracy": 0.988,
+        "recall": 0.988,
+        "mitigate_rate": null,
+        "expected_action": "Allow",
+        "pred_dist": {
+          "Allow": 494,
+          "Block": 2,
+          "RateLimit": 2,
+          "Redirect": 2
+        },
+        "timeline": {}
+      },
+      "brute_force": {
+        "total": 3940,
+        "correct": 11,
+        "accuracy": 0.0028,
+        "recall": 0.0028,
+        "mitigate_rate": 1.0,
+        "expected_action": "Redirect",
+        "pred_dist": {
+          "Redirect": 11,
+          "Block": 3929
+        },
+        "timeline": {
+          "15-60s  (escalate)": {
+            "Redirect": 10
+          },
+          "60-300s (sustained)": {
+            "Redirect": 1,
+            "Block": 213
+          },
+          "300s+   (long-run)": {
+            "Block": 3716
+          }
+        }
+      },
+      "xss": {
+        "total": 2202,
+        "correct": 16,
+        "accuracy": 0.0073,
+        "recall": 0.0073,
+        "mitigate_rate": 1.0,
+        "expected_action": "Redirect",
+        "pred_dist": {
+          "Redirect": 16,
+          "Block": 2186
+        },
+        "timeline": {
+          "60-300s (sustained)": {
+            "Redirect": 16,
+            "Block": 146
+          },
+          "300s+   (long-run)": {
+            "Block": 2040
+          }
+        }
+      },
+      "sqli": {
+        "total": 49,
+        "correct": 16,
+        "accuracy": 0.3265,
+        "recall": 0.3265,
+        "mitigate_rate": 1.0,
+        "expected_action": "Redirect",
+        "pred_dist": {
+          "Redirect": 16,
+          "Block": 33
+        },
+        "timeline": {
+          "60-300s (sustained)": {
+            "Redirect": 4,
+            "Block": 23
+          },
+          "300s+   (long-run)": {
+            "Block": 10,
+            "Redirect": 12
+          }
+        }
+      }
+    },
+    "confusion_matrix": {
+      "Allow": {
+        "Allow": 494,
+        "Block": 2,
+        "RateLimit": 2,
+        "Redirect": 2
+      },
+      "Redirect": {
+        "Redirect": 43,
+        "Block": 6148
+      }
+    }
+  }
+}
