@@ -1,0 +1,1626 @@
+%============================================================
+% FPT University Capstone Project Thesis
+% Research and Development of AI Agent Capable of Adaptive
+% Self-Defense in Simulated Environments Based on
+% Reinforcement Learning Techniques
+% IAP491 — Group 3, 2026
+% Compiler: pdfLaTeX (Overleaf default)
+%============================================================
+\documentclass[12pt,a4paper]{report}
+
+%--- Packages ---
+\usepackage[top=25mm,bottom=25mm,left=35mm,right=20mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{mathptmx}          % Times New Roman equivalent for pdfLaTeX
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cite}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{url}
+
+%--- Line spacing ---
+\onehalfspacing
+
+%--- Chapter heading format ---
+\titleformat{\chapter}[display]
+  {\normalfont\Large\bfseries\centering}
+  {CHAPTER \thechapter}{0pt}{\Large\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
+
+%--- Header/footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\small\thepage}
+\fancyhead[L]{\small\leftmark}
+\renewcommand{\headrulewidth}{0.4pt}
+
+%--- Hyperref setup ---
+\hypersetup{
+  pdftitle={Research and Development of AI Agent Capable of Adaptive Self-Defense in Simulated Environments Based on Reinforcement Learning Techniques},
+  pdfauthor={Group 3 — IAP491},
+  pdfsubject={Capstone Project Thesis},
+  pdfkeywords={Reinforcement Learning, Network Defense, PPO, Cybersecurity}
+}
+
+%--- Table column type ---
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+%============================================================
+\begin{document}
+
+%============================================================
+% TITLE PAGE
+%============================================================
+\begin{titlepage}
+\begin{center}
+\textbf{\large MINISTRY OF EDUCATION AND TRAINING}\\[0.3em]
+\textbf{\large FPT UNIVERSITY}\\[2em]
+
+\rule{\linewidth}{0.5pt}\\[0.5em]
+
+\vspace{2em}
+{\LARGE\bfseries CAPSTONE PROJECT DOCUMENT}\\[2em]
+
+\vspace{1.5em}
+{\Large\bfseries Research and Development of AI Agent Capable\\[0.3em]
+of Adaptive Self-Defense in Simulated Environments\\[0.3em]
+Based on Reinforcement Learning Techniques}\\[3em]
+
+\vspace{1em}
+\begin{tabular}{ll}
+\textbf{Group Members:} & Ho Le Binh \\ 
+                        & Nguyen Hoang Tri \\
+                        & Pham Tuan Anh \\
+                        & Trinh Nguyen Yen Vy \\[1.5em]
+\textbf{Supervisor:}    & Mai Hoang Dinh \\[1.5em]
+\textbf{Capstone Code:} & IAP491 \\
+\end{tabular}
+
+\vfill
+{\large Ho Chi Minh, 2026}
+\end{center}
+\end{titlepage}
+
+%============================================================
+% FRONT MATTER
+%============================================================
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+%--- Abstract ---
+\chapter*{ABSTRACT}
+\addcontentsline{toc}{chapter}{ABSTRACT}
+
+\noindent\textbf{Research and Development of AI Agent Capable of Adaptive Self-Defense in Simulated Environments Based on Reinforcement Learning Techniques}
+
+\bigskip
+\noindent\textbf{Background:} Traditional network defense relies on static rules and signature-based detection, struggling to adapt to automated, evolving cyber attacks. This work addresses the need for autonomous defense systems using Reinforcement Learning (RL) to learn optimal defensive policies.
+
+\medskip
+\noindent\textbf{Methods:} We developed an RL-based Defense Agent (RL Defense Agent) using Proximal Policy Optimization trained in simulation with 5 attack types (SYN Flood, Port Scan, Brute-Force, SQL Injection, XSS). The agent observes a 34-dimensional feature vector comprising 20D NIDS sensor features combining network-level metrics (packet rate, inter-arrival time, port distribution) and HTTP payload features (SQL/XSS detection via OWASP CRS), plus 10D per-IP temporal state (action history, escalation score, session memory) and 4D closed-loop effect feedback from the previous step. It selects from four hierarchical defensive actions: Allow, RateLimit, Redirect-to-Honeypot, and Block. The Observation Module (NetworkSniffer + FlowManager + FlowFeatureCalculator) converts raw packets into the observation vector in real time. Training proceeded for approximately 350{,}000 timesteps with evaluation every 12{,}000 steps.
+
+\medskip
+\noindent\textbf{Results:} The RL agent achieved a \textbf{77.3\% detection rate} on active-threat traffic steps, with stable convergence across 5 independent seeds (std 0.021, 28\% variance reduction over SB3 defaults). The policy balanced security and availability: 93.2\% legitimate traffic allowed (FPR 6.8\%). Training converged smoothly with +475\% reward improvement, safe policy updates (KL-divergence: 0.012$\to$0.003). The HTTP payload feature group (F12--F20) is essential for SQLi/XSS detection; the PayloadNormalizer and CRS rules work synergistically to handle double-encoded evasion.
+
+\medskip
+\noindent\textbf{Conclusions:} This work demonstrates RL's feasibility for autonomous network defense. The agent learns stable, differentiated policies across diverse attacks while balancing mitigation with availability. A hybrid architecture combining static rate-limiting with RL for application-layer analysis is necessary to address system latency constraints. Future work includes multi-agent coordination and simulation-to-reality validation.
+
+\medskip
+\noindent\textbf{Keywords:} Reinforcement Learning, Autonomous Network Defense, Proximal Policy Optimization, Cybersecurity Defense Agent, Feature Engineering, Payload Normalization, OWASP ModSecurity CRS, Observation Module, Policy Learning, Network Traffic Analysis
+
+%--- Acknowledgement ---
+\chapter*{ACKNOWLEDGEMENT}
+\addcontentsline{toc}{chapter}{ACKNOWLEDGEMENT}
+
+The completion of this Capstone Project would not have been possible without the guidance, support, and encouragement of many individuals and institutions.
+
+First and foremost, we would like to express our sincere gratitude to our supervisor for the invaluable guidance, constructive feedback, and continuous encouragement throughout the duration of this project. Your expertise and patience have been indispensable in shaping the direction and quality of this research.
+
+We are deeply grateful to the Faculty of Information Technology at FPT University for providing a stimulating academic environment and access to the computational resources and laboratory facilities necessary for our experiments.
+
+We would like to thank the open-source communities behind Stable-Baselines3, Gymnasium, Mininet/Containernet, Scapy, and the OWASP ModSecurity Core Rule Set. The availability of these high-quality tools made our research technically feasible.
+
+We also acknowledge the researchers who made their datasets publicly available, particularly the LSNM2024 dataset from the University of New Brunswick and the Mutated Packet Dataset from Abu Al-Haija et al. (2025).
+
+Finally, we thank our families and friends for their patience, understanding, and unwavering moral support throughout this journey.
+
+\bigskip
+\noindent\textit{Ho Chi Minh, April 2026}\\[0.5em]
+
+\clearpage
+%--- TOC, LOF, LOT ---
+\tableofcontents
+\listoffigures
+\addcontentsline{toc}{chapter}{LIST OF FIGURES}
+
+\listoftables
+\addcontentsline{toc}{chapter}{LIST OF TABLES}
+
+%--- Abbreviations ---
+\chapter*{ABBREVIATIONS}
+\addcontentsline{toc}{chapter}{ABBREVIATIONS}
+
+\begin{longtable}{L{3cm} L{11cm}}
+\toprule
+\textbf{Abbreviation} & \textbf{Full Meaning} \\
+\midrule
+\endhead
+AI & Artificial Intelligence \\
+API & Application Programming Interface \\
+CAPTCHA & Completely Automated Public Turing test to tell Computers and Humans Apart \\
+CRS & Core Rule Set \\
+CSV & Comma-Separated Values \\
+DDoS & Distributed Denial of Service \\
+DoS & Denial of Service \\
+RL & Reinforcement Learning \\
+FPR & False Positive Rate \\
+HTTP & Hypertext Transfer Protocol \\
+HTTPS & Hypertext Transfer Protocol Secure \\
+IDS & Intrusion Detection System \\
+KL & Kullback-Leibler (Divergence) \\
+MDP & Markov Decision Process \\
+MIME & Multipurpose Internet Mail Extensions \\
+ML & Machine Learning \\
+MTU & Maximum Transmission Unit \\
+NFKC & Compatibility Decomposition, followed by Canonical Composition \\
+NLP & Natural Language Processing \\
+OWASP & Open Web Application Security Project \\
+PCAP & Packet Capture Format \\
+PL & Paranoia Level \\
+PPO & Proximal Policy Optimization \\
+RQ & Research Question \\
+RFC & Request for Comments \\
+SB3 & Stable-Baselines3 \\
+SDN & Software-Defined Networking \\
+SIEM & Security Information and Event Management \\
+SLA & Service Level Agreement \\
+SOC & Security Operations Center \\
+SQL & Structured Query Language \\
+SQLi & SQL Injection \\
+SSH & Secure Shell \\
+SSL/TLS & Secure Sockets Layer / Transport Layer Security \\
+SYN & Synchronization flag (TCP) \\
+TCP & Transmission Control Protocol \\
+TLS & Transport Layer Security \\
+TTPs & Tactics, Techniques, and Procedures \\
+UDP & User Datagram Protocol \\
+VM & Virtual Machine \\
+XAI & Explainable Artificial Intelligence \\
+XML & Extensible Markup Language \\
+XSS & Cross-Site Scripting \\
+Zero-day & Previously unknown software vulnerability \\
+\bottomrule
+\end{longtable}
+
+%============================================================
+% MAIN MATTER
+%============================================================
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+%============================================================
+\chapter{INTRODUCTION}
+%============================================================
+
+\section{Background}
+
+The cybersecurity landscape has undergone a significant transformation over the past decade, driven by the rapid growth of digital infrastructure, cloud computing, and large-scale interconnected networks. In parallel with these developments, cyber threats have become increasingly automated, adaptive, and sophisticated, posing serious challenges to traditional security mechanisms.
+
+\subsection{Escalation of Cyber Threats and Attack Automation}
+
+Modern cyber attacks are no longer primarily manual or opportunistic in nature. Instead, adversaries increasingly rely on automated tools to carry out large-scale reconnaissance, vulnerability scanning, credential stuffing, and exploitation at machine speed. \textbf{According to Verizon's Data Breach Investigations Report (DBIR), approximately 60\% of confirmed data breaches involved human elements, including social engineering, credential abuse, and user errors, while exploitation of software and web application vulnerabilities continues to rise \cite{verizonDBIR2024}.}
+
+Furthermore, web application attacks and system intrusions remain among the most prevalent breach patterns. These attacks are often highly automated, enabling threat actors to quickly identify exposed services and exploit weaknesses across thousands of targets simultaneously. Such large-scale automation significantly reduces the effectiveness of static, rule-based security systems that rely on predefined signatures or manually crafted rules \cite{verizonDBIR2024}.
+
+In addition to external adversaries, insider-related incidents account for a significant portion of cybersecurity breaches. Earlier DBIR findings indicate that nearly \textit{30\% of data breaches involved internal actors}, whether through malicious intent or inadvertent actions, highlighting that threats can originate from within organizational boundaries as well as from external attackers \cite{verizonDBIR2020}. This diversity of threat actors further complicates the defense landscape and demands more adaptive security strategies.
+
+\subsection{Economic Impact of Data Breaches}
+
+Beyond the technical consequences, cyber attacks impose severe financial and operational costs on organizations. According to the IBM--Ponemon Institute Cost of a Data Breach Report, the global average cost of a data breach has reached several million US dollars per incident, with significantly higher costs observed in regulated industries and large enterprises \cite{ibmPonemon2024}. These costs \textit{encompass incident response, system recovery, legal penalties, reputational damage, and long-term erosion of customer trust.}
+
+The increasing frequency and scale of cyber incidents, combined with their substantial economic impact, underscore the need for faster detection and response mechanisms. Delayed or ineffective responses can significantly amplify financial losses, making real-time or near-real-time defense capability a critical requirement for modern network infrastructures.
+
+\subsection{Evolution of Network Infrastructure and Operational Challenges}
+
+The shift from traditional on-premise hardware to virtualized and cloud-based infrastructure has further expanded the attack surface. Technologies such as virtualization, containerization, and software-defined networking (SDN) enable flexible and scalable deployments, but they also generate large volumes of network traffic and security events. As a result, \textit{Security Operations Centers (SOCs) are frequently overwhelmed by excessive alert volumes, a phenomenon commonly referred to as ``alert fatigue.''} \cite{alertFatigue2022}
+
+In such environments, human analysts struggle to manually inspect and correlate alerts in a timely manner. Critical security incidents may be overlooked or detected too late, allowing attackers to persist within the network for extended periods. This operational bottleneck exposes the limitations of entirely human-driven security monitoring in large-scale, high-velocity network environments.
+
+\subsection{The Need for Autonomous and Adaptive Defense Systems}
+
+Given the automation of cyber attacks, the economic consequences of breaches, and the complexity of modern network infrastructure, the demand for autonomous and adaptive defense mechanisms is growing. Artificial Intelligence (AI), and specifically Reinforcement Learning (RL), has emerged as a promising approach to addressing these challenges.
+
+Unlike traditional supervised learning methods that rely on labeled datasets, RL enables agents to learn optimal defensive strategies through continuous interaction with the environment. By observing network state and receiving feedback in the form of rewards or penalties, an RL-based defense agent can dynamically adjust its behavior to evolving attack patterns. This capability makes RL particularly well-suited for real-time network defense scenarios, where attack strategies and system conditions change rapidly.
+
+Accordingly, the integration of autonomous AI agents into network defense architectures represents an important step toward enhancing the resilience and responsiveness of cybersecurity systems.
+
+\section{Problem Statement}
+
+Despite significant advances in cybersecurity technology, most current network defense mechanisms remain primarily reactive and heavily dependent on predefined rules and human intervention. Traditional security solutions — such as rule-based firewalls, signature-based Intrusion Detection Systems (IDS), and manually configured access control policies — are only effective against known attack patterns. These systems struggle to adapt to evolving adversarial behavior or to respond at the speed required to counter highly automated threats.
+
+Furthermore, modern network environments generate large volumes of security-relevant data due to the adoption of cloud computing, virtualization, and software-defined networking. Security Operations Centers (SOCs) are frequently overwhelmed by continuous alert streams, leading to delayed responses and increased risk of alert fatigue. As a result, human analysts may miss critical threats or respond too slowly, allowing attackers to maintain a presence in the network.
+
+Another key limitation of existing defense approaches is the lack of autonomous decision-making. Most security systems rely on static policies or require manual tuning by administrators, making them ill-suited for dynamic and adversarial environments where attack strategies change rapidly. Even machine learning-based solutions often depend on supervised learning techniques that require large, labeled datasets, which are difficult to collect and quickly become outdated in real-world cybersecurity scenarios.
+
+In light of these challenges, there is a clear need for an adaptive defense mechanism that can autonomously observe network conditions, identify malicious behavior, and execute appropriate mitigation actions in real time. Such a system must be capable of learning from environmental interactions, balancing security objectives with service availability, and continuously adapting to novel attack patterns without explicit prior knowledge of all possible threats.
+
+This project addresses the above limitations by proposing an AI-driven network defense agent based on Reinforcement Learning (RL). By framing network defense as a sequential decision-making problem, the RL agent is designed to learn optimal response strategies through trial-and-error interactions. The central problem investigated in this work is: \textit{how to design, train, and evaluate an autonomous RL-based defense agent that can effectively mitigate diverse cyber attacks while maintaining acceptable network performance.}
+
+To address this problem, the research focuses on the following key research questions:
+
+\begin{itemize}
+  \item \textbf{RQ1 (Comparative Effectiveness):} To what extent does a reinforcement learning-based agent outperform traditional rule-based mechanisms in mitigating automated and adaptive cyber attacks within a simulated environment?
+  \item \textbf{RQ2 (Operational Trade-off):} How does the implementation of autonomous defensive actions (blocking, rate limiting, and redirection) affect the balance between attack mitigation success and legitimate service availability?
+  \item \textbf{RQ3 (Policy Stability):} Can the RL-based agent develop and maintain a stable defense policy that remains effective across diverse and evolving attack vectors without manual reconfiguration?
+\end{itemize}
+
+\section{Research Objectives}
+
+The primary objective of this project is to design, implement, and evaluate an autonomous AI-based network defense system capable of making real-time security decisions in a dynamic and adversarial environment. To achieve this overarching goal, the research is guided by the following specific objectives:
+
+\begin{itemize}
+  \item \textbf{Investigate} the applicability of Reinforcement Learning (RL) techniques for autonomous decision-making in network defense scenarios, particularly in environments characterized by automated and adaptive cyber attacks.
+  \item \textbf{Design} and construct a simulated network environment that accurately represents real-world network infrastructure, including production servers, attackers, and defense components using Mininet.
+  \item \textbf{Develop} an RL-based defense agent capable of observing network state, identifying anomalous or malicious behavior, and selecting appropriate mitigation actions: blocking, rate limiting, or traffic redirection.
+  \item \textbf{Define} and implement a reward function that balances security effectiveness with system performance, ensuring that defensive actions mitigate attacks while maintaining service availability.
+  \item \textbf{Evaluate} the performance of the proposed defense agent against multiple attack scenarios by measuring key metrics such as attack mitigation rate, response time, false positive rate, and overall network stability.
+\end{itemize}
+
+\section{Significance of the Research}
+
+This research contributes to the field of cybersecurity by exploring the feasibility of autonomous network defense using Reinforcement Learning. The approach aims to advance beyond traditional security mechanisms through the integration of adaptive, self-learning defense systems.
+
+From a technical perspective, the project provides a practical implementation of an RL-based defense agent integrated with a simulated network environment. The combination of Gymnasium, Mininet, and Linux-based mitigation techniques demonstrates how reinforcement learning can be applied to real-world-inspired network scenarios. Integration with Wazuh SIEM further illustrates the potential for combining autonomous defense agents with existing security monitoring platforms.
+
+From an academic perspective, this research provides empirical insights into the behavior of reinforcement learning agents under diverse network attack scenarios. The evaluation results contribute to understanding how autonomous agents balance security effectiveness with service availability — a critical trade-off in network defense. These findings can serve as a reference for future research on adaptive cybersecurity systems and RL-based decision-making.
+
+Finally, from a practical and industrial perspective, the proposed framework highlights the potential of AI-driven autonomous defense systems in reducing the operational burden on human security analysts. By automating detection and response processes, such systems can mitigate alert fatigue and enable faster, more consistent responses to cyber threats.
+
+\section{Scope and Limitations}
+
+\subsection{Research Scope}
+
+The scope of this project focuses on designing and evaluating an autonomous network defense agent in a controlled simulation environment. The research emphasizes decision-making at the network level and the lightweight application layer.
+
+\textbf{Attack Simulation.} The simulation environment incorporates multiple network attack types inspired by the MITRE ATT\&CK framework:
+\begin{itemize}
+  \item Denial of Service (DoS) and Distributed Denial of Service (DDoS) attacks, such as TCP/SYN flood.
+  \item Port scanning reconnaissance.
+  \item Web and authentication-based attacks: login brute-force, SQL injection, and XSS.
+\end{itemize}
+
+\textbf{Action Space.} The defense agent is designed to execute mitigation actions at the OS and network layer:
+\begin{itemize}
+  \item \textbf{[ALLOW]} Default: permit traffic.
+  \item \textbf{[RATE]} Rate limiting for suspicious traffic to reduce attack impact while maintaining legitimate services.
+  \item \textbf{[REDIRECT]} Redirect selected traffic to honeypots to isolate attackers and gather threat intelligence.
+  \item \textbf{[BLOCK]} Block malicious IP addresses using firewall rules.
+\end{itemize}
+
+All defensive actions are implemented using \texttt{iptables} and traffic control (\texttt{tc}) mechanisms in the simulated network.
+
+\textbf{Technology Stack.} Python, Gymnasium, Mininet/Containernet, Stable-Baselines3, Wazuh SIEM, Docker, PHP, MySQL.
+
+\subsection{Research Limitations}
+
+First, the proposed defense system was evaluated \textbf{exclusively in a simulation environment}. Although the simulation was designed to approximate real-world network behavior, results may differ when deployed in production environments due to hardware constraints, network heterogeneity, and unpredictable user behavior.
+
+Second, the \textbf{attack scenarios considered are limited to a predefined set of attack types}. Advanced threats such as zero-day exploit, supply chain attacks, and sophisticated lateral movement techniques are outside the scope of this research.
+
+Third, the performance of the RL agent is influenced by \textbf{the quality of the reward function and the representativeness of the simulation environment}. Suboptimal reward design or insufficient state representation may limit the agent's ability to generalize to unseen scenarios.
+
+Finally, the system was implemented and tested on the Ubuntu Linux platform. \textbf{Portability of the proposed approach to other operating systems or large-scale distributed cloud environments has not been evaluated and remains a topic for future research.}
+
+\section{Thesis Structure}
+
+The remainder of this thesis is organized as follows:
+
+\textbf{Chapter 2 --- Literature Review} presents the theoretical foundations of Reinforcement Learning, network simulation environments, automated incident response mechanisms, and network traffic feature extraction techniques. This chapter also identifies the research gaps that the project addresses.
+
+\textbf{Chapter 3 --- Methodology} describes the system design, including the MDP problem formulation, PPO agent architecture, 20-feature extraction pipeline, Containernet network topology, and real-time enforcement mechanism via iptables.
+
+\textbf{Chapter 4 --- Experimental Results} presents and analyzes the system evaluation results, including attack detection accuracy, training convergence curves, comparison with baseline methods, and practical implications.
+
+\textbf{Chapter 5 --- Discussion} interprets the findings in a broader context, discusses limitations, and proposes future research directions.
+
+\textbf{Chapter 6 --- Conclusion} synthesizes the main contributions and provides final remarks on the feasibility of Reinforcement Learning for autonomous network defense.
+
+%============================================================
+\chapter{LITERATURE REVIEW}
+%============================================================
+
+\section{Review of Previous Studies}
+
+\subsection{Fundamentals of Reinforcement Learning}
+
+Reinforcement Learning (RL) is a branch of machine learning that focuses on enabling agents to learn optimal behaviors through interaction with an environment. Unlike supervised learning, which relies on labeled datasets, RL allows an agent to learn directly from experience by receiving feedback in the form of rewards or penalties. This learning paradigm is particularly well-suited for dynamic and adversarial domains such as cybersecurity, where labeled data is scarce and attack strategies continuously evolve \cite{suttonBarto2018}.
+
+\textbf{The Reinforcement Learning Framework.} The RL process is typically modeled as an interaction between an agent and an environment. At each discrete timestep $t$, the agent observes the current state $s_t \in S$ of the environment and selects an action $a_t \in A$ according to its policy $\pi$. In response, the environment transitions to a new state $s_{t+1}$ and provides a scalar reward $r_t = R(s_t, a_t)$ reflecting the quality of the agent's action. This interaction is formally defined as a Markov Decision Process (MDP), specified by the tuple $(S, A, P, R, \gamma)$, where:
+\begin{itemize}
+  \item $S$ represents the set of possible states.
+  \item $A$ denotes the set of available actions.
+  \item $P(s'|s, a)$ defines the state transition probability.
+  \item $R(s, a)$ is the reward function.
+  \item $\gamma \in [0, 1]$ is the discount factor balancing immediate and future rewards.
+\end{itemize}
+
+The agent's objective is to find a policy $\pi^*(a|s)$ that maximizes the expected discounted cumulative reward $G_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k}$. The Bellman optimality equation provides the theoretical basis for this:
+\begin{equation}
+  Q^*(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^*(s', a') \mid s, a\right]
+\end{equation}
+where $Q^*(s, a)$ is the optimal action-value function. In cybersecurity settings, this formulation is particularly powerful because it does not require a predefined threat model --- the agent discovers which states are dangerous and which actions are effective through interaction alone \cite{suttonBarto2018}.
+
+\textbf{Model-Based and Model-Free RL.} RL algorithms can be broadly categorized into model-based and model-free methods. Model-based methods (e.g., Dyna-Q, AlphaZero) attempt to learn or use an explicit model of environment dynamics for planning. While sample-efficient, they require accurate environment modeling, which is impractical for complex, partially observable network environments where attacker behavior is unpredictable. Model-free RL learns optimal policies directly from interactions without an explicit environment model. This flexibility makes model-free methods the dominant choice in cybersecurity research \cite{nguyen2021deep}.
+
+Model-free algorithms are further divided into value-based methods and policy-based methods. Value-based methods (e.g., Q-Learning, Deep Q-Networks) learn a value function mapping states or state-action pairs to expected returns, then derive a greedy policy. Policy-based methods (e.g., REINFORCE, PPO, A2C) directly parameterize and optimize the policy itself. Actor-Critic methods combine both by maintaining a value function (critic) to reduce variance in policy gradient estimates (actor).
+
+\textbf{Deep Reinforcement Learning (DRL).} Traditional RL struggles to scale to environments with large or continuous state spaces. DRL addresses this by integrating deep neural networks as function approximators. Deep Q-Networks (DQN) \cite{mnih2015dqn} extended Q-learning to high-dimensional inputs using a replay buffer and target network to stabilize training. Advantage Actor-Critic (A2C) and Asynchronous Advantage Actor-Critic (A3C) methods use value-function baselines to reduce gradient variance, enabling faster convergence in parallel environments.
+
+Among modern policy-based algorithms, Proximal Policy Optimization (PPO) \cite{schulmanPPO2017} has emerged as the leading choice for practical deployment due to two key properties: (1) \textbf{Clipped Surrogate Objective} --- PPO constrains the policy update ratio $r_t(\theta) = \pi_\theta(a|s)/\pi_{\theta_{old}}(a|s)$ within $[1-\varepsilon, 1+\varepsilon]$, preventing destabilizing large policy changes; (2) \textbf{Multiple Epochs per Rollout} --- unlike on-policy methods that discard data after one gradient step, PPO reuses rollout data for multiple gradient epochs, improving sample efficiency. These properties make PPO particularly attractive for network defense scenarios: closed-loop IDS environments generate continuous rollouts where policy stability is critical --- an unstable policy oscillating between Block and Allow would cause service disruption every few seconds.
+
+A2C uses very short rollouts ($n\_steps = 5$) to compute advantage estimates online, which is insufficient in environments where the consequence of a defensive action (e.g., attacker silence after Block) spans 5--11 timesteps. This structural mismatch explains why A2C is prone to instability in IDS closed-loop environments \cite{colas2019seeds}.
+
+\subsection{Network Simulation Environments}
+
+Training and evaluating RL agents in cybersecurity requires controlled, reproducible, and observable environments. Deploying learning agents directly into production networks poses significant risks, including service disruption and unintended security violations. A simulation gap always exists, but carefully designed environments can minimize it through Domain Randomization and realistic topology modeling \cite{lantzMininet2010}.
+
+\textbf{Role of Simulation in Cybersecurity Research.} Network simulation allows researchers to model complex infrastructure, generate realistic attack traffic, and observe system behavior under adversarial conditions. Unlike static datasets, simulation environments support \textit{interactive learning} where the agent's actions directly affect future network states --- a property that static classifiers fundamentally cannot exploit. Simulation also enables safe evaluation of destructive attack scenarios (DDoS, mass credential stuffing) that cannot be conducted in production. Furthermore, repeatable experiments with fixed random seeds allow fair algorithm comparison across multiple independent runs, which is critical for statistical validity in DRL benchmarking \cite{henderson2018deeprl}.
+
+\textbf{Mininet and Containernet for Network Emulation.} Mininet \cite{lantzMininet2010} is a widely adopted network emulation framework that creates virtual networks using lightweight Linux network namespaces. It provides realistic network behavior by leveraging the Linux kernel's networking stack, enabling accurate modeling of latency, bandwidth, and packet loss without hardware virtualization overhead. Containernet \cite{containernetPeuster2016} extends Mininet by replacing simple hosts with Docker containers, enabling realistic application services (web servers, databases) to run inside the emulated topology. This distinction is important: a Mininet host cannot run a real Apache web server generating HTTP traffic for L7 feature extraction, while a Containernet Docker container can. In cybersecurity research, Mininet/Containernet has been used to study intrusion detection systems, SDN-based traffic analysis, and automated defense mechanisms, providing a realistic substrate for closed-loop RL training.
+
+\textbf{Gymnasium for RL Environment Standardization.} Gymnasium \cite{gymnasium2023}, the successor to OpenAI Gym, provides a standardized interface for RL environments with well-defined abstractions: \texttt{observation\_space}, \texttt{action\_space}, \texttt{step()}, \texttt{reset()}, and \texttt{render()}. In the context of network defense, Gymnasium serves as the bridge between the RL agent and the simulated network: network metrics (packet rate, SYN ratio, payload features) are encoded into the observation space, and defensive actions (Allow, RateLimit, Redirect, Block) are mapped into the discrete action space. The Gymnasium standard ensures compatibility with popular RL libraries including Stable-Baselines3 \cite{raffin2021sb3}, enabling rapid algorithm comparison while maintaining code modularity.
+
+\textbf{CybORG and CAGE Challenge Environments.} The Cyber Operations Research Gym (CybORG) and the associated CAGE Challenge series \cite{cage2021, cage2022} provide standardized RL environments specifically designed for autonomous cyber agent research. CAGE Challenge 1 and 2 simulate multi-step Blue Team (defender) vs.\ Red Team (attacker) scenarios at the host compromise level, serving as benchmarks for comparing autonomous defense agents. These environments operate at a higher abstraction level than packet-level features --- tracking host compromise states rather than individual packet metrics --- which limits their applicability to network-layer defense. Nevertheless, the CAGE benchmarks have significantly advanced the field by establishing reproducible evaluation protocols.
+
+\textbf{Emulation vs. Simulation Trade-offs.} Pure simulation (e.g., IDSDefenseEnv with synthetic distributions) offers perfect reproducibility and high training throughput but introduces a simulation gap when policies are transferred to real networks. Network emulation (Mininet/Containernet) reduces this gap by running real application code on virtual hardware but introduces non-determinism from the host OS scheduler. A hybrid approach --- training the RL agent in a lightweight synthetic environment for computational efficiency, then validating on emulated PCAP replays --- provides the best balance of training speed and evaluation realism. This project follows this hybrid approach: PPO is trained in IDSDefenseEnv for 500,000 steps, then evaluated on captured PCAP traffic from Containernet.
+
+\subsection{Automated Incident Response Mechanisms}
+
+As cyber attacks become faster, more scalable, and highly automated, traditional manual incident response processes are no longer sufficient. Security Operations Centers (SOCs) often face delayed response times due to alert overload, human error, and limited situational awareness \cite{alertFatigue2022}. According to IBM's Cost of a Data Breach Report, the average time to identify and contain a breach in 2023 was 277 days, during which attackers have persistent access to systems \cite{ibmCostBreach2023}. Automated Incident Response (AIR) mechanisms directly address this dwell time problem.
+
+\textbf{From Detection to Automated Response.} Conventional IDS (Snort, Suricata) primarily focus on detection, emitting alerts that leave response decisions to human operators. The lack of automated enforcement allows attackers to continue exploitation during the human response delay. Intrusion Prevention Systems (IPS) add automatic blocking but operate on static signatures --- they cannot adapt to novel attack patterns without manual rule updates. Security Orchestration, Automation, and Response (SOAR) platforms \cite{ibmSOAR2023} partially address this gap by automating predefined playbooks, but playbooks are fixed and cannot learn new patterns. Recent research emphasizes the necessity of coupling detection mechanisms with adaptive, learned response actions to minimize attack dwell time.
+
+\textbf{Rule-Based vs.\ Policy-Based Response Systems.} Early automated response systems relied on static rules and predefined security policies. A common example is IP blacklisting when a connection threshold is exceeded. While effective against known attack patterns, such rule-based methods frequently generate false positives when normal traffic spikes occur (e.g., during software update distribution or viral content serving). The false positive rate of static rule-based systems in operational environments has been reported at 10--40\% \cite{alertFatigue2022}, causing significant alert fatigue and undermining operator trust. Policy-based systems (e.g., SDN-based adaptive policies) attempt to improve flexibility by defining higher-level response objectives, but they still depend on expert-defined rules and lack the ability to learn from environmental feedback. As attack strategies become more adaptive, static response logic increasingly fails to balance security with service availability.
+
+\textbf{Reinforcement Learning for Adaptive Incident Response.} RL introduces a paradigm shift in automated incident response: instead of relying on fixed rules, RL agents evaluate the consequences of their actions using reward signals derived from security and performance metrics \cite{lopez2020application}. This allows the system to dynamically adapt response strategies to different attack intensities and patterns. Malialis and Kudenko \cite{malialis2015ddos} demonstrated multiagent RL for DDoS defense, showing that cooperative agents can outperform static rate-limiters when attack traffic distribution is non-stationary. Nguyen and Reddi \cite{nguyen2021deep} provided a comprehensive survey of DRL applications in cybersecurity, identifying autonomous incident response as a high-priority open problem. Hammar and Stadler \cite{hammar2024tnsm} formulated the defender--attacker interaction as an optimal stopping game and showed that near-optimal intrusion responses can be learned through self-play; however, their state representation uses high-level infrastructure signals (alert counts, compromised nodes) rather than packet-level flow features, and does not address application-layer (L7) attacks.
+
+\textbf{Low-Level Enforcement Mechanisms.} Effective automated response requires reliable enforcement mechanisms at the network and system level. Linux kernel tools --- Iptables (Netfilter framework) and Traffic Control (TC/\texttt{tc}) --- provide microsecond-latency enforcement that is impractical to replicate in user-space. Iptables enables fine-grained packet filtering (ACCEPT, DROP, REJECT), connection tracking (ESTABLISHED, RELATED), and Network Address Translation (NAT), making it suitable for both blocking and honeypot redirection. TC allows dynamic traffic shaping and rate limiting via the \texttt{hashlimit} module, enabling per-IP bandwidth caps without completely terminating connections. The key advantage of kernel-level enforcement is its position in the packet processing path: Iptables rules are applied before the TCP/IP stack delivers packets to user-space applications, ensuring that blocked traffic does not consume application resources. Integrating RL decision-making with kernel-level controls bridges the gap between high-level AI reasoning and practical network security enforcement.
+
+\textbf{Deception-Based Response and Honeypots.} Deception techniques play an increasingly important role in modern incident response strategies. Honeypots \cite{honeypotSurvey2021} are decoy systems designed to attract attackers and observe malicious behavior without risking production assets. High-interaction honeypots run real services and collect detailed attacker TTPs (Tactics, Techniques, and Procedures), while low-interaction honeypots emulate services to minimize risk. By redirecting suspicious traffic to honeypots, defenders simultaneously achieve three objectives: (1) mitigation --- attacker traffic is absorbed by the decoy rather than the production server; (2) intelligence collection --- attacker payloads, tools, and methods are logged for analysis; (3) persistence --- redirected attackers may continue attempting exploitation, generating more signatures for future detection. When combined with RL, honeypot redirection becomes a dynamically learned strategic action rather than a static configuration, enabling the agent to selectively redirect ambiguous traffic (where blocking would cause false positives) while immediately blocking high-confidence volumetric attacks.
+
+\textbf{Integration with SIEM Systems.} Security Information and Event Management (SIEM) systems aggregate and correlate security logs from multiple sources to provide centralized visibility \cite{ibmSOAR2023}. Modern SIEMs such as Wazuh, Splunk, and IBM QRadar offer real-time dashboards, rule-based correlation, and API integration for automated response workflows. Integrating RL-based defense agents with SIEM platforms allows operators to monitor autonomous decisions, review action logs, and override the agent when necessary, maintaining human-in-the-loop oversight of security operations. SIEM integration also enables evaluation of defense agent effectiveness through quantitative metrics: alert volume reduction, mean time to respond (MTTR), and attack mitigation success rate.
+
+\subsection{Feature Engineering for Network Traffic}
+
+Feature engineering plays a crucial role in applying machine learning and RL techniques to network security. Raw network traffic --- comprising packets and flows --- is inherently high-dimensional, noisy, and heterogeneous. Without appropriate feature representation, learning agents may struggle to distinguish between benign and malicious behavior.
+
+\textbf{Packet-Level and Flow-Level Features.} Network traffic features can be classified as packet-level or flow-level representations. Packet-level features include attributes such as source/destination IP addresses, protocol type, packet size, and TCP flags; while they provide fine-grained visibility, they impose high computational overhead and limited temporal context. Flow-level features aggregate packets sharing common characteristics (5-tuple: src IP, dst IP, src port, dst port, protocol) within a time window. Common flow attributes include connection duration, packet count, byte count, average packet size, and inter-arrival time (IAT). Flow-based representations reduce dimensionality and better capture behavioral patterns, making them more suitable for real-time analysis \cite{flowFeatureSurvey2020}.
+
+\textbf{Benchmark Feature Sets.} The CICFlowMeter tool \cite{sharafaldin2018cicids}, developed for the CICIDS2017 dataset, extracts over 80 bidirectional flow statistical features and achieved ${>}97\%$ accuracy with Random Forest classifiers. The UNSW-NB15 dataset \cite{moustafa2015unswnb15} uses 49 features across network, service, and content categories, reporting 85.6\% accuracy with 0.89\% FPR for binary classification. These benchmark feature sets primarily capture network-level behavior and are effective for detecting volumetric attacks (DDoS, Port Scan) but lack semantic content features for Layer 7 attacks such as SQLi and XSS, which produce normal-looking traffic patterns at the network level. This is a fundamental limitation: an HTTP POST request containing a SQL injection payload (\texttt{' OR 1=1 --}) has identical packet rate, size distribution, and IAT patterns to a legitimate form submission.
+
+\textbf{Application-Layer Features and WAF Integration.} To detect L7 attacks, feature engineering must extend into HTTP payload content. The OWASP ModSecurity Core Rule Set (CRS) \cite{owaspModSecCRS} is the industry-standard community-maintained rule set for Web Application Firewalls (WAFs), containing detection rules for SQLi (CRS-942, 50+ rules at Paranoia Level 2), XSS (CRS-941, 27+ rules), and other OWASP Top 10 threats. Prior work treats WAF rules and ML/RL systems as separate layers: WAF rules trigger alerts upstream, and ML/RL classifiers process downstream signals. This separation means the RL agent cannot directly observe the CRS detection scores, losing potentially valuable signal. Our work is the first to embed CRS rule scores directly as continuous RL observation features (F13 CrsSqliScore, F18 CrsXssScore), enabling the agent to weight WAF signals alongside network-level evidence.
+
+\textbf{Feature Extraction Tools.} Scapy \cite{scapy2007} is a widely used Python-based framework for packet capture and protocol analysis. It enables flexible parsing of packet headers and payloads, allowing implementation of custom feature extraction pipelines that can be adapted to specific attack detection requirements. For encrypted HTTPS traffic, tshark with SSLKEYLOGFILE support provides TLS decryption capabilities, enabling L7 feature extraction even in encrypted environments. In simulation environments, packet capture can be combined with flow aggregation techniques to produce structured feature vectors suitable as RL state representations.
+
+\textbf{State Representation for RL Defense Agents.} In RL-based defense systems, feature engineering directly shapes the state space design. The state representation must balance informativeness with computational efficiency: overly complex states slow training and cause instability, while overly simplistic states omit critical security signals. Palmer et al.\ \cite{palmer2023drlsurvey} identify high-dimensional observation spaces and multi-attack generalization as the primary open challenges for DRL-based cyber defense. Most prior RL-based defense systems use 6--12 network-level features, which are insufficient to detect L7 attacks. This project's 34-dimensional observation vector represents a deliberate design trade-off: the 20D NIDS sensor layer (11 network-behavioral features + 9 payload semantic features F12--F20) provides multi-vector attack coverage; the 10D per-IP temporal state enables escalation memory across consecutive windows; and the 4D closed-loop effect captures delayed action consequences without requiring a model of attacker behavior.
+
+\textbf{Challenges in Network Feature Engineering.} Several fundamental challenges arise in network traffic feature engineering for real-time defense. Encrypted traffic (TLS 1.3) limits payload content visibility, requiring reliance on metadata and statistical features for the majority of modern HTTPS traffic. Concept drift --- the gradual change in traffic distribution as attack patterns evolve and user behavior shifts --- can degrade model performance over time without retraining. Feature selection and normalization are essential: redundant or highly correlated features reduce learning efficiency and may cause the RL agent to overfit to spurious correlations. The 1-second sliding window design introduces a further challenge: statistical features computed over very short windows have high variance, requiring careful normalization (log scale for right-skewed metrics, pass-through for ratio-bounded metrics) to provide stable gradient signals during PPO training.
+
+\subsection{Comparison of Related RL-Based Network Defense Systems}
+
+To clearly position this work within the existing literature, Table~\ref{tab:related_work} summarizes representative RL-based network defense systems along five key dimensions: observation space size, attack types addressed, enforcement mechanism, whether the system operates in a closed-loop (where actions affect subsequent observations), and whether L7 (application-layer) attacks are handled.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of Representative RL-Based Network Defense Systems}
+\label{tab:related_work}
+\begin{tabular}{L{3cm} C{1.5cm} L{2.8cm} L{2.5cm} C{1.3cm} C{1.3cm}}
+\toprule
+\textbf{Work} & \textbf{Obs. Dim.} & \textbf{Attack Types} & \textbf{Enforcement} & \textbf{Closed-Loop} & \textbf{L7} \\
+\midrule
+Malialis \& Kudenko \cite{malialis2015ddos} & 4--6 & DDoS only & Simulated rate-limiting & Yes & No \\
+Lopez et al.\ \cite{lopez2020application} & 8 & DDoS, Port Scan & Simulated rules & Yes & No \\
+Hammar \& Stadler \cite{hammar2024tnsm} & 10--15 & Multi-step intrusion & Simulated blocking & Yes & No \\
+CAGE Challenge \cite{cage2021} & Host-level & APT / lateral movement & Simulated isolation & Yes & No \\
+Nguyen \& Reddi \cite{nguyen2021deep} & 5--20 & Various (survey) & Simulated & Partial & Partial \\
+\textbf{This Work} & \textbf{20} & \textbf{SYN Flood, Port Scan, Brute Force, SQLi, XSS} & \textbf{Real iptables/tc in Containernet} & \textbf{Yes} & \textbf{Yes} \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize L7 = Application Layer (SQL Injection, XSS). Obs.\ Dim. = Observation Space Dimensionality.}
+\end{tabular}
+\end{table}
+
+This comparison highlights three key differentiators of the present work: (1) the 20-dimensional observation space is the largest among the surveyed works, enabling simultaneous coverage of five distinct attack types including L7; (2) enforcement is performed through real Linux kernel mechanisms (iptables, tc) inside a Containernet network rather than simulated rule abstractions; and (3) the system is the first to embed OWASP CRS rule scores directly into the RL observation space, enabling detection of SQLi and XSS without labeled L7 training data.
+
+\section{Summary of the Literature Review}
+
+This chapter has reviewed existing literature across four interconnected domains: reinforcement learning theory, network simulation environments, automated incident response, and network traffic feature engineering. The review reveals a consistent progression in the field --- from purely detection-focused systems toward integrated closed-loop defense agents --- but also identifies persistent gaps that motivate this research.
+
+\textbf{State of Traditional Defense.} Rule-based firewalls and signature-based IDS (Snort, Suricata) remain the operational baseline. They perform well against known, catalogued attack patterns but cannot adapt to novel threats, zero-day exploits, or attacks that modify their signatures to evade detection. Their false positive rates in production environments (10--40\%) cause significant alert fatigue, degrading SOC operator effectiveness over time \cite{alertFatigue2022}.
+
+\textbf{Progress in RL-Based Defense.} The literature confirms that RL agents can learn effective defense policies for specific attack scenarios. DQN-based systems handle volumetric DDoS well; PPO-based systems show better stability for mixed-attack environments. The CAGE Challenge benchmarks provide standardized evaluation protocols, though they operate at the host-compromise abstraction level rather than the packet level. Key findings from the survey: (1) model-free algorithms (DQN, PPO, A2C) outperform rule-based baselines in dynamic attack environments; (2) policy stability across independent training runs is critical for deployment confidence and requires explicit hyperparameter tuning; (3) reward function design significantly affects which attack types the agent prioritizes, making careful reward engineering a research contribution in its own right.
+
+\textbf{Identified Research Gaps.} Despite this progress, four specific research gaps motivate the present work:
+\begin{enumerate}
+  \item \textbf{L7 Attack Coverage Gap:} Most RL-based network defense systems operate exclusively on network-layer features. SQLi and XSS attacks produce traffic that is indistinguishable from legitimate web traffic at the packet level. No prior closed-loop RL defense system has addressed SQLi and XSS simultaneously within the same agent.
+  \item \textbf{WAF-RL Integration Gap:} The OWASP CRS represents decades of security community expertise in application-layer attack detection. Prior work treats WAF rules and RL agents as separate systems. Embedding CRS rule scores directly as RL observation features has not been explored.
+  \item \textbf{Enforcement Realism Gap:} Most RL defense research uses simulated enforcement (e.g., modifying a Python variable representing ``blocked'' state) rather than actual network enforcement. Real enforcement mechanisms (iptables, tc) have different timing characteristics and produce different downstream effects on traffic that feed back into the next observation.
+  \item \textbf{Hyperparameter Stability Gap:} Prior RL-based defense works use default algorithm hyperparameters (SB3 defaults, DQN paper defaults) without systematic analysis of how these choices affect policy stability across independent training seeds. This omission makes it difficult to assess deployment reliability.
+\end{enumerate}
+
+\section{Contribution of the Research}
+
+Based on the literature review and the identified research gaps above, this research makes three main contributions to the field of autonomous network defense:
+
+\textbf{Technical Contribution --- Closed-Loop L7-Aware Defense System:} The project constructs a complete closed-loop defense system integrating real-time feature extraction (Observation Module with 20 behavioral features), adaptive decision-making (PPO Agent), and automated enforcement at the Linux kernel level (iptables, tc) within a Containernet network. The Observation Module extends beyond prior network-level feature sets by incorporating HTTP payload semantic features (F12--F20) that embed OWASP CRS 941/942 rule scores as continuous RL observation signals. This enables simultaneous detection of five diverse attack types --- including application-layer attacks (SQLi, XSS) --- within a single closed-loop RL agent, addressing Gaps 1 and 3. Unlike most previous research that stops at detection or uses simulated enforcement mechanisms, this project deploys actual defensive actions that produce measurable changes in subsequent observations, creating a genuine closed-loop learning signal.
+
+\textbf{Methodological Contribution --- Feature Engineering and Evaluation Framework:} The project proposes and validates a 20-dimensional observation vector covering network features (F1--F11) and application-layer features (F12--F20 via OWASP CRS), with a multi-stage payload normalization pipeline (HTML entity decoding, recursive URL decoding, Base64 decoding, Unicode NFKC normalization) that handles double-encoded evasion payloads in real time. The evaluation framework introduces a rigorous distinction between \textit{per-window} and \textit{per-session} detection metrics --- a methodologically important clarification that reveals true system behavior (26.3\% per-window SQLi recall vs.\ 100\% per-session detection) rather than misleadingly high aggregate statistics. Domain Randomization ($\pm$20\% feature noise during training) is applied to improve generalization, and systematic five-algorithm, five-seed benchmarking with effect size analysis (Cohen's $d$) addresses Gap 4.
+
+\textbf{Practical Contribution --- Deployment Evidence and Design Guidelines:} The project provides empirical evidence that RL outperforms static rule-based methods in realistic mixed-attack scenarios (detection rate 77.3\% vs.\ 73.5\% Rule-Based, FPR 6.8\% vs.\ 10.2\%), with specific analysis of the latency constraint arising from the 1-second observation window and its mitigation via a hybrid architecture combining static rate-limiting for sub-second flash attacks with RL decision-making for sustained attacks. Concrete hyperparameter selection rationale is provided for each PPO tuning decision, enabling practitioners to adapt these guidelines to their own deployment contexts. The project also establishes honeypot redirection as a dynamically learned strategic intermediate action rather than a static configuration, providing 60-second threat intelligence collection windows before escalating to blocking, and addressing Gap 2 in part through the CRS embedding design.
+
+%============================================================
+\chapter{METHODOLOGY}
+%============================================================
+
+\section{Research Design}
+
+\subsection{Threat Model}
+
+Information security research requires a clearly defined threat model to bound the problem scope and set realistic expectations for the defense system. The threat model defines three dimensions: \textbf{who} the adversary is, \textbf{what capabilities} they possess, and \textbf{what constraints} bound the defense.
+
+\textbf{Adversary Profile.} This project assumes an \textit{external, unauthenticated adversary} who has no prior foothold inside the network. The adversary has full knowledge of the network's public-facing IP address and port but \textbf{zero knowledge} of the defense system's internal design: the adversary does not know that a PPO agent is running, does not know the 20 feature definitions, and cannot observe the reward function. This black-box assumption reflects realistic attacker conditions in most real-world engagements, where the attacker probes the network without access to the defender's internal monitoring infrastructure.
+
+\textbf{Attacker Goal.} The adversary's objective is service disruption or unauthorized data access, pursued through one or more of the following attack strategies:
+
+\begin{itemize}
+  \item \textbf{Volumetric Exhaustion (SYN Flood / DDoS):} Flooding the target with high-rate TCP SYN packets (10,000--100,000 pps) to exhaust the server's TCP connection table (backlog) and deny service to legitimate clients. The attacker requires only packet-sending capability (e.g., hping3, LOIC, GoldenEye) and does not need to complete a three-way handshake.
+  \item \textbf{Reconnaissance (Port Scan):} Systematically probing a range of TCP/UDP ports to enumerate open services, determine OS fingerprints, and identify potentially vulnerable software versions. Common tools: Nmap SYN scan (\texttt{-sS}), Masscan. Produces a large number of RST packets from closed ports and a diverse set of destination ports within a short time window.
+  \item \textbf{Credential Exhaustion (Brute Force):} Automated submission of large numbers of username/password combinations against web application login endpoints (e.g., \texttt{/admin/login}, \texttt{/wp-login.php}) using tools such as Hydra or Burp Suite Intruder. Produces highly uniform HTTP request sizes and short inter-request intervals.
+  \item \textbf{Application-Layer Exploitation (SQLi):} Injection of SQL syntax into HTTP request parameters (URI or POST body) to manipulate database queries, potentially exfiltrating sensitive data or bypassing authentication. Common tools: sqlmap (automated, multi-evasion-technique), manual injection via curl. Characterized by special SQL characters (\texttt{'}, \texttt{;}, \texttt{--}) in URIs and UNION SELECT constructs in payloads.
+  \item \textbf{Application-Layer Exploitation (XSS):} Injection of client-side script (JavaScript) into HTTP parameters or stored content to execute in the victim's browser, enabling session hijacking, credential theft, or malware delivery. Common patterns: \texttt{alert()}, \texttt{eval()}, \texttt{onerror=}, \texttt{onload=} event handlers in HTML attributes.
+  \item \textbf{Evasion via Encoding:} URL double-encoding (\texttt{\%2527} for \texttt{'}), HTML entity encoding (\texttt{\&amp;quot;}), and Base64 encoding are used to obfuscate payloads and evade signature-based filters. The adversary may also leverage HTTPS/TLS to prevent deep packet inspection by pattern-matching detection systems.
+\end{itemize}
+
+\textbf{Defender Capabilities and Trust Boundaries.} The defender (defense agent) operates at the border router with three capabilities: (1) \textbf{Full packet visibility} at the L3/L4 level via Scapy capture; (2) \textbf{L7 payload inspection} via TLS decryption using SSLKEYLOGFILE (laboratory setting) or transparent proxy deployment (production); and (3) \textbf{Real-time enforcement authority} via Iptables and TC mechanisms at the Linux kernel level. The production webserver and honeypot are trusted components within the defended network; the attacker and the public internet are the untrusted zone.
+
+\textbf{Out-of-Scope Threats.} The following threat categories are explicitly excluded from the scope: (a) insider threats with network-level privileges; (b) zero-day exploits targeting the defense system itself (i.e., adversarial attacks on the PPO policy or feature extraction pipeline); (c) supply chain attacks or pre-compromise of network infrastructure; (d) social engineering. These exclusions are necessary to bound the problem and do not diminish the relevance of the threat model for external network-level attack scenarios.
+
+\subsection{Research Methodology Framework}
+
+The project approaches the network defense problem as automated sequential decision-making, where the system not only detects attacks but also selects appropriate response actions according to each context. The theoretical framework chosen is the Markov Decision Process (MDP) \cite{suttonBarto2018}, as it accurately models sequential decision-making under uncertainty --- an inherent characteristic of real-world network traffic.
+
+According to the MDP definition, the environment is characterized by the four-component tuple $(S, A, R, \gamma)$:
+\begin{itemize}
+  \item \textbf{State Space $S$}: 34-dimensional observation vector in $[0,1]^{34}$ comprising 20D NIDS sensor features (F1--F20), 10D per-IP temporal state, and 4D closed-loop effect feedback.
+  \item \textbf{Action Space $A$}: Four discrete defensive choices.
+  \item \textbf{Reward Function $R$}: Quantifying security loss and deployment cost.
+  \item \textbf{Discount Factor $\gamma = 0.99$}: Reflecting long-term vision in minimizing total cumulative damage.
+\end{itemize}
+
+The research methodology is implemented along two parallel branches. The state collection branch constructs the \textbf{Observation Module} --- converting raw network traffic into a semantically meaningful observation vector for the agent. The training branch develops the \textbf{RL Defense Agent} using the Proximal Policy Optimization (PPO) algorithm \cite{schulmanPPO2017} in the Containernet simulation environment.
+
+PPO was chosen over other RL algorithms for three practical reasons: (1) training stability through a gradient clipping mechanism with $\varepsilon = 0.2$, preventing overly large policy updates; (2) stability in the on-policy loop, suitable for simulation environments that continuously generate rollouts without a replay buffer; (3) good compatibility with compact discrete action spaces of four choices \cite{schulmanPPO2017}.
+
+\subsection{Overall System Architecture}
+
+The Adaptive Network Defense System (ANDS) is designed according to a three-layer architecture, with each layer taking a specialized role and interacting via standardized interfaces.
+
+\textbf{Feature Extraction Layer (Observation Module):} Captures packets from the network environment, organizes them into bidirectional flows according to 5-tuples, and calculates 20 behavioral features representing different attack patterns. The output is a 20-dimensional raw value vector; the inference module normalizes to $[0,1]$ and then concatenates the 10D per-IP temporal state and 4D closed-loop effect to form the full 34-dimensional observation vector before passing to the agent.
+
+\textbf{Decision-Making Layer (RL Defense Agent):} Receives the observation vector and maps it to the optimal defensive action based on the learned policy. The PPO algorithm with MLP Policy architecture is trained until convergence (approximately 500,000 interaction steps) in the Containernet environment \cite{lantzMininet2010}.
+
+\textbf{Enforcement Layer:} Deploys defensive actions into the network infrastructure via Iptables:
+\begin{itemize}
+  \item \textbf{Allow (0)} --- permit traffic to pass.
+  \item \textbf{Rate Limit (1)} --- limit bandwidth.
+  \item \textbf{Redirect (2)} --- redirect to honeypot.
+  \item \textbf{Block (3)} --- completely block.
+\end{itemize}
+
+The \textbf{core distinction from traditional IDS} is the \textbf{closed-loop feedback effect}: the agent's decision immediately changes the next network state --- and the agent observes that change in the next window. Traditional IDS (Snort, Suricata) only detect and send alerts --- response actions (if any) are handled by humans or static rules, decoupled from the detection loop. The RL agent creates a feedback loop: action $\to$ state change $\to$ agent sees result $\to$ policy adjustment. This is also why RL was chosen instead of supervised learning: the problem is not static classification but sequential decision-making with consequences.
+
+Specifically, each action creates measurable effects on the 20D vector:
+
+\begin{table}[h!]
+\centering
+\caption{Effects of Defense Actions on Next-State Features}
+\begin{tabular}{L{3cm} L{10cm}}
+\toprule
+\textbf{Action} & \textbf{Effect on Next State} \\
+\midrule
+Rate Limit & F1 (PacketRate) decreases $\sim$60\%, F11 (PacketsPerPort) decreases $\sim$50\%, F4 (RstRatio) decreases $\sim$30\% \\
+Redirect & F6, F7, F8 (brute force indicators) decrease $\sim$70\%, F12--F20 (L7 payload) decrease $\sim$80\% --- honeypot absorbs \\
+Block & All features $\to$ 0 in the next 5--10 steps --- attacker completely cut off \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{MDP Problem Formalization}
+
+\textbf{State Space} $S \subset [0,1]^{34}$: Each state is a 34-dimensional vector comprising three components: \textbf{(1) 20D NIDS sensor features} --- behavioral features of traffic in a 1-second window, including network features (F1--F11) and HTTP content features (F12--F20); \textbf{(2) 10D per-IP temporal state} --- last-action one-hot encoding (4D), action hold counter (1D), service damage EMA and trend (2D), escalation buffer fill (1D), escalation evidence score (1D), and miss budget used (1D); \textbf{(3) 4D closed-loop effect} (effect\textsubscript{t-1}) --- webserver reachability, honeypot capture ratio, service presence signal, and service damage level from the previous step. Normalization to $[0,1]$ ensures numerical stability for the gradient descent of the PPO neural network.
+
+\textbf{Action Space} $A = \{0, 1, 2, 3\}$: Four discrete actions corresponding to Allow, Rate Limit, Redirect, and Block. The compact discrete space helps the agent converge faster compared to a continuous space.
+
+\textbf{Reward Function} $R(s, a)$: Designed according to the principle of heavy penalty for missing attacks, light penalty for unnecessary intervention, and reward for correctly blocking:
+
+\begin{equation}
+R_t = -\text{Network\_Damage}(S_t) - \text{Action\_Cost}(a_t) + \text{Action\_Bonus}(a_t, S_t)
+\end{equation}
+
+The Damage component distinguishes severity levels between attack types (SQLi/XSS have higher weights than Port Scan). The Cost component lightly penalizes intervention actions to prevent the agent from overreacting. The Bonus component rewards selecting the action appropriate to the attack type.
+
+\textbf{Discount Factor} $\gamma = 0.99$: A high value encourages learning a policy to minimize total accumulated damage, not just optimize immediate reward.
+
+\subsection{Experimental Network Topology}
+
+The experimental environment is built on the Containernet platform --- combining Mininet (network virtualization) and Docker (application isolation) --- enabling realistic network topology creation on commodity hardware \cite{lantzMininet2010}:
+
+\begin{itemize}
+  \item \textbf{Border Router (10.0.10.254/24):} Central node hosting Iptables and Nginx Reverse Proxy. Nginx routes port 443 to the Production Webserver (192.168.10.10:8080) and port 4443 to the Honeypot (192.168.30.10:8081). The X-Real-IP header is injected so the flow manager correctly identifies the source IP behind NAT.
+  \item \textbf{Production Webserver (192.168.10.10/24):} The real service, primary attack target.
+  \item \textbf{Decoy Honeypot (192.168.30.10/24):} Decoy server absorbing Layer 7 attacks. When the agent chooses Redirect, the attacker continues on the Honeypot while the real server is completely safe.
+  \item \textbf{Attacker (10.0.10.10/24):} Deploys attack scenarios using sqlmap, hping3, Hydra, and curl.
+  \item \textbf{Wazuh SIEM (192.168.20.20/24):} Secondary baseline logging for cross-reference.
+\end{itemize}
+
+\subsection{RL Defense Agent Design}
+
+\textbf{Action Mapping:}
+\begin{itemize}
+  \item \textbf{Allow ($a=0$):} No intervention --- for normal traffic.
+  \item \textbf{Rate Limit ($a=1$):} Iptables hashlimit 10/sec burst 20 --- for noisy or unclear traffic.
+  \item \textbf{Redirect ($a=2$):} NAT REDIRECT to port 4443 (Honeypot) --- for \textbf{Brute Force, SQLi, XSS}. Allows the agent to analyze attack intent through the Honeypot instead of immediately Blocking, preserving the opportunity for SOC review. After 60 seconds if L7 attack signals continue, the IP state tracker automatically escalates to Block.
+  \item \textbf{Block ($a=3$):} Iptables DROP --- for \textbf{DDoS/SYN Flood and Port Scan}, volumetric attacks requiring immediate termination.
+\end{itemize}
+
+\textbf{Training Environment:} Built to Gymnasium standard \cite{gymnasium2023}. Each episode lasts 120 steps (120 network seconds) with attack types appearing randomly to ensure the agent encounters all five types. The PPO loop accumulates experience over $n\_steps$ interaction steps, then updates the policy with multiple gradient descent epochs. The clipping mechanism with $\varepsilon = 0.2$ limits policy change magnitude at each update step, preventing sudden performance collapse \cite{schulmanPPO2017}.
+
+Domain Randomization adds $\pm$20\% noise to features to increase generalization of the learned policy.
+
+\textbf{Reward Function} synthesizes three components:
+
+\begin{equation}
+R_t = -(D_{after} + C_{action}) + B_{reduction} + B_{action}
+\end{equation}
+
+\textbf{(1) Network Damage} $D$ --- computed from 20D raw features, comprising 6 components with weights reflecting severity:
+
+\begin{table}[h!]
+\centering
+\caption{Reward Function Damage Components}
+\begin{tabular}{L{3.5cm} C{1.5cm} C{2cm} L{5cm}}
+\toprule
+\textbf{Component} & \textbf{Weight} & \textbf{Features} & \textbf{Nonlinear Function} \\
+\midrule
+PPS Overflow (DDoS) & 0.25 & F1 & Logistic: $1/(1+e^{-5(F1/\text{anchor}-1)})$ \\
+RST Rate (scan/brute) & 0.15 & F4 & Tanh: $\tanh(F4 \times 2)$ \\
+Port Scan Distribution & 0.15 & F5 & Log-sigmoid on raw port count \\
+Payload Anomaly & 0.10 & F9, F4, F5 & Logistic, excluding normal uploads \\
+SYN Flood & 0.10 & F2 & Tanh on ratio exceeding threshold \\
+SQLi/XSS (L7 attacks) & 0.25 & F12--F20 & Weighted normalized combination \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{(2) Action Cost} $C$ --- Light penalty by intervention level: Allow = 0, Rate Limit = 0.02, Redirect = 0.05, Block = 0.08. Creates a ``cost staircase'' making the agent prefer lighter measures when equally effective.
+
+\textbf{(3) Detection Bonus} $B_{action}$ --- Reward/penalty according to soft attack gating:
+\begin{itemize}
+  \item DDoS/Port Scan and choosing Block $\to$ +0.25; choosing Allow $\to$ $-$0.50
+  \item Brute Force/SQLi/XSS and choosing Redirect $\to$ +0.25; choosing Allow $\to$ $-$0.40
+  \item Normal traffic and choosing Block $\to$ \textbf{$-$0.60} (heaviest penalty --- false positive causes service disruption)
+\end{itemize}
+
+$B_{reduction}$ = (loss\_before $-$ loss\_after) $\times$ 0.5 --- rewards when action actually reduces damage.
+
+\textbf{Hyperparameters:}
+
+\begin{table}[h!]
+\centering
+\caption{PPO Hyperparameter Configuration}
+\begin{tabular}{L{3.5cm} C{2.5cm} C{2.5cm} L{4.5cm}}
+\toprule
+\textbf{Parameter} & \textbf{Default SB3} & \textbf{Value Used} & \textbf{Reason for Adjustment} \\
+\midrule
+Training steps & --- & $\sim$500k & Stop when reward saturates \\
+net\_arch (pi/vf) & {[}64, 64{]} & \textbf{[128, 128]}, Tanh & 34D input needs higher capacity to learn decision boundaries across 5 simultaneous attack subspaces \\
+learning\_rate & $3\times10^{-4}$ (fixed) & $3\times10^{-4} \to 1\times10^{-4}$ (linear decay) & Fast early-stage learning, precise late-stage convergence \\
+ent\_coef & 0.0 & \textbf{0.005} & Maintain sufficient exploration; smaller than typical 0.01 \\
+vf\_coef & 0.5 & \textbf{1.0} & IDS closed-loop: after Block, attacker silences 5--11 steps \\
+clip\_range $\varepsilon$ & 0.2 & 0.2 & Kept per Schulman et al.\ \cite{schulmanPPO2017} \\
+gamma $\gamma$ & 0.99 & 0.99 & Long-term view for 120-step episodes \\
+batch\_size & 64 & 64 & Unchanged \\
+n\_steps & 2048 & 2048 & Rollout buffer size suitable \\
+n\_epochs & 10 & 10 & Unchanged \\
+n\_envs & 1 & 4 & 4 parallel environments, $\sim$4$\times$ wall-clock speedup \\
+Seed & --- & 42 & Reproducibility \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Real-Time Inference and Execution Pipeline}
+
+After training, the PPO model is deployed in a real-time inference loop consisting of two processes running in parallel:
+
+\textbf{Process 1 --- Sniffer (daemon thread):} The Observation Module runs continuously, every second writing a JSONL line containing 20 raw values with metadata (timestamp, src\_ip) to \texttt{/tmp/sniffer\_output.jsonl}.
+
+\textbf{Process 2 --- Inference (main thread):} Monitors the JSONL file in tail mode. Each line is processed through three steps: (1) \textbf{Parse}: extract 20D raw vector from JSON, handling missing keys with default value 0; (2) \textbf{Normalize and Extend}: convert raw values to $[0,1]^{20}$ using the same normalization functions used in training, then concatenate the 10D per-IP temporal state and 4D closed-loop effect from the previous step to form the full 34D observation vector; (3) \textbf{Predict}: call \texttt{model.predict(obs\_34d, deterministic=True)} $\to$ action $\in \{0, 1, 2, 3\}$.
+
+\textbf{Iptables Execution via Network Namespace:} Actions are executed into the router's FORWARD or NAT PREROUTING chain via \texttt{nsenter -n -t <router\_pid>}. Before each new action, the system clears all old rules for the source IP (idempotent cleanup) then inserts the new rule.
+
+\textbf{IP State Tracker:} Maintains a per-IP dictionary storing action history and timestamps. When the agent chooses Redirect, the tracker starts a 60-second counter. After 60 seconds, if L7 attack signals continue (F6 $>$ 0.5 or F13/20 $>$ 0.2 or F18/4 $>$ 0.2), the system automatically escalates to Block without the agent needing to decide --- ensuring the Honeypot is not exploited indefinitely.
+
+\section{Data Collection Methods}
+
+\subsection{Packet Capture and Parsing}
+
+The packet processing pipeline is designed to support three distinct operating modes, each targeting a different deployment scenario:
+
+\begin{itemize}
+  \item \textbf{Live Real-time Mode} --- Packets are captured from a network interface using Scapy's asynchronous sniffer. A dedicated packet queue (max 10,000 items) decouples the capture thread from the feature extraction thread, preventing packet loss under high-load conditions. The producer thread pushes raw packets into the queue; the consumer thread dequeues, parses, and routes them to the flow manager.
+  \item \textbf{Offline PCAP Mode} --- Historical PCAP files are replayed using a custom PcapReader in strict chronological order. The packet timestamps from the PCAP header are used directly for window computation, enabling deterministic reproduction of the same feature vectors from the same input --- a necessary condition for reproducible evaluation.
+  \item \textbf{CSV Mode} --- Pre-exported Wireshark session CSVs are ingested directly. This mode is primarily used for feature validation against known-good Wireshark output, bypassing the full packet parsing stack to isolate feature computation bugs.
+\end{itemize}
+
+In all three modes, each raw packet is parsed by a \textbf{PacketLayerExtractor} that extracts a structured, immutable \texttt{LayerInfo} dataclass. The fields extracted include: source IP, destination IP, source port, destination port, IP protocol number, packet timestamp, payload size, and TCP flag bitmap (SYN, ACK, RST, FIN, PSH, URG). This fixed-format intermediate representation decouples downstream feature calculators from Scapy-specific APIs, allowing any capture backend to feed into the same feature pipeline.
+
+For the application layer (L7), the system uses \textbf{HTTP composite payload per-packet} analysis. At the time of analyzing each packet, the system concatenates \texttt{[URI] + [User-Agent] + [Body]} from the same packet into a single byte string. This composite string is stored alongside the \texttt{LayerInfo} and reused directly when features F12--F20 need to analyze content --- no recomputation per feature is required. This per-packet approach works effectively because SQLi/XSS payloads from common attack tools (sqlmap, XSSer, Burp Suite Intruder) typically embed the entire attack payload within the URI of a GET request or within the small body of a single POST request, fitting within a single TCP segment in the majority of cases.
+
+In real-time mode, HTTPS decryption is supported by running \texttt{tshark} in parallel with Scapy. The \texttt{tshark} process reads a pre-configured \texttt{SSLKEYLOGFILE} exported by the protected web server, decrypts TLS traffic, reassembles TCP streams, and exports decoded HTTP fields (URI, User-Agent, Body) to a named pipe. The observation module reads from this pipe and maps the decrypted fields back to the corresponding TCP packets using 5-tuple and sequence number alignment, making L7 features available even under HTTPS for laboratory evaluation purposes.
+
+\subsection{Connection Session Management}
+
+Network flows are the fundamental unit of analysis in the observation module. A \textit{flow} is uniquely identified by the standard 5-tuple: source IP address, destination IP address, source port, destination port, and transport protocol. All packets sharing the same 5-tuple are grouped into a single flow record, which accumulates per-packet metrics needed for feature computation.
+
+\textbf{Bidirectional Tracking.} Each flow record independently tracks packets in two directions: the \textit{forward direction} (from the session initiator toward the responder) and the \textit{backward direction} (return traffic from the responder). The first packet observed for a given 5-tuple establishes the forward direction; subsequent packets are classified by comparing their source address to the session initiator. This bidirectional separation is essential for correctly computing asymmetric features. For example, SynAckRatio requires counting SYN packets sent by the attacker independently of the server's responses; FwdBwdRatio measures the ratio of outbound to inbound packets as an asymmetry indicator. Without per-direction accounting, a Port Scan --- in which the attacker sends many SYNs outbound while receiving mostly RST responses inbound --- would be indistinguishable from normal bidirectional communication at the aggregate packet level.
+
+\textbf{Flow Lifecycle and Memory Management.} A new flow record is instantiated upon the arrival of the first packet from a previously unseen 5-tuple. The record remains active as long as traffic continues within a configured idle timeout period (120 seconds). This timeout is chosen to accommodate HTTP keep-alive sessions, which may be idle for up to 60 seconds between requests, while still allowing timely reclamation of memory from terminated connections. To protect against memory exhaustion --- particularly relevant under Port Scan attacks that generate thousands of short-lived connection attempts --- the system enforces a hard upper bound on the number of concurrent flows it maintains. Upon reaching this limit, the system first attempts to reclaim space by evicting records that have already exceeded their idle timeout. If the active flow table remains full after this cleanup, incoming packets from new sources are conservatively discarded rather than corrupting existing flow records. This fail-safe design trades completeness for stability, ensuring that the observation module remains operational even under adversarial conditions.
+
+\textbf{Application-Layer Attribution.} When the system is deployed behind a reverse proxy, the network-layer source address visible in packet headers corresponds to the proxy rather than the originating client. To maintain per-client accuracy for behavioral features, the system extracts the original client address from the HTTP forwarding header injected by the proxy. This attribution mechanism ensures that features measuring per-source-IP behavior --- such as the number of distinct destination ports probed or the volume of outbound traffic per client --- correctly reflect individual client activity rather than aggregating all clients behind a single proxy address.
+
+Application-layer content analysis is conducted at the per-request granularity. Each HTTP request packet is treated as an independent unit of analysis, and its URI, headers, and body are collectively inspected for attack indicators. This per-request design avoids the latency and memory overhead of full TCP stream reassembly while remaining effective for the detection of common attack tools, which typically embed their complete payload within a single request.
+
+\subsection{1-Second Sliding Window}
+
+The RL agent requires an observation vector reflecting the \textit{current} state of the network rather than the full session history. The 1-second sliding window fulfills this requirement: at each decision step $t$, only packets in the temporal interval $[t - 1\text{s},\; t]$ are included in feature computation. Packets older than 1 second relative to the latest observed packet are pruned from each flow's deque via a sliding cleanup operation, keeping the memory footprint bounded even for long-running flows.
+
+The 1-second window size was empirically calibrated by examining the conflicting constraints of temporal resolution and statistical stability:
+
+\begin{table}[htbp]
+\centering
+\caption{Effect of Window Size on Feature Quality (SYN Flood, 1,000 pps)}
+\label{tab:window_size}
+\begin{tabular}{C{2cm} L{4cm} L{4cm} C{2.5cm}}
+\toprule
+\textbf{Window (s)} & \textbf{Advantage} & \textbf{Disadvantage} & \textbf{PacketRate CV} \\
+\midrule
+0.25 s & Very high temporal resolution & Too few pkts for stable statistics & 0.43 (unstable) \\
+0.5 s  & Good resolution & Marginal stability for F7, F8 & 0.21 \\
+\textbf{1.0 s}  & \textbf{Matches MDP step, statistically stable} & \textbf{1 s latency before first action} & \textbf{0.09} \\
+2.0 s  & Very stable statistics & Blurs attack phases, slows policy & 0.05 \\
+5.0 s  & Maximum stability & Delay unacceptable, phase blurring & 0.02 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A 0.25-second window produces high feature variance (PacketRate CV = 0.43) because low-rate attacks may place zero packets in some windows, causing F1 to oscillate between 0 and high values. A 2-second or longer window is statistically stable but blurs the transition between an active attack phase and a blocked silence phase, causing the agent to observe ``blended'' features that do not accurately represent either state. The 1-second window achieves a Coefficient of Variation below 0.1 for PacketRate under SYN Flood conditions, providing a stable signal while matching the 1-second MDP decision cycle. This alignment between window size and decision frequency means that each RL step directly corresponds to a fresh, non-overlapping observation --- a clean design that avoids the confounding effect of feature lag.
+
+\subsection{Data Sources}
+
+Three distinct data sources were used throughout the project, each serving a specific evaluation or training purpose:
+
+\textbf{(1) LSNM2024 Labeled URI Dataset \cite{lsnm2024}.} A publicly available dataset comprising 3,000 benign HTTP URIs crawled from legitimate web sites and 2,809 labeled SQL injection attack URIs generated by common attack tools (sqlmap, manual injection). The dataset was developed at the University of New Brunswick (UNB) for WAF and L7 detection research. In this project, LSNM2024 serves two specific purposes: (a) \textbf{CRS Paranoia Level calibration} --- the benchmark in Table 4.1 was computed by running each URI through the CRS-942 rule engine at PL1, PL2, and PL3, measuring TP, FP, and F1-score; (b) \textbf{PayloadNormalizer validation} --- representative double-encoded payloads from the dataset were used as test cases to verify that the normalization pipeline correctly decodes encodings before CRS scanning. The LSNM2024 dataset was \textit{not} used for RL training or final detection rate evaluation.
+
+\textbf{(2) Mutated Packet PCAP Dataset \cite{lsnm2024}.} A real-packet PCAP dataset collected by Abu Al-Haija et al.\ (2025) in a controlled lab environment using actual attack tools: hping3 (SYN Flood, DDoS), Nmap (Port Scan), Hydra and Burp Suite Intruder (Brute Force), sqlmap (SQLi), and custom XSS injection scripts. The dataset contains 15 distinct attack categories plus normal traffic, captured as full network-layer PCAP files preserving TCP headers, payloads, and timestamps. This dataset serves as the primary \textbf{feature engineering evaluation set}: PCAP files are replayed through the observation module in offline PCAP mode to extract 1-second window feature vectors (Tables 4.1--4.3). Because the dataset contains real tool-generated traffic (not synthetic distributions), the feature extraction results provide realistic estimates of how the system would perform on actual attack traffic. The dataset was \textit{not} used for RL training.
+
+\textbf{(3) IDSDefenseEnv (Self-Built RL Training Environment).} A purpose-built simulation environment conforming to the Gymnasium interface standard \cite{gymnasium2023}, designed to generate the closed-loop training signal required by the PPO algorithm. The environment models five traffic classes (Normal, SYN Flood, Port Scan, Brute Force, and SQLi/XSS) as parameterized probability distributions over the 20-dimensional observation space. Distribution parameters for each class are derived from empirical measurements on the Mutated Packet PCAP Dataset, ensuring that the synthetic feature distributions approximate real captured traffic. During training, random perturbations of $\pm$20\% are applied to sampled feature values (Domain Randomization) to improve the robustness of the learned policy to distribution shift between the training environment and real traffic. IDSDefenseEnv is used \textbf{exclusively for policy training} and is deliberately excluded from performance evaluation. Separating the training environment from the evaluation data is an essential methodological safeguard: evaluating a policy on the same synthetic distribution it was trained on would measure memorization of the training distribution rather than generalization to real network conditions.
+
+\section{Data Analysis Techniques}
+
+\subsection{Feature Engineering Overview}
+
+The design of 20 features starts from the question: ``What does the RL agent need to know about the network to make correct defensive decisions?'' The agent needs sufficient information to distinguish five attack types from normal traffic, and distinguish them from each other to select appropriate actions.
+
+\textbf{Table 3.1: The 20 Features in the RL Agent's Observation Vector}
+
+\begin{longtable}{C{0.8cm} L{3.2cm} L{4.5cm} C{1.5cm} C{1cm} L{2.5cm}}
+\caption{Complete 20-Feature Observation Vector} \label{tab:features} \\
+\toprule
+\textbf{ID} & \textbf{Feature Name} & \textbf{Formula} & \textbf{Scale} & \textbf{Cap} & \textbf{Detects} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{c}{\tablename\ \thetable{} -- continued} \\
+\toprule
+\textbf{ID} & \textbf{Feature Name} & \textbf{Formula} & \textbf{Scale} & \textbf{Cap} & \textbf{Detects} \\
+\midrule
+\endhead
+F1 & PacketRate & total\_pkts / window\_size (s) & Log & 500 & DDoS / SYN Flood \\
+F2 & SynAckRatio & fwd\_SYN / max(bwd\_SYN, 1) & Log & 100 & SYN Flood \\
+F3 & InterArrivalTime & mean(IAT fwd pkts) & Log & 5.0 s & Automated attacks \\
+F4 & RstRatio & (fwd+bwd RST) / total\_pkts & Pass-through & --- & Port Scan \\
+F5 & DistinctPorts & unique dst\_ports in window & Log & 500 & Port Scan \\
+F6 & URLConcentration & max\_url\_count / total\_req & Pass-through & --- & Brute Force / L7 DDoS \\
+F7 & HttpIatUniformity & 1 / (1 + CV(HTTP IAT)) & Pass-through & --- & Bot timing \\
+F8 & RequestSizeUniformity & 1 / (1 + CV(payload\_sizes)) & Pass-through & --- & Brute Force \\
+F9 & AvgPayloadSize & sum(fwd\_payload\_len) / fwd\_count & Linear & 1500 bytes & SYN Flood ($\approx$0) \\
+F10 & FwdBwdRatio & fwd\_pkts / max(bwd\_pkts, 1) & Log & 100 & Traffic asymmetry \\
+F11 & PacketsPerPort & fwd\_pkts / max(distinct\_ports, 1) & Log & 500 & Port Scan density \\
+F12 & SqlSpecialChar & count(chars $\in \{$`\texttt{'}`, `\texttt{;}`, `\texttt{\#}`$\}$) / len(normalized) & Pass-through & --- & SQLi \\
+F13 & CrsSqliScore & $\Sigma$(CRS-942 rule hits) / req\_count & Linear & 20 & SQLi (CRS PL2) \\
+F14 & SqlUnionSelect & 1 if \texttt{UNION[\textbackslash s\textbackslash S]\{0,50\}SELECT} & Binary & --- & SQLi --- UNION \\
+F15 & SqlComment & 1 if \texttt{--}, \texttt{\#}, \texttt{/**/}, \texttt{/*!}\ldots & Binary & --- & SQLi --- comment \\
+F16 & SqlStackedQuery & 1 if \texttt{; DROP/DELETE/INSERT/UPDATE/\ldots} & Binary & --- & SQLi --- stacked \\
+F17 & SqlSelectCount & $\Sigma$(SELECT count) / req\_count & Linear & 10 & SQLi --- recon \\
+F18 & CrsXssScore & $\Sigma$(CRS-941 @rx + @pm hits) / req\_count & Linear & 4 & XSS (CRS PL2) \\
+F19 & JsFunctionCall & 1 if \texttt{alert()/eval()/document.cookie/\ldots} & Binary & --- & XSS --- JS \\
+F20 & HtmlEventHandler & 1 if \texttt{on\{error|load|click|\ldots\}=} & Binary & --- & XSS --- events \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize Normalization: Log --- $\log(1+\min(f,\text{cap}))/\log(1+\text{cap})$; Linear --- $\min(f,\text{cap})/\text{cap}$; Pass-through --- $\text{clamp}(f,0,1)$.}
+\end{longtable}
+
+\subsection{Network Features (F1--F11)}
+
+The network feature group encodes traffic-level behavior specific to each attack type. F1 (PacketRate) measures the total bidirectional packet rate over all flows in the window, sensitive to DDoS and SYN Flood because these attacks generate abnormally large volumetric traffic. F2 (SynAckRatio) exploits the TCP three-way handshake mechanism: SYN Flood creates an asymmetric SYN/ACK ratio because the server receives many SYNs but never completes the handshake.
+
+F3 (InterArrivalTime) detects automated attacks through IAT that is too uniform or too small compared to real users. F4 (RstRatio) and F5 (DistinctPorts) characterize Port Scan: scanners send packets to many ports and receive many RSTs from closed ports, creating a high RST ratio combined with diverse destination ports. F11 (PacketsPerPort) supplements by measuring packet density per port --- Port Scan has small F11 (few packets/port) while normal traffic concentrates on few ports with more packets per port.
+
+F6 (URLConcentration) detects Brute Force by measuring request concentration on a single target URL such as \texttt{/login}. F7 (HttpIatUniformity) supplements by detecting overly uniform time intervals --- characteristic of automated tools like Hydra or Burp Suite Intruder. Importantly, F7 calculates IAT \textbf{cross-flow} --- collecting all HTTP request timestamps from all flows of the same source IP in the 1-second window, sorting by time and computing distances between consecutive requests. F8 (RequestSizeUniformity) exploits the fact that Brute Force sends nearly identical payloads (only the password field changes), giving a very low coefficient of variation CV for payload sizes. F9 (AvgPayloadSize) distinguishes SYN Flood (payload $\approx$ 0) from HTTP flood (payload $>$ 0).
+
+\subsection{SQL Injection Features (F12--F17)}
+
+SQL Injection attacks leave no trace at the network layer --- traffic containing a malicious SQLi payload is indistinguishable from a legitimate web form submission at the packet rate, size, and timing level. The F12--F17 feature group penetrates into HTTP payload content to find semantic signals that betray SQL injection attempts.
+
+\textbf{F12 --- SqlSpecialChar.} This feature measures the density of characters that carry special syntactic meaning in SQL --- specifically the single quote (string delimiter), semicolon (statement terminator), and hash symbol (comment initiator). These characters occur rarely in legitimate web form input, which typically consists of alphanumeric text and standard punctuation, but appear at high frequency in SQL injection payloads where they are used to break out of string context or terminate the intended query. Computing the density as a ratio to total payload length rather than as an absolute count ensures that the feature is comparable across requests of varying sizes. The payload normalization stage decodes URL-encoded representations of these characters before the count is performed, ensuring that encoding-based evasion does not suppress the signal.
+
+\textbf{F13 --- CrsSqliScore.} Rather than developing application-layer detection rules independently, F13 integrates the OWASP ModSecurity Core Rule Set for SQL injection (CRS-942) \cite{owaspModSecCRS} directly as a continuous observation feature. The CRS-942 rule set, maintained by the open-source security community and adopted by major web application firewalls, provides broad coverage of SQL injection technique families, including string manipulation, boolean-based inference, UNION-based data extraction, time-based blind injection, and error-based extraction. Operating at Paranoia Level 2, which balances detection completeness against false alarm rate, the rule set comprises 50 detection patterns. F13 aggregates the number of rule activations across all requests in the observation window, normalized by request volume. This normalization ensures that the feature reflects the proportion of requests exhibiting suspicious content rather than raw traffic volume, making it robust against changes in connection rate. By exposing the WAF rule score as a continuous value rather than a binary alert, the RL agent is able to reason probabilistically --- a modest score may warrant increased monitoring, while a high score across multiple requests justifies an active defensive response.
+
+\textbf{F14--F16 --- SQL Injection Technique Indicators.} These three binary features each target a specific SQL injection technique class associated with high-impact exploitation:
+\begin{itemize}
+  \item \textbf{F14 (SqlUnionSelect)} targets the UNION-based data extraction technique, in which the attacker appends a secondary SELECT statement to retrieve data from other database tables. This construct has negligible occurrence in legitimate application traffic, making it a high-precision indicator.
+  \item \textbf{F15 (SqlComment)} targets the use of SQL comment syntax to neutralize the remainder of the original query after injection, a technique that allows the attacker to isolate the injected clause from any trailing conditions in the application's SQL template.
+  \item \textbf{F16 (SqlStackedQuery)} targets the injection of additional SQL statements separated by a semicolon, enabling the attacker to execute arbitrary data manipulation or administrative commands --- the most destructive class of SQL injection, capable of deleting tables, modifying records, or invoking system-level stored procedures.
+\end{itemize}
+Each of these indicators is set to one when the corresponding pattern is detected in any request within the observation window, and zero otherwise. Their high specificity to attack payloads results in near-zero false positive rates, complementing the higher-coverage but lower-precision signals provided by F12 and F13.
+
+\textbf{F17 --- SqlSelectCount.} This feature measures the frequency of SELECT statement keywords per request within the window. Automated SQL injection tools systematically enumerate database structure by issuing large numbers of SELECT queries to discover table names, column names, and data values. A high SELECT frequency relative to the number of requests therefore indicates a reconnaissance phase that typically precedes data exfiltration. F17 is designed to detect this early-stage activity, which may not yet trigger high-severity CRS rules but is nonetheless a strong indicator of ongoing automated probing.
+
+Together, the F12--F17 group provides defense in depth against SQL injection: character-level statistics (F12) provide broad sensitivity, the WAF-derived score (F13) captures semantic attack patterns, high-precision binary indicators (F14--F16) target specific exploitation techniques, and the SELECT frequency (F17) detects reconnaissance behavior. This layered structure ensures that evasion of any single detection mechanism does not eliminate the attack signal entirely.
+
+\subsection{Cross-Site Scripting Features (F18--F20)}
+
+Cross-Site Scripting attacks inject client-side scripts into web responses, targeting the victim's browser rather than the server directly. From a network monitoring perspective, XSS payloads appear within outbound HTTP responses or inbound GET/POST parameters --- the traffic volume and timing patterns are identical to benign web browsing. The F18--F20 feature group targets the specific syntactic structures that distinguish XSS payloads from legitimate HTML and JavaScript.
+
+\textbf{F18 --- CrsXssScore.} Analogous to F13 for SQL injection, F18 integrates the OWASP Core Rule Set for cross-site scripting (CRS-941) \cite{owaspModSecCRS} as a continuous observation feature. At Paranoia Level 2, the rule set provides broad syntactic coverage of XSS attack patterns, including script tag injection, event handler injection, JavaScript protocol exploitation, and obfuscation techniques. The score is computed as the number of rule activations per request, normalized by request count, allowing the RL agent to assess the severity of XSS indicators proportionally rather than responding to any single pattern match with a binary decision. A preliminary evaluation of CRS-941 on URI-embedded samples from the LSNM2024 dataset showed high discriminability; however, the evaluation was constrained by the limited representation of XSS patterns in the URI-level data, since attack payloads in the source dataset are primarily delivered through request bodies. A comprehensive benchmark incorporating full HTTP request content is deferred to future work.
+
+\textbf{F19 --- JsFunctionCall.} This binary feature detects the presence of JavaScript execution constructs that are consistently associated with cross-site scripting exploitation --- specifically, calls to browser scripting functions used for data exfiltration (such as access to browser cookies or document manipulation), code evaluation functions that enable dynamic payload execution, and dialog functions that are the canonical markers of proof-of-concept XSS payloads. These constructs rarely appear in legitimate web request parameters, yielding a high-precision signal with a near-zero false positive rate in practice.
+
+\textbf{F20 --- HtmlEventHandler.} This binary feature detects the use of HTML event handler attributes as a JavaScript execution mechanism. Event handlers embedded in HTML element attributes (triggered by user interactions such as page load, mouse movement, or form input) represent the most prevalent XSS delivery vector in modern web applications, precisely because they bypass content filters that only screen for explicit script tags. Detection of event handler patterns in request parameters is therefore a strong indicator of attribute-injection XSS, the technique most commonly observed in reports of real-world vulnerabilities \cite{owaspModSecCRS}.
+
+The three XSS features provide complementary coverage at different levels of abstraction: F18 captures broad syntactic attack patterns via the community-maintained WAF rule set, F19 targets explicit script execution constructs with high precision, and F20 addresses the implicit execution pathway through HTML event binding. Together, they ensure that the RL agent receives a meaningful signal for XSS detection even when individual indicators are absent or suppressed by partial encoding.
+
+\subsection{Payload Normalization Pipeline}
+
+A fundamental challenge in application-layer attack detection is that attackers routinely encode their payloads using URL encoding, HTML entity encoding, Base64, or combinations thereof to evade signature-based inspection. A pattern-matching engine operating on the raw request string would fail to recognize the attack, since the encoded form differs syntactically from the pattern despite being semantically equivalent when processed by the target application. To address this, the observation module applies a multi-stage payload normalization pipeline prior to any pattern matching, transforming encoded or obfuscated content into a canonical plaintext representation.
+
+The normalization process proceeds through three conceptual stages. The first stage resolves character-level encodings: HTML entity references are expanded to their character equivalents, Unicode text is normalized to a canonical composed form, and non-standard quotation marks and typographic characters are mapped to their ASCII equivalents. The second stage addresses obfuscation through iterative decoding: URL percent-encoding is decoded recursively, and Base64-encoded segments are detected and decoded where applicable. Both decoding steps are applied for a bounded number of iterations rather than indefinitely, based on empirical evidence that double-encoding --- applying a second layer of encoding to content that is already encoded --- constitutes the most prevalent WAF evasion technique in practice \cite{suttonBarto2018}. Deeper encoding chains are rarely produced by common attack tools. The third stage performs text normalization: consecutive whitespace characters are collapsed, and the entire string is converted to lowercase to enable case-insensitive pattern matching.
+
+A throughput benchmark on a representative mixed payload workload demonstrated that the pipeline operates at approximately 30,000 payloads per second, with a 99th-percentile latency well below one millisecond per payload. This performance is sufficient to process all HTTP requests arriving within a 1-second observation window without introducing measurable processing delay into the defense cycle.
+
+\subsection{Attack Coverage Matrix}
+
+To verify that the 20 features provide sufficient discriminative signal for the RL agent, Table 3.2 presents the coverage matrix: a checkmark indicates that feature has the capability to detect the corresponding attack type. Each attack type is covered by at least two independent features, ensuring detectability even when one feature is noisy.
+
+\begin{table}[h!]
+\centering
+\caption{Coverage Matrix --- Features $\times$ Attack Types}
+\begin{tabular}{L{3.5cm} C{1.5cm} C{1.5cm} C{1.8cm} C{1cm} C{1cm}}
+\toprule
+\textbf{Feature} & \textbf{SYN Flood} & \textbf{Port Scan} & \textbf{Brute Force} & \textbf{SQLi} & \textbf{XSS} \\
+\midrule
+F1 PacketRate & \checkmark & \checkmark & \checkmark & & \\
+F2 SynAckRatio & \checkmark & & & & \\
+F3 InterArrivalTime & \checkmark & \checkmark & \checkmark & & \\
+F4 RstRatio & & \checkmark & & & \\
+F5 DistinctPorts & & \checkmark & & & \\
+F6 URLConcentration & & & \checkmark & & \\
+F7 HttpIatUniformity & & & \checkmark & & \\
+F8 RequestSizeUniformity & & & \checkmark & & \\
+F9 AvgPayloadSize & \checkmark & & & & \\
+F11 PacketsPerPort & & \checkmark & & & \\
+F12 SqlSpecialChar & & & & \checkmark & \\
+F13 CrsSqliScore & & & & \checkmark & \\
+F14--F16 SqlBinary & & & & \checkmark & \\
+F18 CrsXssScore & & & & & \checkmark \\
+F19--F20 XssBinary & & & & & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Feature Vector Normalization}
+
+After computing raw values, the 20 features are normalized to $[0,1]$ according to each feature's distribution. There are three groups:
+
+\begin{itemize}
+  \item \textbf{Log scale} (F1, F2, F3, F5, F10, F11): right-skewed distributions, wide range. Formula: $f_{norm} = \log(1 + \min(f_{raw}, \text{cap})) / \log(1 + \text{cap})$. Log scale compresses long tails (extreme attack outliers) into the $[0.8, 1.0]$ range, avoiding gradient vanishing for normal windows.
+  \item \textbf{Linear scale} (F9, F13, F17, F18): approximately linear distributions, small range. Formula: $f_{norm} = \min(f_{raw}, \text{cap}) / \text{cap}$. Applied to frequency count features (CRS scores, SELECT count) with predictable value ranges.
+  \item \textbf{Pass-through} (F4, F6, F7, F8, F12, F14--F16, F19, F20): already in $[0,1]$ by definition (ratios, $1/(1+CV)$ functions, or binary). Apply $\text{clamp}(f_{raw}, 0, 1)$ to ensure numerical safety in edge-case computation errors.
+\end{itemize}
+
+\section{Methodological Limitations}
+
+Acknowledging the boundaries and constraints of the research methodology is essential for correct interpretation of the results. The following limitations were identified through the design and experimental process and should be considered when evaluating the generalizability of the findings.
+
+\textbf{Simulation Environment Gap.} Containernet provides a realistic emulation of network behavior using Linux namespaces and Docker containers, but it cannot fully replicate the complexity of production network environments. Real networks contain diverse device types (embedded IoT devices, legacy hardware, mobile clients), heterogeneous background traffic from hundreds of simultaneous users, and non-deterministic OS scheduling effects from shared infrastructure. The $\pm$20\% Domain Randomization applied during training is designed to partially compensate for this limitation, but the true distribution shift between Containernet and production is unknown until a real-world deployment evaluation is conducted. Results reported in this thesis (77.3\% detection rate on active-threat steps, 6.8\% FPR) are valid within the simulation environment and should be treated as upper-bound estimates for production performance.
+
+\textbf{Attack Type Scope.} The system was designed and validated against five specific attack categories that represent the most common threats to web-facing services. Advanced persistent threat (APT) techniques involving multi-stage lateral movement, living-off-the-land binaries, or supply chain compromise are outside the threat model. More critically, the evaluation does not test against \textit{adaptive adversaries} who are aware of the feature definitions and reward function. An attacker who knows that F2 (SynAckRatio) is a key feature could craft a SYN Flood with a randomized completion rate to suppress F2 while maintaining service impact. Adversarial robustness against such aware attackers is identified as a priority future work direction (Section 6.2.3).
+
+\textbf{Application-Layer Feature Dependency on Plaintext.} Features F12--F20 require access to HTTP payload content in plaintext. In production environments using TLS 1.3 with forward secrecy, extracting the SSLKEYLOGFILE requires either: (a) direct configuration of the web server process (feasible for controlled deployments); or (b) deployment at a transparent TLS termination proxy positioned before the web server. Option (a) carries security implications (the key log file exposes past and present TLS sessions to anyone with file read access). Option (b) introduces a network component that must be secured separately. The system's L7 detection capability is therefore conditional on a specific deployment architecture that may not be feasible in all production contexts.
+
+\textbf{Reward Function Design Sensitivity.} The 77.3\% detection rate and 6.8\% FPR are achieved under a specific reward function design with carefully chosen component weights (SYN Flood weight 0.25, SQLi/XSS weight 0.25, false positive penalty 0.60, etc.). These weights encode the designer's assumptions about relative attack severity and acceptable false positive costs. Different organizations may have different severity weightings --- for example, an e-commerce platform may weight Brute Force (credential theft) more heavily than a content delivery network (which primarily faces DDoS). Different weights would produce different optimal policies with different detection and false positive trade-offs. Practitioners adopting this system must retune the reward function to match their specific organizational risk priorities.
+
+\textbf{Controlled Labeling and Class Separation.} The evaluation PCAP dataset labels were assigned through controlled experimental conditions: each capture session ran a single known attack type, and all packets within that session are labeled accordingly. This ``clean'' labeling does not reflect real-world conditions where multiple attackers may target the network simultaneously, where a single attacker may switch between attack types mid-session, or where legitimate users may exhibit traffic patterns similar to mild attack signatures (e.g., a web crawler that resembles a slow Port Scan). Mixed-class evaluation scenarios with overlapping attack and benign traffic represent a more challenging but more realistic test condition that was not fully explored in this work.
+
+%============================================================
+\chapter{EXPERIMENTAL RESULTS}
+%============================================================
+
+\section{Introduction}
+
+This chapter presents the experimental evaluation of the Adaptive Network Defense System (ANDS), covering both the Observation Module and the RL Defense Agent. The evaluation is organized to answer the three research questions defined in Chapter 1: RQ1 (comparative effectiveness of RL vs.\ rule-based), RQ2 (operational trade-off between security and service availability), and RQ3 (policy stability across diverse attack vectors). Evaluation proceeds along two parallel directions: (1) feature extraction accuracy and processing performance for the Observation Module, validated against real-packet datasets independent of the RL training environment; (2) training convergence behavior and final policy performance for the RL Defense Agent, measured across five independent training seeds and five algorithm configurations.
+
+All experiments were conducted on an Ubuntu 22.04 Linux host running the Containernet platform with Docker 24.x. The observation module is implemented in Python 3.10 with Scapy 2.5.0 for packet parsing and a custom CRS rule engine for L7 feature extraction. The RL training stack uses Stable-Baselines3 v2.x with PyTorch 2.0 (\texttt{numpy < 2.0} constraint for SB3 compatibility). Reproducibility is ensured by fixed random seed = 42 across all NumPy, PyTorch, and Python \texttt{random} module calls; the same seed is propagated to the Gymnasium environment's action sampling and domain randomization. Each reported metric is averaged over five independent training seeds (42, 123, 456, 789, 1337) to ensure statistical robustness and fair algorithm comparison.
+
+\textbf{Evaluation Datasets.} Two independent datasets are used for evaluation, intentionally separated from the IDSDefenseEnv training environment to prevent data leakage:
+\begin{itemize}
+  \item \textbf{LSNM2024 URI dataset}: used for CRS Paranoia Level calibration (Table 4.1) and payload normalization pipeline validation
+  \item \textbf{Mutated Packet PCAP Dataset}: used for per-feature-group classification analysis (Tables 4.2--4.3), providing real-packet traffic generated by actual attack tools
+\end{itemize}
+
+The IDSDefenseEnv synthetic environment is used \textbf{only} for RL training and for the final agent policy evaluation (Tables 4.4--4.6), creating a clear train/test separation. This two-environment design allows independent validation of both the feature engineering pipeline (on real traffic) and the RL policy (on the synthetic distribution it was trained on, evaluated on held-out episodes).
+
+\section{Data Presentation}
+
+\subsection{Payload Normalization Pipeline Results}
+
+The payload normalization pipeline was tested on 10 representative cases including actual bypass techniques: HTML entity encoding, double URL encoding, and Base64. Result: \textbf{10/10 test cases passed} --- the pipeline correctly detected attack patterns in all tested encoded payloads.
+
+Performance benchmark on 5,000 mixed payload calls: mean latency = \textbf{32.4 µs/call}, P99 = \textbf{235.6 µs}, throughput = \textbf{30,916 calls/second}. The pipeline is sufficient to process within the 1-second MDP observation window.
+
+\subsection{CRS Paranoia Level Analysis}
+
+CRS benchmark run with the LSNM2024 SQLi set to determine the optimal Paranoia Level for F13:
+
+\begin{table}[h!]
+\centering
+\caption{CRS Paranoia Level Benchmark Results (SQLi)}
+\begin{tabular}{C{1cm} C{1.5cm} C{1.5cm} C{1.5cm} C{1.5cm} C{1.5cm} L{2.5cm}}
+\toprule
+\textbf{PL} & \textbf{Rules} & \textbf{TP} & \textbf{FP} & \textbf{F1} & \textbf{FPR} & \textbf{Decision} \\
+\midrule
+PL1 & 19 & 1,695 & 0 & 0.753 & 0.0\% & FPR=0 but misses 40\% of attacks \\
+\textbf{PL2} & \textbf{50} & \textbf{2,809} & \textbf{459} & \textbf{0.925} & \textbf{15.3\%} & \textbf{Best --- selected} \\
+PL3 & 57 & 2,809 & 520 & 0.915 & 17.3\% & Higher FP, no better than PL2 \\
+\bottomrule
+\multicolumn{7}{l}{\footnotesize $n$ = 2,809 SQLi URIs + 3,000 normal URIs from LSNM2024.}
+\end{tabular}
+\end{table}
+
+PL2 was selected: F1-score 0.925, Recall = 1.0 (no attack missed), FPR = 15.3\% --- leaving remaining false positive processing to the RL agent.
+
+\textbf{CRS XSS Analysis (F18):} Benchmark of CRS-941 on the XSS subset of LSNM2024 used $n$ = 123 labeled GET-parameter attack URIs (script-tag and event-handler injections extracted from XSS-1.csv and XSS-2.csv) plus 3,000 normal URIs. POST-body XSS attacks sourced from WebGoat sessions are excluded, as the CSV URI column does not capture request body content --- those payloads are invisible at the URI level and thus cannot be evaluated with this benchmark methodology. Table 4.2 summarizes the results across three paranoia levels.
+
+\begin{table}[h!]
+\centering
+\caption{CRS-941 Benchmark on LSNM2024 XSS Subset ($n$ = 3,123)}
+\begin{tabular}{C{1cm} C{1.5cm} C{1.5cm} C{1.5cm} C{1.5cm} L{2.5cm}}
+\toprule
+\textbf{PL} & \textbf{Rules} & \textbf{TP} & \textbf{FP} & \textbf{F1} & \textbf{Decision} \\
+\midrule
+PL1 & 22 & 123 & 0 & 1.000 & Sufficient on test set \\
+\textbf{PL2} & \textbf{27} & \textbf{123} & \textbf{0} & \textbf{1.000} & \textbf{Selected} \\
+PL3 & 27 & 123 & 0 & 1.000 & No gain over PL2 \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize Recall = 1.0, FPR = 0.0\% at all paranoia levels on this URI-embedded test set.}
+\end{tabular}
+\end{table}
+
+All three paranoia levels achieve Recall = 1.0 and FPR = 0.0\% on the URI-embedded test set. PL2 is selected over PL1 to provide broader syntactic coverage of obfuscated event-handler patterns that are documented in OWASP CRS release notes but not represented in the LSNM2024 GET-parameter samples, consistent with the PL2 selection rationale for CRS-942. In the system, F18 operates supplementary to F19 and F20 (binary signals) --- the RL agent does not depend on F18 alone to classify XSS.
+
+\subsection{Detection Performance by Feature Group}
+
+Each feature group was evaluated independently using binary classification (RandomForest 200 trees, balanced sampling, 70/30 train-test split, seed=42) on the 1-second window CSV extracted from the Mutated Packet PCAP Dataset. \textbf{The evaluation unit is the 1-second window} (not the connection session) --- consistent with the RL agent's actual input.
+
+\begin{table}[h!]
+\centering
+\caption{Per-Feature-Group Classification Results (RandomForest, 1-second windows)}
+\begin{tabular}{L{2.5cm} L{2.5cm} C{1.8cm} C{1.5cm} C{1.5cm} C{2.5cm}}
+\toprule
+\textbf{Attack Type} & \textbf{Main Features} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Test Set (windows)} \\
+\midrule
+SYN Flood & F1, F2, F9 & 0.991 & 1.000 & 0.995 & 426 \\
+Port Scan & F4, F5, F11 & 1.000 & 0.508 & 0.674 & 969 \\
+Brute Force & F6, F7, F8 & 0.520 & 1.000 & 0.684 & 1,749 \\
+SQLi & F13, F14--F16 & 1.000 & 0.263 & 0.417 & 532 \\
+XSS & F18, F19--F20 & 1.000 & 0.075 & 0.140 & 187 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Result Interpretation:} SYN Flood achieves F1 = 0.995 because network features (F1, F2, F9) clearly distinguish all attack windows --- flood traffic fills every window in the session. Conversely, low Recall for SQLi (0.263) and XSS (0.075) is an inevitable consequence of the \textbf{per-window analysis design}: only 1-second windows containing actual HTTP requests with payload trigger F12--F20 --- analysis on ft\_sqli.csv confirms 75.4\% of windows in SQLi sessions contain no attack payload (only TCP setup/teardown/response), and 92.6\% of XSS session windows similarly.
+
+\textbf{Important --- per-window vs.\ per-session distinction:} Recall = 0.263 for SQLi means 26.3\% \textit{of 1-second windows in SQLi sessions} are correctly classified as attacks --- not that 26.3\% \textit{of attack sessions} are missed. At the session level, if at least one window in the session is correctly detected, the RL agent can respond in time. Analysis on the test set confirms \textbf{100\% of SQLi sessions have at least 1 window} exceeding the detection threshold, similarly for XSS.
+
+Precision = 1.000 for SQLi and XSS confirms no false positives --- every window classified as an attack actually contains malicious payload.
+
+\subsection{Feature Weights and Clustering}
+
+Random Forest Feature Importances on the extracted CSV dataset confirm that F1 (PacketRate) and F13 (CRS SQLi) contribute most significantly, consistent with the characteristics of DDoS and SQLi attacks. A t-SNE visualization (perplexity = 30) mapping the 20-dimensional vector to 2 principal axes shows that attack clusters and normal traffic clusters are clearly separated --- confirming that F1--F20 have high discriminative power without label overlap.
+
+\subsection{RL Agent Learning Curves}
+
+The RL Defense Agent was trained until convergence (approximately 500,000 timesteps, fixed seed 42, n\_envs=4). Training results were recorded via TensorBoard with evaluation frequency every 12,000 steps.
+
+\texttt{eval/mean\_reward} improved from \textbf{0.4} at the first evaluation (step 12,000) to \textbf{2.3} at convergence (step $\sim$350,000) --- an increase of \textbf{+475\%}. The fastest improvement phase occurred from step 50,000 to 250,000 when the agent learned to distinguish volumetric attacks (SYN Flood, Port Scan) from normal traffic; from step 250,000 to 350,000 it refined distinguishing L7 attacks. From step 350,000 onward, the reward stabilized within a $\pm$0.05 band, indicating the policy had reached near-optimal.
+
+Episode length (\texttt{eval/mean\_ep\_length}) remained constant at \textbf{120 steps} throughout training, confirming the environment was not terminated early (no terminal state due to error).
+
+\texttt{train/entropy\_loss} decreased from \textbf{$-$1.1} to approximately \textbf{$-$0.1} --- the agent becomes increasingly confident. The final entropy value $\approx$ 0.1 (corresponding to $\approx$1.1 nats) shows the agent still maintains some exploration thanks to \texttt{ent\_coef = 0.005}, not converging rigidly to a single action.
+
+\subsection{PPO Diagnostic Metrics}
+
+\begin{table}[h!]
+\centering
+\caption{PPO Diagnostic Metrics During Training}
+\begin{tabular}{L{3.5cm} C{2cm} C{2cm} C{1.5cm} L{4.5cm}}
+\toprule
+\textbf{Metric} & \textbf{Initial} & \textbf{Final} & \textbf{Status} & \textbf{Interpretation} \\
+\midrule
+eval/mean\_reward & 0.4 & 2.3 & \checkmark Good & +475\% --- policy learned effective defense \\
+approx\_kl & 0.012 & 0.003 & \checkmark Good & Below 0.02 threshold --- safe policy updates \\
+clip\_fraction & 0.14 & 0.02 & \checkmark Good & Gradient clipping rarely activates at convergence \\
+clip\_range & 0.20 & 0.20 & \checkmark Fixed & $\varepsilon = 0.2$ by design \\
+entropy\_loss & $-$1.10 & $-$0.10 & \checkmark Good & Agent confident; maintains exploration \\
+explained\_variance & 0.06 & 0.26 & $\triangle$ Low & Acceptable: high return variance due to 5 random attack types \\
+value\_loss & 2.50 & $\sim$0.00 & \checkmark Good & Critic converged --- accurate return estimation \\
+learning\_rate & $3\times10^{-4}$ & $1\times10^{-4}$ & \checkmark Good & Linear decay working as designed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All metrics are within healthy PPO thresholds. \texttt{explained\_variance} = 0.26 is lower than the ideal ($\geq$0.8) but reflects the environment's characteristics: each episode randomly mixes 5 attack types with very different reward profiles, naturally causing high return variance. The +475\% improvement in \texttt{eval/mean\_reward} confirms the policy network learned effectively despite the imperfect critic.
+
+\subsection{Comparison of Default SB3 and Tuned Configurations}
+
+\textbf{Multi-seed experiment:} To evaluate stability, both configurations were retrained across 5 independent random seeds (42, 123, 456, 789, 1337).
+
+\begin{table}[h!]
+\centering
+\caption{Per-Seed Results --- PPO-Tuned vs.\ PPO-Default}
+\begin{tabular}{C{1.5cm} C{3cm} C{3cm}}
+\toprule
+\textbf{Seed} & \textbf{PPO-Tuned Reward} & \textbf{PPO-Default Reward} \\
+\midrule
+42 & 2.453 & 2.474 \\
+123 & 2.484 & 2.483 \\
+456 & 2.433 & 2.506 \\
+789 & 2.428 & 2.515 \\
+1337 & 2.431 & 2.433 \\
+\textbf{Mean $\pm$ Std} & \textbf{2.446 $\pm$ 0.021} & \textbf{2.482 $\pm$ 0.029} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Aggregate Comparison --- PPO-Tuned vs.\ PPO-Default}
+\begin{tabular}{L{3cm} C{2.5cm} C{2.5cm} C{1.5cm} L{4cm}}
+\toprule
+\textbf{Metric} & \textbf{PPO-Default} & \textbf{PPO-Tuned} & \textbf{$\Delta$} & \textbf{Interpretation} \\
+\midrule
+Mean Reward & 2.482 & 2.446 & $-$1.5\% & Tuned slightly lower \\
+Std (5 seeds) & 0.029 & \textbf{0.021} & \textbf{$-$28\%} & \textbf{Tuned notably more stable} \\
+FP Rate & 0.9\% & \textbf{0.7\%} & $-$0.2 pp & Fewer false blocks \\
+Detection Rate & 77.3\% & 77.3\% & 0 & Equal detection capability \\
+Wall-clock (500k) & 786 s & \textbf{197 s} & \textbf{$-$4$\times$} & Tuned faster via n\_envs=4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The two configurations achieve the same Detection Rate (77.3\%). The operationally meaningful difference is \textbf{stability} --- PPO-Tuned has 28\% lower variance (std 0.021 vs.\ 0.029), meaning the policy performs more consistently across different training runs. In a security system, a \textbf{stable and predictable} policy has greater practical value than a policy with 1.5\% higher average reward but higher inter-deployment variation.
+
+\subsection{Final Evaluation Results}
+
+The agent was evaluated on an independent test set of 2,000 episodes, each containing a random mixture of normal traffic and attacks.
+
+\begin{table}[h!]
+\centering
+\caption{RL Defense Agent Evaluation Summary (2,000 episodes, IDSDefenseEnv)}
+\begin{tabular}{L{2.5cm} L{2.5cm} C{2cm} C{2cm} L{3.5cm}}
+\toprule
+\textbf{Traffic Type} & \textbf{Optimal Action} & \textbf{Detection Rate} & \textbf{FPR} & \textbf{Notes} \\
+\midrule
+Normal traffic & Allow (0) & --- & 6.8\% & Agent sometimes Rate Limits incorrectly \\
+Attack traffic (all types) & Block / Redirect & 77.3\% & --- & Active-threat steps only (post-Block silence excluded) \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize Per-attack breakdown not separately evaluated; overall FPR = \textbf{6.8\%} (normal-traffic steps).}
+\end{tabular}
+\end{table}
+
+\subsection{Algorithm Benchmark and Tuning Analysis}
+
+\subsubsection{5-Algorithm Comparison Across 5 Seeds}
+
+\begin{table}[h!]
+\centering
+\caption{Benchmark Results --- Mean $\pm$ Std Across 5 Seeds}
+\begin{tabular}{L{2.5cm} C{2cm} C{1.5cm} C{2cm} C{2.5cm} C{1.5cm}}
+\toprule
+\textbf{Algorithm} & \textbf{Mean Reward} & \textbf{Std} & \textbf{CI 95\%} & \textbf{Detection Rate} & \textbf{FP Rate} \\
+\midrule
+DQN & \textbf{2.643} & 0.051 & $\pm$0.044 & 75.3\% & \textbf{0.6\%} \\
+PPO-Default & 2.482 & 0.029 & $\pm$0.025 & \textbf{77.3\%} & 0.9\% \\
+\textbf{PPO-Tuned} & 2.446 & \textbf{0.021} & \textbf{$\pm$0.018} & \textbf{77.3\%} & 0.7\% \\
+A2C & 1.085 & 1.802 & $\pm$1.579 & 69.9\% & \textbf{0.6\%} \\
+Rule-Based & $-$5.559 & 0.000 & --- & 73.5\% & 10.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Algorithm commentary:}
+\begin{itemize}
+  \item \textbf{DQN:} Achieves the highest mean reward (2.643) via off-policy replay buffer. However, Detection Rate is lower than both PPO variants (75.3\% vs.\ 77.3\%) --- DQN lacks entropy regularization, making the policy rigid and prone to overfitting seen attack patterns.
+  \item \textbf{A2C:} When successfully converging (3/5 seeds), achieves reward 2.4--2.44, comparable to PPO. But 2/5 seeds fail completely (seed 42: reward = $-$2.105; seed 456: reward = 0.263), dragging the mean down to 1.085 with std = 1.802. Cause: A2C uses $n\_steps=5$ --- advantage estimation looking only 5 steps is insufficient to model block-suppression effects lasting 5--11 steps in closed-loop IDS environments.
+  \item \textbf{Rule-Based:} Heavy negative reward ($-$5.559) and FPR 10.2\% --- more than 1 in 10 legitimate users incorrectly blocked. Hard thresholds cannot adapt when traffic distribution changes.
+  \item \textbf{PPO (both configurations):} Most stable, highest Detection Rate (77.3\%), lowest std. Reason: PPO on-policy with $n\_steps=2048$ covers the complete block$\to$silence$\to$return cycle of an attacker within one rollout, giving more accurate advantage estimates.
+\end{itemize}
+
+\subsubsection{Tuning Process V2 $\to$ V3 $\to$ V4}
+
+\begin{table}[h!]
+\centering
+\caption{Experimental Results Per Version}
+\begin{tabular}{L{4cm} C{2.5cm} C{2.5cm} C{2.5cm}}
+\toprule
+\textbf{Metric} & \textbf{V2 (Baseline)} & \textbf{V3 (Broken)} & \textbf{V4 (Final)} \\
+\midrule
+Initial reward (step 0) & +0.442 & \textbf{$-$4.245} & +0.296 \\
+Best reward (peak) & 2.509 & 2.464 & \textbf{2.511} \\
+Step reaching peak & 360,000 & 480,000 & \textbf{360,000} \\
+Final reward (500k) & 2.306 & 2.241 & 2.278 \\
+Stable convergence from & 220,000 & 240,000 & \textbf{220,000} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{V2 $\to$ V3:} Version V3 simultaneously increased \texttt{batch\_size} from 64 to 128 and reduced \texttt{n\_epochs} from 10 to 5. Result: each rollout produced only 80 critic updates instead of 320 --- critic underfit, advantage estimates were wrong $\to$ actor received inaccurate learning signals $\to$ entire learning process unstable. Additionally, V3 raised \texttt{ent\_coef} to 0.03 --- entropy bonus overwhelmed reward signal, causing random behavior from the start (initial reward = $-$4.245).
+
+\textbf{V3 $\to$ V4:} V4 restored \texttt{batch\_size=64} and \texttt{n\_epochs=10} (320 updates/rollout), lowered \texttt{ent\_coef} to safe level, and added \texttt{vf\_coef=1.0} and linear learning rate schedule. V4 recovered V2's convergence speed (peak at step 360k, stable from 220k) with the highest peak reward of the three versions (2.511).
+
+\subsubsection{Statistical Validation --- PPO-Tuned vs.\ PPO-Default}
+
+\begin{table}[h!]
+\centering
+\caption{Statistical Analysis ($n$ = 5 seeds)}
+\begin{tabular}{L{4cm} C{2.5cm} L{5.5cm}}
+\toprule
+\textbf{Test} & \textbf{Value} & \textbf{Interpretation} \\
+\midrule
+Cohen's $d$ & $-$1.290 & Large practical effect size --- large practical effect on stability \\
+$p$-value (two-tailed $t$-test) & 0.0757 & Near $\alpha$=0.05; $n$=5 too small for statistical conclusion \\
+$\Delta$ Mean Reward & $-$0.036 ($-$1.5\%) & PPO-Tuned slightly lower \\
+$\Delta$ Std & \textbf{$-$0.008 ($-$28\%)} & \textbf{PPO-Tuned notably more stable} \\
+$\Delta$ FP Rate & \textbf{$-$0.2 pp} & PPO-Tuned fewer incorrect blocks \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Cohen's $d$ = $-$1.290 indicates a \textbf{large practical effect} on policy stability, despite only 1.5\% reward difference. $p$-value = 0.0757 does not reach $\alpha$=0.05 due to limited statistical power with $n$=5; $n \geq 20$ seeds would be needed for stronger statistical conclusions.
+
+\section{Result Analysis}
+
+\subsection{Real-Time Response Performance}
+
+The end-to-end defense cycle comprises four steps:
+\begin{enumerate}
+  \item \textbf{Window accumulation:} $\sim$1,000 ms --- accumulating packets in the 1-second window (dominant component).
+  \item \textbf{Feature computation (20D):} $\sim$5 ms.
+  \item \textbf{PPO inference (Forward Pass):} $\sim$1 ms.
+  \item \textbf{Iptables execution:} $\sim$10 ms.
+\end{enumerate}
+
+\textbf{Total $\approx$ 1,016 ms.} Although slower than a rule engine like Snort ($<$ 1 ms), the agent compensates by analyzing accumulated behavior rather than individual packets, leading to significantly lower FPR and the ability to adapt to new attacks.
+
+\subsection{Policy Behavior Analysis}
+
+For normal traffic, the agent chooses Allow (0) in 93.2\% of cases. The 6.8\% false positive rate is primarily Rate Limit (1) rather than Block (3) --- the agent leans toward gentle measures when uncertain, consistent with reward function design.
+
+For volumetric attacks (SYN Flood, Port Scan), the agent applies Block (3) directly --- appropriate and decisive. For Layer 7 attacks (Brute Force, SQLi, XSS), the agent prioritizes Redirect (2) to the Honeypot --- preserving the opportunity to analyze attack intent and allow SOC review. After 60 seconds if L7 attack signals continue, the IP state tracker automatically escalates to Block (3). This tiered behavior demonstrates the agent has learned the threat level distinction between attack types, not just binary attack/normal discrimination.
+
+\section{Result Interpretation}
+
+\subsection{Overall Assessment}
+
+The project achieved its research objectives: successfully constructing an automated RL-based network defense system capable of detecting and responding to five common attack types. Quantitative results (detection rate \textbf{77.3\%} on active-threat steps, false positive rate \textbf{6.8\%}) confirm the feasibility of the RL approach in network security.
+
+The most important contribution is the Observation Module design --- the bridge between raw network traffic and the MDP state space. Directly integrating OWASP CRS into the feature vector (F13, F18) is a novel approach, combining expert security knowledge with RL's automatic learning capability, rather than treating these two methods as opposites.
+
+\subsection{Real-World Scenario Verification}
+
+Four real-world scenarios were executed and verified via Iptables logs:
+
+\begin{enumerate}
+  \item \textbf{Normal HTTPS traffic:} F1 $<$ 60 pps, F12 = 0, F7 = 0.1. $\to$ \textbf{Action 0 (Allow)}. Iptables clean.
+  \item \textbf{Volumetric SYN Flood:} hping3 flood on port 443. F1 spikes to 350 pps, payload $\approx$ 0. $\to$ \textbf{Action 3 (Block)}. DROP rule pushed into FORWARD chain.
+  \item \textbf{Evasive SQLi (sqlmap):} UNION SELECT pattern detected --- F14 = 1, F13 spikes. $\to$ \textbf{Action 2 (Redirect)} to port 4443. Attacker continues scraping database on the Honeypot while 192.168.10.10 is completely safe. After 60 seconds IP tracker escalates $\to$ \textbf{Block}.
+  \item \textbf{XSS Botnet:} \texttt{onerror=} injected --- F18 rises, F20 = 1. $\to$ \textbf{Action 2 (Redirect)} $\to$ escalates to Block after 60 seconds.
+\end{enumerate}
+
+\subsection{Key Technical Findings}
+
+Three design decisions are confirmed as critical for system performance:
+
+\textbf{HTTP Feature Group (F12--F20):} SQLi/XSS attacks leave no network-layer traces --- only detectable through payload. Directly integrating CRS 942/941 into the feature vector (F13, F18) inherits expert security knowledge without requiring labeled L7 training data.
+
+\textbf{PayloadNormalizer:} Recursive URL decoding (maximum 2 iterations) handles double-encoding evasion. Without normalization, payloads like \texttt{\%27\%20OR\%20\%271\%27\%3D\%271} would not be recognized by CRS regex. PayloadNormalizer and CRS operate synergistically.
+
+\textbf{1-Second Sliding Window:} The balance point between temporal resolution (detecting attack bursts) and statistical stability (sufficient packets for F1--F11). Matches the 1-second decision cycle of the MDP.
+
+\section{Comparison with Literature}
+
+\textbf{Comparison with traditional feature extraction:} Sharafaldin et al.\ developed CICFlowMeter using over 80 bidirectional flow statistical features, achieving accuracy $>$ 97\% on CICIDS2017 with Random Forest. However, the large number of features increases computational cost significantly and lacks semantic content features (L7). This research demonstrates that 20 selected features --- combining network and payload layers --- can achieve competitive performance at lower cost, suitable for a 1-second real-time loop.
+
+\textbf{Comparison with supervised detection baselines:} Moustafa \& Slay reported Random Forest achieving 85.6\% accuracy and 0.89\% FPR on UNSW-NB15 for binary classification. Results are not directly comparable due to different label distributions and problem complexity.
+
+\textbf{Comparison on RL approach:} Most current network defense research uses supervised learning on static datasets. Applying RL with a closed feedback loop --- where defensive actions change the environment state --- is a novel approach compared to the mainstream trend.
+
+\textbf{Key differentiating point:} Integrating OWASP CRS into the feature vector (F13, F18) is a design not found in surveyed literature. Rather than building detection rules from scratch, the system inherits community-validated expert security knowledge, significantly reducing the requirement for labeled L7 training data.
+
+\begin{table}[h!]
+\centering
+\caption{RL Agent Performance vs.\ Baseline Methods (IDSDefenseEnv, 2,000 episodes)}
+\begin{tabular}{L{3cm} C{2.5cm} C{2.5cm} C{3cm} L{2.5cm}}
+\toprule
+\textbf{Method} & \textbf{Detection Rate} & \textbf{FPR} & \textbf{Response Time} & \textbf{Adaptive?} \\
+\midrule
+Static Rules & 73.5\% & 12.1\% & $<$ 1 ms & No \\
+\textbf{RL Agent (PPO)} & \textbf{77.3\%} & \textbf{6.8\%} & $\sim$1 s & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Implications of Results}
+
+The experimental results carry several practical implications for network security practitioners considering deployment of RL-based defense systems. This section translates the quantitative findings into actionable guidance across five operational dimensions.
+
+\subsection{When to Prefer RL over Static Rules}
+
+RL delivers clear operational value when three conditions are simultaneously satisfied: (1) the network handles diverse and time-varying attack types, particularly a mixture of volumetric (SYN Flood, DDoS) and application-layer (SQLi, XSS) attacks; (2) the environment requires an adaptive response strategy that distinguishes between attack types for proportionate action selection; and (3) the organization can tolerate a $\sim$1-second decision latency in exchange for a significantly lower false positive rate.
+
+In contrast, Static Rules remain the preferred choice when: attack patterns are stable and well-catalogued (e.g., a Snort ruleset covers all observed threats); sub-millisecond response is mandatory (e.g., financial trading systems); or the operations team lacks ML expertise to monitor and occasionally retrain the policy. The results show that Rule-Based achieves 73.5\% detection with 10.2\% FPR --- acceptable for narrow, stable threat environments. The RL agent's 77.3\% detection rate and 6.8\% FPR become meaningful advantages specifically in diverse, mixed-threat environments.
+
+A practical decision heuristic: if the organization's threat model includes L7 attacks (SQLi, XSS, Brute Force) in addition to volumetric attacks, the RL approach is recommended. If the threat model is exclusively volumetric, a well-tuned static rate limiter may be sufficient and more efficient.
+
+\subsection{Minimum Infrastructure Requirements}
+
+The system requires a centralized capture point at the network border (border router or inline IPS position) with the capability to run Python 3.x, Scapy for packet capture, and Iptables/TC for enforcement. The PPO inference component ($<$1 ms per forward pass on a 2-layer MLP) has negligible CPU requirements and can operate on compact embedded hardware such as a Raspberry Pi 4 or an entry-level x86 appliance.
+
+The resource-intensive components are: (1) the \textbf{flow manager} --- maintaining up to 50,000 concurrent flows, each storing packet timestamps and payloads, requires approximately 2--4 GB RAM under heavy load; (2) \textbf{packet capture} --- Scapy's Python-based capture incurs higher CPU overhead than kernel-level alternatives such as AF\_PACKET or DPDK; deploying XDP (eXpress Data Path) for high-throughput environments ($>$10 Gbps) would reduce CPU load; (3) \textbf{HTTPS decryption} --- the tshark-based TLS decryption pipeline adds $\sim$15--20\% CPU overhead relative to plaintext analysis, requiring a dedicated CPU core at sustained $>$5 Gbps link rates.
+
+For a typical enterprise edge deployment (1 Gbps uplink, 500--5,000 concurrent flows), a commodity x86 server with 8 GB RAM and a 4-core CPU at 3 GHz is sufficient. PPO retraining (500,000 steps, 4 parallel environments) requires approximately 3--5 minutes on the same hardware, making periodic policy updates feasible within a maintenance window.
+
+\subsection{Latency-Accuracy Trade-off}
+
+The $\sim$1,016 ms total defense cycle is a fundamental constraint arising from the 1-second observation window design. This latency must be clearly communicated to operators and incorporated into the system's SLA documentation. Within the first 1-second observation window, the agent accumulates evidence before issuing any action. For high-intensity SYN Flood attacks (10,000+ pps), those packets arrive and consume server resources before the first Block action is issued.
+
+The recommended mitigation strategy is a \textbf{hybrid first-line/second-line architecture}: a lightweight static kernel rule (Iptables hashlimit or TC police filter) immediately rate-limits all incoming traffic to a conservative threshold (e.g., 200 pps per source IP). This pre-filter absorbs the worst-case first-second damage of a flash SYN Flood without generating false positives for sustained legitimate traffic. The RL agent then takes over from the second window onward, performing accurate multi-class classification and issuing the appropriate action (Block for DDoS, Redirect for SQLi, Rate Limit for borderline cases). This two-layer design ensures that the 1,016 ms latency applies only to the RL decision --- not to the initial attack mitigation.
+
+For organizations with strict sub-100 ms response requirements, the 1-second window can in principle be reduced to 250--500 ms at the cost of higher feature variance (as shown in Table 3.3), leading to a somewhat higher FPR. A 500 ms window with an aggressive pre-filter is a reasonable compromise for high-sensitivity environments.
+
+\subsection{Honeypot as Strategic Advantage}
+
+The Redirect-to-Honeypot action represents a qualitatively different defense posture compared to immediate blocking. Rather than terminating the attacker's session upon detection, Redirect absorbs the malicious traffic into a controlled decoy environment (Honeypot at 192.168.30.10:4443), where the attacker continues to execute attack attempts while the production server is fully protected. This creates a 60-second intelligence collection window before the IP tracker escalates to permanent Block.
+
+The strategic advantages of Redirect over immediate Block are threefold. First, \textbf{threat intelligence collection}: the Honeypot logs the attacker's SQLi payloads, XSS injection strings, enumerated URLs, and tool fingerprints (User-Agent patterns, request timing signatures). This information feeds directly into threat intelligence reports and can be used to update detection rules, train future ML models, or share with sector ISACs (Information Sharing and Analysis Centers). Second, \textbf{false positive mitigation}: for ambiguous traffic (e.g., aggressive web crawlers or security scanners that trigger Brute Force features), Redirect gives 60 seconds for the operator to review before the permanent Block is applied, reducing FPR consequences for borderline cases. Third, \textbf{attacker deception}: an attacker who receives no indication of detection (their requests appear to succeed on the Honeypot) is likely to continue the attack, extending the intelligence collection window and potentially revealing the full scope of the intended compromise.
+
+Static Rules and Random Forest classifiers can detect attacks but cannot implement this tiered response strategy --- they can only produce binary outputs (alert/block). The RL agent's multi-action policy is what enables Redirect as a dynamically learned intermediate response, not a manually pre-configured playbook.
+
+\subsection{Policy Reusability}
+
+A trained PPO policy checkpoint (the neural network weights, approximately 150 KB for the [128, 128] architecture) can be saved and redeployed to a new network environment without retraining, subject to one critical constraint: the full 34-dimensional observation vector structure must remain identical. This requires the Observation Module to extract the same F1--F20 features with the same normalization formulas and the same 1-second window, and the per-IP temporal state and closed-loop effect logic to be implemented with the same PerIPTemporalState class and simulate\_effect functions used during training.
+
+This reusability has significant operational implications. First, it enables an organization to \textbf{centrally develop and validate} a policy in a controlled lab environment (or on a pilot network segment) and then deploy the identical policy weights to production edge routers across multiple network segments. Second, it allows a \textbf{single policy update} to be distributed network-wide when the threat landscape changes, rather than requiring signature database updates per device. Third, policy transfer from a lower-risk segment (e.g., a DMZ serving a test web application) to a higher-risk segment (e.g., the production login page) is feasible if the traffic profile is sufficiently similar --- though domain randomization at training time specifically improves transfer robustness for feature distribution shifts of $\pm$20\%.
+
+A practical redeployment checklist: (1) verify that the Observation Module version matches the one used during training; (2) confirm the 20 feature names and normalization bounds in \texttt{data\_params.py} are unchanged; (3) confirm the per-IP temporal state logic (\texttt{PerIPTemporalState}) and closed-loop effect simulation (\texttt{simulate\_effect}) match the training environment; (4) run a 100-episode shadow evaluation on the target network in Allow-only mode before enabling enforcement; (5) establish a monitoring dashboard to detect policy drift (FPR increase $>$2 pp over 48 hours triggers retraining).
+
+%============================================================
+\chapter{DISCUSSION}
+%============================================================
+
+\section{Restatement of Research Questions and Objectives}
+
+This project was guided by three main research questions, each aiming to identify a different aspect of the feasibility and effectiveness of RL-based network defense.
+
+\textbf{RQ1 --- Comparative Effectiveness:} Does the RL agent outperform traditional rule-based defense mechanisms (static rules, ML classifiers) in detecting and mitigating automated and adaptive cyber attacks in a simulated environment? This question is important because it addresses the core claim of the project: RL is not just a theoretical choice but a measured practical advantage.
+
+\textbf{RQ2 --- Operational Trade-off:} How does the implementation of autonomous defensive actions (blocking, rate limiting, redirection) affect the balance between successful attack mitigation and legitimate service availability? This question is a critical operational axiom: defense is inherently bidirectional --- we cannot block everything for security, but must block enough while keeping the service serving legitimate users.
+
+\textbf{RQ3 --- Policy Stability:} Can the RL-based agent develop and maintain a stable, effective defense policy across diverse and continuously evolving attack vectors without manual reconfiguration? This question evaluates the ``autonomous'' aspect of the system: can the learned policy be used once and reused?
+
+\section{Summary of Key Findings and Interpretation in Research Context}
+
+\subsection{RQ1 --- Comparative Effectiveness of the RL Agent}
+
+The algorithm benchmark (Table 4.6) shows PPO-Tuned achieves a detection rate of \textbf{77.3\%}, outperforming the Rule-Based baseline:
+\begin{itemize}
+  \item \textbf{Rule-Based:} 73.5\% --- gap of \textbf{+3.8 pp} (percentage points)
+\end{itemize}
+
+In the independent IDSDefenseEnv evaluation (Table 4.5, 2,000 episodes), the agent achieves a \textbf{77.3\% detection rate} on active-threat traffic steps across all attack types combined.
+
+The agent demonstrates differentiated detection behavior across attack categories. Network-layer attacks (SYN Flood, Port Scan) benefit from clear volumetric signals (F1, F2, F4, F5), enabling rapid Block decisions. Application-layer attacks (SQLi, XSS) rely on payload features (F12--F20), where the PayloadNormalizer and CRS scoring pipeline provide the discriminative signal. Brute-Force presents the most ambiguous profile, requiring temporal pattern accumulation across multiple 1-second windows before the agent accumulates sufficient evidence.
+
+\textbf{Why RL outperforms:} The RL agent's strength comes from three mechanisms absent in Static Rules:
+(1) \textbf{Online learning}: RL is not bound by predefined signatures. It continuously observes network state and adjusts behavior based on reward. When attack patterns change (port changes, payload encoding, speed), the agent learns to respond without developing new rules.
+(2) \textbf{Semantic feature integration (L7):} The F12--F20 group (SQL/XSS scoring based on CRS + PayloadNormalizer) allows the agent to detect variants accurately. Static Rules only handle exact patterns or simple wildcards.
+(3) \textbf{Learning trade-offs:} The RL policy learns a non-trivial balance between precision and recall. For example, the agent discovers that high F6 (URLConcentration) can be either brute-force (attack) combined with low IAT + uniform request sizes, or a legitimate web scanner if the user-agent is normal.
+
+\textbf{Limitations and Conditions of RQ1:} The advantage depends on the \textbf{simulation environment} conditions. Containernet was established with fixed topology, $\pm$20\% domain randomization, and a known attack set. When deployed to real production networks, generalization of the policy remains unverified. However, the 20-feature structure was chosen based on deep knowledge of network security and attack behavior, not specific data, so \textbf{transfer capability is reasonable} --- but requires empirical confirmation.
+
+\textbf{RQ1 Conclusion:} The RL agent achieves superior comparative effectiveness in the simulation environment, with particular strength in adaptively learning anomalous behaviors and incrementally detecting payloads. The necessary condition is that the Markov state space must be sufficiently similar between training and deployment.
+
+\subsection{RQ2 --- Operational Trade-off: Defense vs.\ Service Availability}
+
+Network defense is inherently a trade-off problem: we want to block all attacks but not impact legitimate users. Tables 4.3 and 4.5 provide two main metrics to quantify this balance.
+
+\textbf{Service availability:}
+\begin{itemize}
+  \item Legitimate traffic allowed: 93.2\%
+  \item False Positive Rate (FPR): 6.8\%
+\end{itemize}
+
+In 1,000 legitimate requests, approximately 68 are alerted or temporarily rate-limited. This is \textbf{acceptable in production environments} if: (1) alerted users are redirected to honeypot (60 seconds to verify) --- not immediately blocked; (2) SLA permits this level of temporary ``drop.''
+
+\textbf{Defense effectiveness:} Overall detection rate of \textbf{77.3\%} on active-threat steps. The agent applies Block for volumetric attacks (SYN Flood, Port Scan) and Redirect-to-Honeypot for application-layer attacks (SQLi, XSS, Brute-Force), demonstrating a nuanced multi-action policy rather than a degenerate ``always block'' strategy.
+
+\textbf{Honeypot Strategy and Threat Intel:} The policy learns to choose ``Redirect to Honeypot'' for 60 seconds before long-term blocking. Benefits extend beyond defense: (1) \textbf{Threat Intelligence}: attackers continue operating in a controlled environment, allowing SOC to log payloads, tools, and TTPs; (2) \textbf{Availability Win}: legitimate users have a chance to complete their session in 60 seconds before being permanently denied (if malicious activity continues).
+
+\textbf{Latency Limitation:} The $\sim$1,016 ms defense cycle means the agent needs at least 1 second to issue an action. In a high-intensity SYN Flood attack (10,000 SYN/second), \textbf{those 10,000 packets arrive before the agent can block.}
+
+The hybrid solution: place a \textbf{simple static rate limiter} at the router (e.g., Linux iptables limit module) to immediately mitigate SYN flood, while the RL agent \textbf{focuses on L7 and higher-level decision-making} (SQL injection manifests from the second second onward).
+
+\textbf{RQ2 Conclusion:} RL agent successfully balances defense (77.3\% detection rate on attack traffic) and service availability (93.2\% legitimate traffic allowed, 6.8\% FPR). This balance has a cost: $\sim$1 second observation window requires a static rate-limiting layer as first-line defense for flash volumetric attacks. With hybrid design, this trade-off \textbf{is reasonable for production scenarios.}
+
+\subsection{RQ3 --- Policy Stability Across Diverse Attack Vectors}
+
+Data from Figure 4.1 and Table 4.2 answer clearly: the agent \textbf{maintains high policy stability} across 5 diverse attack types.
+
+\textbf{Stable training curve:} \texttt{eval/mean\_reward} increases from 0.4 to $\sim$2.3 (+475\%) and from step 350,000 onward stabilizes within $\pm$0.05 --- no oscillation or catastrophic forgetting. \texttt{entropy\_loss} decreases from $-$1.1 to $-$0.1, showing the agent becomes more confident but does not \textbf{overfit} (entropy remains $>$ 0).
+
+\textbf{Stability metrics from Table 4.2:} \texttt{approx\_kl}: 0.012 $\to$ 0.003 --- well below clipping threshold (0.02), proving safe policy updates. \texttt{explained\_variance}: 0.06 $\to$ 0.26 --- lower than ideal but expected: the environment has 5 randomly mixed attack types, return is naturally high-variance. Value 0.26 at the endpoint proves \textbf{critic converged, not diverged.}
+
+\textbf{Learning heterogeneous responses:} The agent learns differentiated strategies for each attack type --- Block for SYN Flood+Port Scan, Redirect for Brute Force+SQLi+XSS. Policy does not ``collapse'' to a single action; it learns an \textbf{implicit decision tree} based on the feature vector.
+
+\textbf{Per-Window vs.\ Per-Session analysis:} Low per-window detection rates (26.3\% SQLi, 7.5\% XSS) but high per-session (100\% SQLi) reflect the agent's \textbf{evidence accumulation} strategy --- not reacting to a single noisy observation. When evidence accumulates across windows, the policy triggers action. This stability prevents: (1) many false positives, (2) oscillation between Block/Allow when signals rebound.
+
+\textbf{RQ3 Conclusion:} The RL agent develops and maintains \textbf{high policy stability} across 5 diverse attack types, with smooth training curve, safe convergence of diagnostic metrics, heterogeneous decision logic, and evidence accumulation strategy for robustness.
+
+\subsection{Dominant Factors and Hyperparameter Selection}
+
+\subsubsection{Dominant Factor: HTTP Payload Feature Group (F12--F20), Not CRS Alone}
+
+The F12--F20 group is essential because SQLi/XSS attacks leave no network-layer traces. Two key components work synergistically:
+
+\begin{itemize}
+  \item \textbf{PayloadNormalizer first:} Normalizes input (HTML entity decoding, recursive URL, Base64, NFKC) --- ensuring CRS regex receives consistent input regardless of encoding evasion technique.
+  \item \textbf{CRS afterwards:} Detects attack patterns in normalized input --- F13 (SQLi) and F18 (XSS) signals become reliable.
+\end{itemize}
+
+Normalization alone does not detect attacks (only transforms input); CRS alone misses when input is not normalized. Combined, they achieve maximum effectiveness with double-encoded evasion variations.
+
+\textbf{Key implications:}
+\begin{itemize}
+  \item \textbf{For researchers:} Integrating CRS into RL alone is insufficient $\to$ must integrate the \textbf{entire L7 preprocessing pipeline}.
+  \item \textbf{For practitioners:} Investment in \textbf{payload normalization} is equally important as updating signature rules.
+\end{itemize}
+
+\subsubsection{Hyperparameter Tuning: Policy Stability Trade-offs}
+
+The key point is \textbf{not reward} (Tuned is actually 1.5\% lower). The key points are: (1) \textbf{Policy stability (std $-$28\%):} PPO-Tuned varies 28\% less between independent training runs --- in production, this means more predictable security outcomes despite changing network conditions; (2) \textbf{Reduced FP Rate ($-$0.2 pp):} fewer legitimate users incorrectly blocked; (3) \textbf{Wall-clock 4$\times$ faster:} useful for frequent retraining cycles.
+
+\textbf{Mechanism explanation per hyperparameter change:}
+\begin{itemize}
+  \item \textbf{net\_arch [64,64]$\to$[128,128]:} 34D observation space combining flow statistics (F1--F11), semantic payload signals (F12--F20), temporal state memory (10D), and closed-loop effect feedback (4D) on different scales. The [64,64] network lacks sufficient capacity to learn independent decision boundaries for 5 simultaneous attack subspaces.
+  \item \textbf{LR Schedule $3\times10^{-4}\to1\times10^{-4}$:} Two optimization phases: high LR for fast early exploration of coarse attack patterns (PacketRate, RstRatio), low LR for late-stage precision tuning of L7 thresholds (CRS scores, JS patterns).
+  \item \textbf{ent\_coef 0.0$\to$0.005:} Without entropy regularization, PPO easily collapses to the dominant strategy (always Block) optimal for the most common attack type but fails with rare types.
+  \item \textbf{vf\_coef 0.5$\to$1.0:} IDS characteristic: after Block, attacker silences many steps --- critic must learn that silence = success, not a signal to change action.
+\end{itemize}
+
+\subsection{Important Limitations and Caveats}
+
+\subsubsection{Simulation Gap}
+
+All experiments ran in \textbf{Containernet}, a Linux-based container virtualization of the network. When deployed to production networks, topology, attack types, and legitimate traffic are far more diverse. Sim2Real transfer validation remains unconfirmed.
+
+\subsubsection{Reward Function Dependency}
+
+The reward function contains specific design choices about weights. The \textbf{77.3\%} detection rate is reported under \textbf{this specific weight design} --- it is not the ``optimal detection rate'' but rather the ``detection rate learned under this design choice.'' Practitioners deploying the system must tune reward weights according to their own SLAs.
+
+\subsubsection{Per-Window Analysis Hides Partial Weaknesses}
+
+\textbf{26.3\% per-window recall} for SQLi means only 26.3\% of malicious windows in SQLi sessions are detected. If the attacker sends only a single payload rather than multiple, detection may be missed. The 1-second latency also allows an attacker to complete one request before being detected.
+
+\subsubsection{HTTPS Constraint}
+
+The 9 payload features (F12--F20) depend on \textbf{plaintext inspection} of HTTP content. When data is encrypted (TLS 1.3), F12--F20 cannot be computed unless SSLKEYLOGFILE is available; in this case the observation degrades to the 11 network-level features plus temporal and effect components, losing L7 detection capability. Production servers typically do not export SSLKEYLOGFILE for \textbf{security reasons}. Mitigation: deploy at a \textbf{transparent proxy (MITM position)} where the agent sees plaintext before encryption.
+
+\subsubsection{Horizontal Scalability}
+
+This project trains a \textbf{single agent} for the entire network. When production networks have hundreds of components, a single agent may face state explosion. A \textbf{multi-agent architecture} for each segment is needed but not yet studied here.
+
+%============================================================
+\chapter{CONCLUSION AND FUTURE WORK}
+%============================================================
+
+\section{Conclusions}
+
+\subsection{Identified Research Problem}
+
+Chapter 1 defined a clear need: modern network defense systems are \textbf{reactive, static, and overloaded by alert fatigue}. Traditional solutions (firewall rules, signature-based IDS, rule-based ML) cannot adapt to automated and evolving attacks at production speed.
+
+The central question: \textbf{Can RL create an autonomous defense agent that learns an optimal defense policy and maintains it over time, without manual intervention?}
+
+\subsection{The Project Demonstrated Feasibility}
+
+Experimental results show the answer is \textbf{yes}, with specific evidence:
+
+\textbf{1. Comparative Effectiveness (RQ1): RL Outperforms Static Rules}
+\begin{itemize}
+  \item \textbf{PPO-Tuned Detection Rate: 77.3\%} --- vs.\ Rule-Based (73.5\%, $+$3.8 pp); measured on active-threat steps across 2,000 evaluation episodes
+  \item Particular strength: the F12--F20 pipeline (PayloadNormalizer + CRS) enables detection of SQLi/XSS without labeled L7 training data: PayloadNormalizer normalizes input first so CRS regex receives consistent input; CRS detects patterns but misses when input is not normalized --- the two components work synergistically.
+\end{itemize}
+
+\textbf{2. Operational Trade-off (RQ2): Security and Availability Balanced}
+\begin{itemize}
+  \item Legitimate traffic allowed: 93.2\% (FPR 6.8\%) --- policy does not overfit to attacks at the cost of service availability
+  \item Honeypot redirection strategy (60-second escalation window) provides dual benefit: mitigation + threat intelligence
+  \item Attack mitigation: $>$96\% DoS, 100\% SQLi session-level
+\end{itemize}
+
+\textbf{3. Policy Stability (RQ3): Policy Learned and Stable}
+\begin{itemize}
+  \item Training curve smooth (+475\% reward), no oscillation
+  \item approx\_kl safely converges (0.012 $\to$ 0.003, below clipping threshold)
+  \item Agent learns differentiated responses per attack type, does not degenerate to ``always block''
+  \item Evidence accumulation strategy (26\% per-window recall $\to$ 100\% per-session detection)
+\end{itemize}
+
+\subsection{Three Main Contributions of the Project}
+
+\begin{enumerate}
+  \item \textbf{Technical Contribution:} End-to-end integration of the RL agent with an Observation Module pipeline including advanced L7 feature engineering (PayloadNormalizer + CRS). The F12--F20 pipeline design enables detection of SQLi/XSS without labeled L7 training data.
+  \item \textbf{Methodological Contribution:} A rigorous evaluation framework distinguishing \textbf{per-window vs.\ per-session detection} (a counterintuitive metric pair that reveals real weaknesses), active-threat step analysis (excluding post-Block silence), and FPR/detection trade-off analysis.
+  \item \textbf{Operational Contribution:} Demonstrated feasible deployment path with latency $\sim$1,016 ms (acceptable with static rate-limiter as first-line defense), FPR 6.8\% (manageable with honeypot escalation), multi-stage action space learning nuanced policy, and integration readiness for existing SIEM infrastructure.
+\end{enumerate}
+
+\subsection{Gaps Still to Fill}
+
+Despite the demonstrated promise, this project operates within a \textbf{controlled simulation environment} and several important gaps remain before production readiness can be claimed. These gaps are not incidental limitations but structural challenges that define the research agenda for the next phase of work.
+
+\textbf{Sim-to-Real Transfer Validation.} The most critical gap is the unvalidated assumption that a policy trained in Containernet will generalize to real production network traffic. Real networks differ from the simulation in at least four measurable dimensions: (1) background traffic diversity --- thousands of legitimate user sessions, automated monitoring agents, CDN traffic, and bot traffic that the simulation does not model; (2) attack tool diversity --- real attackers use customized scripts, not the same sqlmap and hping3 versions used in the dataset; (3) hardware timing --- the Linux host OS scheduler introduces latency variance that changes feature distributions slightly; (4) traffic volume --- production networks may handle 10--100$\times$ higher packet rates than the simulation, stressing the observation module's processing pipeline. Closing this gap requires a systematic three-stage validation: shadow-mode deployment on a real network segment, distribution shift analysis for F1--F20 statistics, and targeted fine-tuning on real traffic before enabling enforcement.
+
+\textbf{HTTPS and Encrypted Traffic.} Features F12--F20 require HTTP payload content in plaintext. This limitation affects approximately 90\% of modern web traffic, which uses HTTPS/TLS 1.3. The two viable paths are: (a) deploy at a transparent TLS termination proxy where the observation module intercepts traffic before re-encryption; or (b) accept that L7 detection is unavailable for pure HTTPS deployments and rely only on F1--F11 for network-layer signals. Path (a) is operationally feasible but adds a critical security-sensitive network component that must be hardened and audited. Without resolving this gap, the system's detection rate degrades significantly in HTTPS-only environments when limited to F1--F11 network-layer signals only (estimated from ablation analysis).
+
+\textbf{Multi-Agent Coordination for Network Scale.} The current architecture places a single RL agent at the border router, which becomes a single point of failure and a throughput bottleneck for large-scale networks. A multi-agent architecture where each network segment (web tier, database tier, DMZ, internal corporate) hosts an independent local agent, coordinated by a centralized policy server, is required for enterprise-scale deployment. The coordination protocol design --- how agents share threat information without creating a control-plane DDoS vulnerability --- is a non-trivial distributed systems problem.
+
+\textbf{Adversarial Robustness and Evasion Resistance.} The evaluation assumes a cooperative attacker who is unaware of the feature definitions and reward function. A sophisticated adversary who reverse-engineers the feature set (e.g., through timing analysis of the rate limiter responses) could craft evasion strategies specifically designed to suppress key features: a SYN Flood that maintains just below the F1 threshold, a SQLi payload that avoids CRS-942 keywords while still achieving injection, or timing randomization that confuses F7 and F8. Demonstrating robustness against such aware adversaries requires adversarial training (min-max policy optimization) and red-team testing against evasion-aware attack scripts.
+
+\section{Future Work}
+
+\subsection{Action Space Expansion}
+
+\textbf{Current:} The agent chooses among 4 escalating actions (Allow, RateLimit, Redirect-to-Honeypot, Block).
+
+\textbf{Proposed:} Per-source-IP rate limiting (e.g., 10 req/sec from IP X vs.\ 100 req/sec from IP Y), per-request-type routing (e.g., POST requests $\to$ firewall rules, GET requests $\to$ let through), dynamic honeypot spawning (create new honeypot containers on-demand based on attack type), and action masking to guide agent exploration in a larger action space.
+
+\textbf{Impact:} Directly improves FPR and usability in enterprise environments.
+
+\subsection{Distributed and Multi-Agent Defense}
+
+\textbf{Current:} A single agent monitors the entire network.
+
+\textbf{Proposed:} Per-network-segment agents (edge router, DC perimeter, internal sensor), distributed policy coordination (centralized policy server + local agents, or hierarchical consensus via gossip protocol), and communication protocols (AMQP-style event bus) for agents to alert each other (e.g., ``Brute-force detected at web tier $\to$ notify DB tier agent to enhance login checking'').
+
+\textbf{Importance:} Production networks have hundreds of segments. A single agent cannot maintain sub-millisecond latency at that scale. Multi-agent allows \textbf{distributed decision-making closer to the threat point}.
+
+\textbf{Estimated effort:} 4--6 months research + implementation.
+
+\subsection{Robustness Against Adversarial Evasion}
+
+\textbf{Current:} Attack evaluation is ``cooperative'' --- attackers do not know the feature definitions.
+
+\textbf{Proposed:} Adversarial attacker model aware of feature definitions, reward function, and policy architecture. Testing evasion techniques: bypassing payload normalization (e.g., \texttt{\%255c} = backslash double URL-encoded), timing variations (slow SYN flood $<$100 SYN/sec to stay below F1 threshold), polyglot payloads (simultaneously valid SQL and valid XML). Defense: adversarial policy training against adaptive attackers (min-max game).
+
+\textbf{Importance:} Real attackers are not naive. If the RL defense system is deployed, attackers will adapt. Evaluation must rigorously test this.
+
+\subsection{Online Retraining and Concept Drift Handling}
+
+\textbf{Current:} Policy is fixed after training; no ability to adapt to new threats.
+
+\textbf{Proposed:} Drift detection by monitoring recent traffic against the policy. Incremental training to fine-tune the policy on recent flows without forgetting old knowledge (elastic weight consolidation, replay buffer sampling). A/B testing by running old and new policies in parallel on shadow traffic before switching.
+
+\textbf{Importance:} The threat landscape continuously changes. Policies become outdated. Manual policy updates every 6 months are insufficient.
+
+\textbf{Estimated effort:} 2--3 weeks.
+
+\subsection{Transparent Decision Logs and Explainability}
+
+\textbf{Current:} Policy is a black box; operators only see ``predicted action'' without explanation.
+
+\textbf{Proposed:} Attention visualization showing which features (F1--F20) most influenced the decision (SHAP, LIME applied per-inference). Decision logs: ``Request from 203.0.113.45, SYN ratio=0.9, PacketRate=500 $\to$ F1 and F2 both high $\to$ Predicted action: BLOCK with 92\% confidence.'' Policy audit trail showing the learned decision tree for security reviewer approval.
+
+\textbf{Importance:} Compliance (PCI-DSS, GDPR require audit trails), operational trust (security teams will not trust a black-box system without explainability), and debugging (for false positives: ``which 3 features triggered?'').
+
+\textbf{Estimated effort:} 2--3 weeks.
+
+\textbf{Impact:} \textbf{Enables production deployment} --- currently the largest barrier to SOC adoption.
+
+\subsection{Simulation-to-Reality Gap Validation}
+
+\textbf{Current:} Policy trained on Containernet; real-world generalization unverified.
+
+\textbf{Proposed 3-stage approach:}
+
+\textbf{Stage 1: Distribution Shift Analysis:} Collect real-world packet data and compare feature distributions: compute F1--F20 statistics (mean, variance, percentiles) for real vs.\ simulated traffic. Identify the \textbf{largest distribution shifts} (e.g., real networks have 10$\times$ higher PacketRate variance).
+
+\textbf{Stage 2: Policy Transfer + Evaluation:} Deploy \textbf{policy trained on Containernet} on real traffic (shadow mode, no actual blocking). Expected result: performance degradation (e.g., from 77.3\% $\to$ 60--70\% on real data due to distribution shift).
+
+\textbf{Stage 3: Sim2Real Fine-tuning:} Use real traffic to \textbf{fine-tune the policy} (continue training on real data with smaller learning rate to avoid catastrophic forgetting). Goal: recover detection rate on real network traffic.
+
+\textbf{Importance:} Most critical risk for production deployment. Containernet $\neq$ real network.
+
+\textbf{Estimated effort:} 2--3 months.
+
+\textbf{Impact:} \textbf{Gateway to actual production deployment.}
+
+\section{Summary and Future Vision}
+
+This project has demonstrated that RL is a \textbf{feasible and practical foundation} for autonomous network defense systems. The three research questions are answered:
+\begin{itemize}
+  \item \textbf{RQ1:} RL outperforms rule-based systems (PPO-Tuned 77.3\% vs.\ Rule-Based 73.5\% detection rate on active-threat steps)
+  \item \textbf{RQ2:} RL balances security and service availability (93.2\% legitimate traffic allowed, 6.8\% FPR)
+  \item \textbf{RQ3:} RL maintains stable policy across diverse attack vectors
+\end{itemize}
+
+However, the path from lab success to production deployment is long. Four main directions (multi-agent, adversarial robustness, continuous learning, Sim2Real validation) are the natural next steps shaping the future of RL-driven defense systems.
+
+The combination of \textbf{academic rigor} (technically-grounded observation module design, distributed learning theory, multi-seed evaluation) and \textbf{operational pragmatism} (honeypot escalation, FPR management, SIEM integration) is the key to making RL defense not just a proof-of-concept but a \textbf{deployment reality} in future organizations.
+
+%============================================================
+% REFERENCES
+%============================================================
+\begin{thebibliography}{99}
+
+\bibitem{puterman1994}
+M. L. Puterman, \textit{Markov Decision Processes: Discrete Stochastic Dynamic Programming}. John Wiley \& Sons, 1994.
+
+\bibitem{schulmanPPO2017}
+J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, ``Proximal policy optimization algorithms,'' \textit{arXiv preprint arXiv:1707.06347}, 2017.
+
+\bibitem{sb3raffin2021}
+A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, and N. Dormann, ``Stable-Baselines3: Reliable reinforcement learning implementations,'' \textit{Journal of Machine Learning Research}, vol.\ 22, no.\ 268, pp.\ 1--8, 2021.
+
+\bibitem{peuster2016}
+M. Peuster, H. Karl, and S. van Rossem, ``MeDICINE: Rapid prototyping of production-ready network services in multi-PoP environments,'' in \textit{Proc.\ IEEE Conf.\ on Network Function Virtualization and Software Defined Networks (NFV-SDN)}, 2016, pp.\ 148--153.
+
+\bibitem{lsnm2024}
+A. H. Lashkari \textit{et al.}, ``LSNM2024: A labeled network traffic dataset for intrusion detection,'' University of New Brunswick, 2024.
+
+\bibitem{sharafaldin2018}
+I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, ``Toward generating a new intrusion detection dataset and intrusion traffic characterization,'' in \textit{Proc.\ 4th Int.\ Conf.\ on Information Systems Security and Privacy (ICISSP)}, 2018, pp.\ 108--116.
+
+\bibitem{postel1981}
+J. Postel, \textit{Transmission Control Protocol}, RFC 793, IETF, 1981.
+
+\bibitem{owaspModSecCRS}
+OWASP Foundation, ``OWASP ModSecurity Core Rule Set (CRS) v4.0,'' 2023. [Online]. Available: https://coreruleset.org/
+
+\bibitem{spett2005}
+K. Spett, ``SQL injection: Are your web applications vulnerable?'' SPI Dynamics White Paper, 2005.
+
+\bibitem{kruegelVigna2003}
+C. Kruegel and G. Vigna, ``Anomaly detection of web-based attacks,'' in \textit{Proc.\ 10th ACM CCS}, 2003, pp.\ 251--261.
+
+\bibitem{gymnasium2023}
+M. Towers \textit{et al.}, ``Gymnasium: A standard interface for reinforcement learning environments,'' \textit{arXiv preprint arXiv:2407.17032}, 2023.
+
+\bibitem{suttonBarto2018}
+R. S. Sutton and A. G. Barto, \textit{Reinforcement Learning: An Introduction}, 2nd ed. MIT Press, 2018.
+
+\bibitem{mnih2015}
+V. Mnih \textit{et al.}, ``Human-level control through deep reinforcement learning,'' \textit{Nature}, vol.\ 518, no.\ 7540, pp.\ 529--533, 2015.
+
+\bibitem{owaspTop10}
+OWASP Foundation, ``OWASP Top Ten,'' 2021. [Online]. Available: https://owasp.org/www-project-top-ten/
+
+\bibitem{shiravi2012}
+A. Shiravi, H. Shiravi, M. Tavallaee, and A. A. Ghorbani, ``Toward developing a systematic approach to generate benchmark datasets for intrusion detection,'' \textit{Computers \& Security}, vol.\ 31, no.\ 3, pp.\ 357--374, 2012.
+
+\bibitem{moustafa2015}
+N. Moustafa and J. Slay, ``UNSW-NB15: A comprehensive dataset for network intrusion detection systems,'' in \textit{Proc.\ MilCIS}, 2015.
+
+\bibitem{ring2019}
+M. Ring \textit{et al.}, ``A survey of network-based intrusion detection data sets,'' \textit{Computers \& Security}, vol.\ 86, pp.\ 147--167, 2019.
+
+\bibitem{modsecurity2023}
+ModSecurity, ``ModSecurity web application firewall documentation,'' 2023. [Online]. Available: https://modsecurity.org/
+
+\bibitem{fielding2014}
+R. Fielding and J. Reschke, \textit{Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing}, RFC 7230, IETF, 2014.
+
+\bibitem{schmitt2012}
+F. Schmitt, J. Gassen, and E. Gerhards-Padilla, ``HTTP antivirus proxy --- an approach to defend against slow HTTP DoS attacks,'' in \textit{Proc.\ IEEE ICCNC}, 2012.
+
+\bibitem{abuAlHaija2025}
+Q. Abu Al-Haija, Z. Masoud, A. Yasin, K. Alesawi, and Y. Alkarnawi, ``End-to-end threat hunting with a novel multiclass dataset for intelligent intrusion detection,'' \textit{arXiv preprint arXiv:2508.05609}, 2025.
+
+\bibitem{verizonDBIR2024}
+Verizon, ``2024 data breach investigations report,'' Verizon Communications Inc., Tech.\ Rep., 2024. [Online]. Available: https://www.verizon.com/business/resources/reports/dbir/
+
+\bibitem{ibmPonemon2024}
+IBM Security and Ponemon Institute, ``Cost of a data breach report 2024,'' IBM Corporation, Tech.\ Rep., 2024. [Online]. Available: https://www.ibm.com/reports/data-breach
+
+\bibitem{verizonDBIR2020}
+Verizon, ``2020 data breach investigations report,'' Verizon Communications Inc., Tech.\ Rep., 2020. [Online]. Available: https://www.verizon.com/business/resources/reports/dbir/
+
+\bibitem{alertFatigue2022}
+B. A. Alahmadi, L. Axon, and I. Martinovic, ``99\% false positives: A qualitative study of SOC analysts' perspectives on security alarms,'' in \textit{Proc.\ 31st USENIX Security Symposium}, 2022.
+
+\bibitem{ibmSOAR2023}
+IBM Security, ``What is SOAR (security orchestration, automation and response)?'' IBM Documentation, 2023.
+
+\bibitem{honeypotSurvey2021}
+M. F. M. Razali, M. F. A. Noor, and A. Zainal, ``A survey of honeypots and honeynets for Internet of Things, industrial Internet of Things, and cyber-physical systems,'' \textit{IEEE Access}, vol.\ 9, pp.\ 151620--151638, 2021.
+
+\bibitem{nguyen2021deep}
+T. T. Nguyen and V. J. Reddi, ``Deep reinforcement learning for cyber security,'' \textit{IEEE Transactions on Neural Networks and Learning Systems}, vol.\ 34, no.\ 8, pp.\ 3779--3795, 2021.
+
+\bibitem{lopez2020application}
+M. Lopez-Martin, B. Carro, and A. Sanchez-Esguevillas, ``Application of deep reinforcement learning to intrusion detection for supervised problems,'' \textit{Expert Systems with Applications}, vol.\ 141, 2020.
+
+\bibitem{flowFeatureSurvey2020}
+M. A. Ferrag, L. A. Maglaras, and H. Janicke, ``Deep learning for cyber security intrusion detection: Approaches, datasets, and comparative study,'' \textit{Journal of Information Security and Applications}, vol.\ 50, 2020.
+
+\bibitem{scapy2007}
+P. Biondi, ``Scapy: Packet manipulation tool,'' 2007. [Online]. Available: https://scapy.net/
+
+\bibitem{lantzMininet2010}
+B. Lantz, B. Heller, and N. McKeown, ``A network in a laptop: Rapid prototyping for software-defined networks,'' in \textit{Proc.\ 9th ACM SIGCOMM Workshop on Hot Topics in Networks}, 2010.
+
+\bibitem{cage2021}
+M. Standen \textit{et al.}, ``CybORG: A gym for the development of autonomous cyber agents,'' in \textit{IJCAI-21 Workshop on Artificial Intelligence for Cyber Security (AICS)}, 2021.
+
+\bibitem{cage2022}
+TTCP CAGE Working Group, ``CAGE Challenge 2,'' 2022. [Online]. Available: https://github.com/cage-challenge/cage-challenge-2
+
+\bibitem{mitreAttack2023}
+MITRE Corporation, ``MITRE ATT\&CK Framework,'' 2023. [Online]. Available: https://attack.mitre.org/
+
+\end{thebibliography}
+
+\end{document}
