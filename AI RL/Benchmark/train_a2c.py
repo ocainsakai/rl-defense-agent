@@ -1,8 +1,14 @@
 """
-A2C Baseline Training Script (Benchmark)
+A2C Baseline Training Script (34D Harder Env)
 
-SB3 recommended defaults — no tuning.
-Train 300k steps, save to models/a2c_seed{N}.zip
+Train on env_ids_harder.py (34D obs, missing_prob=0.08, drift_max=0.35).
+SB3 strict defaults — no hyperparameter tuning, single env for fair comparison.
+  learning_rate=7e-4, n_steps=5, gamma=0.99, gae_lambda=1.0
+  ent_coef=0.0, vf_coef=0.5, max_grad_norm=0.5
+  net_arch=pi=[64,64] vf=[64,64] (SB3 MlpPolicy default)
+
+Checkpoint policy: final model primary (not best).
+n_envs=1 — single env, same as DQN/PPO, for fair comparison.
 
 Usage:
   python3 train_a2c.py --seed 42
@@ -16,12 +22,9 @@ import random
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from env_ids_harder import IDSDefenseEnv
-
-HARDER_ENV = {'drift_max': 0.35, 'missing_prob': 0.08}
+from env_ids_harder import IDSDefenseEnv   # 34D harder env
 
 from stable_baselines3 import A2C
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
 
@@ -45,12 +48,14 @@ def main():
 
     output_path = os.path.join(models_dir, f"{ALGO}_seed{seed}")
 
-    print(f"[*] Training A2C-Default | seed={seed} | {TOTAL_TIMESTEPS} steps")
+    print(f"[*] Training A2C (34D harder env) | seed={seed} | {TOTAL_TIMESTEPS} steps")
+    print(f"    Env: env_ids_harder.py (34D, missing_prob=0.08, drift_max=0.35)")
+    print(f"    Track: sb3_strict_default | n_envs=1 | checkpoint=final_primary")
+    print(f"    SB3 defaults: lr=7e-4, n_steps=5, gae_lambda=1.0, net_arch=[64,64]")
 
-    env = make_vec_env(IDSDefenseEnv, n_envs=4, seed=seed, env_kwargs=HARDER_ENV)
-    eval_env = Monitor(IDSDefenseEnv(seed=seed, **HARDER_ENV))
+    env = IDSDefenseEnv(seed=seed)
+    eval_env = Monitor(IDSDefenseEnv(seed=seed))
 
-    tb_log_dir = os.path.join(os.path.dirname(__file__), "tb", f"{ALGO}_seed{seed}")
     best_model_path = os.path.join(models_dir, f"{ALGO}_seed{seed}_best")
     eval_callback = EvalCallback(
         eval_env,
@@ -63,21 +68,13 @@ def main():
         verbose=0,
     )
 
-    # SB3 A2C defaults — no tuning
+    # SB3 A2C — 100% strict default hyperparameters
     model = A2C(
         "MlpPolicy",
         env,
-        learning_rate=7e-4,       # SB3 A2C default
-        n_steps=5,                # SB3 A2C default
-        gamma=0.99,               # SB3 default
-        gae_lambda=1.0,           # SB3 A2C default (no GAE by default)
-        ent_coef=0.0,             # SB3 default
-        vf_coef=0.5,              # SB3 default
-        max_grad_norm=0.5,        # SB3 default
         seed=seed,
         verbose=1,
-        tensorboard_log=tb_log_dir,
-        policy_kwargs=dict(net_arch=dict(pi=[128, 128], vf=[128, 128])),
+        tensorboard_log=None,
     )
 
     model.learn(
@@ -87,14 +84,9 @@ def main():
         reset_num_timesteps=True,
     )
 
+    # Final model is primary — do NOT overwrite with best model
     model.save(output_path)
-    best_zip = os.path.join(best_model_path, "best_model.zip")
-    if os.path.exists(best_zip):
-        import shutil
-        shutil.copy2(best_zip, output_path + ".zip")
-        print(f"[+] Saved best_model → {output_path}.zip")
-    else:
-        print(f"[+] Saved final_model → {output_path}.zip")
+    print(f"[+] Saved final_model (primary) → {output_path}.zip")
 
 if __name__ == "__main__":
     main()

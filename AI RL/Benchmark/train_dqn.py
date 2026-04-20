@@ -1,8 +1,15 @@
 """
-DQN Baseline Training Script (Benchmark)
+DQN Baseline Training Script (34D Harder Env)
 
-SB3 recommended defaults — no tuning.
-Train 300k steps, save to models/dqn_seed{N}.zip
+Train on env_ids_harder.py (34D obs, missing_prob=0.08, drift_max=0.35).
+SB3 strict defaults — no hyperparameter tuning, single env (off-policy).
+  learning_rate=1e-4, buffer_size=1_000_000, learning_starts=100
+  batch_size=32, gamma=0.99, exploration_fraction=0.1
+  exploration_final_eps=0.05, train_freq=4, target_update_interval=10_000
+  max_grad_norm=10, net_arch=[64,64] (SB3 MlpPolicy default)
+
+Checkpoint policy: final model primary (not best).
+n_envs=1 — off-policy algorithm, single env only.
 
 Usage:
   python3 train_dqn.py --seed 42
@@ -16,9 +23,7 @@ import random
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from env_ids_harder import IDSDefenseEnv
-
-HARDER_ENV = {'drift_max': 0.35, 'missing_prob': 0.08}
+from env_ids_harder import IDSDefenseEnv   # 34D harder env
 
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import EvalCallback
@@ -44,13 +49,14 @@ def main():
 
     output_path = os.path.join(models_dir, f"{ALGO}_seed{seed}")
 
-    print(f"[*] Training DQN-Default | seed={seed} | {TOTAL_TIMESTEPS} steps")
+    print(f"[*] Training DQN (34D harder env) | seed={seed} | {TOTAL_TIMESTEPS} steps")
+    print(f"    Env: env_ids_harder.py (34D, missing_prob=0.08, drift_max=0.35)")
+    print(f"    Track: sb3_strict_default | n_envs=1 | checkpoint=final_primary")
+    print(f"    SB3 defaults: lr=1e-4, buffer=1M, learning_starts=100, net_arch=[64,64]")
 
-    # DQN uses single env (off-policy, replay buffer)
-    env = IDSDefenseEnv(seed=seed, **HARDER_ENV)
-    eval_env = Monitor(IDSDefenseEnv(seed=seed, **HARDER_ENV))
+    env = IDSDefenseEnv(seed=seed)
+    eval_env = Monitor(IDSDefenseEnv(seed=seed))
 
-    tb_log_dir = os.path.join(os.path.dirname(__file__), "tb", f"{ALGO}_seed{seed}")
     best_model_path = os.path.join(models_dir, f"{ALGO}_seed{seed}_best")
     eval_callback = EvalCallback(
         eval_env,
@@ -63,27 +69,13 @@ def main():
         verbose=0,
     )
 
-    # SB3 DQN defaults — no tuning
+    # SB3 DQN — 100% strict default hyperparameters (no adjustments)
     model = DQN(
         "MlpPolicy",
         env,
-        learning_rate=1e-4,          # SB3 DQN default
-        buffer_size=100_000,          # SB3 default
-        learning_starts=1_000,        # SB3 default
-        batch_size=32,               # SB3 default
-        tau=1.0,                     # SB3 default (hard update)
-        gamma=0.99,                  # SB3 default
-        train_freq=4,                # SB3 default
-        gradient_steps=1,            # SB3 default
-        target_update_interval=1_000, # SB3 default
-        exploration_fraction=0.1,    # SB3 default
-        exploration_initial_eps=1.0, # SB3 default
-        exploration_final_eps=0.05,  # SB3 default
-        max_grad_norm=10,            # SB3 default
         seed=seed,
         verbose=1,
-        tensorboard_log=tb_log_dir,
-        policy_kwargs=dict(net_arch=[128, 128]),
+        tensorboard_log=None,
     )
 
     model.learn(
@@ -93,14 +85,9 @@ def main():
         reset_num_timesteps=True,
     )
 
+    # Final model is primary — do NOT overwrite with best model
     model.save(output_path)
-    best_zip = os.path.join(best_model_path, "best_model.zip")
-    if os.path.exists(best_zip):
-        import shutil
-        shutil.copy2(best_zip, output_path + ".zip")
-        print(f"[+] Saved best_model → {output_path}.zip")
-    else:
-        print(f"[+] Saved final_model → {output_path}.zip")
+    print(f"[+] Saved final_model (primary) → {output_path}.zip")
 
 if __name__ == "__main__":
     main()

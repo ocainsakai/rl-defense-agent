@@ -1,8 +1,14 @@
 """
-PPO Default Baseline Training Script (Benchmark)
+PPO Default Baseline Training Script (34D Harder Env)
 
-SB3 recommended defaults — no tuning.
-Train 300k steps, save to models/ppo_default_seed{N}.zip
+Train on env_ids_harder.py (34D obs, missing_prob=0.08, drift_max=0.35).
+SB3 strict defaults — no hyperparameter tuning, single env for fair comparison.
+  learning_rate=3e-4, n_steps=2048, batch_size=64, n_epochs=10
+  gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.0
+  net_arch=pi=[64,64] vf=[64,64] (SB3 MlpPolicy default)
+
+Checkpoint policy: final model primary (not best).
+n_envs=1 — single env, same as DQN, for fair comparison.
 
 Usage:
   python3 train_ppo_default.py --seed 42
@@ -15,19 +21,14 @@ import argparse
 import random
 import numpy as np
 
-# Add parent dir so we can import IDSDefenseEnv
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from env_ids_harder import IDSDefenseEnv
-
-# Phase 2 harder env config — same for all algos (fair benchmark)
-HARDER_ENV = {'drift_max': 0.35, 'missing_prob': 0.08}
+from env_ids_harder import IDSDefenseEnv   # 34D harder env
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
 
-ALGO = "ppo_default"
+ALGO = "ppo"
 TOTAL_TIMESTEPS = 500_000
 
 def parse_args():
@@ -47,13 +48,14 @@ def main():
 
     output_path = os.path.join(models_dir, f"{ALGO}_seed{seed}")
 
-    print(f"[*] Training PPO-Default | seed={seed} | {TOTAL_TIMESTEPS} steps")
+    print(f"[*] Training PPO (34D harder env) | seed={seed} | {TOTAL_TIMESTEPS} steps")
+    print(f"    Env: env_ids_harder.py (34D, missing_prob=0.08, drift_max=0.35)")
+    print(f"    Track: sb3_strict_default | n_envs=1 | checkpoint=final_primary")
+    print(f"    SB3 defaults: lr=3e-4, n_steps=2048, batch=64, epochs=10, net_arch=[64,64]")
 
-    env = make_vec_env(IDSDefenseEnv, n_envs=4, seed=seed, env_kwargs=HARDER_ENV)
-    eval_env = Monitor(IDSDefenseEnv(seed=seed, **HARDER_ENV))
+    env = IDSDefenseEnv(seed=seed)
+    eval_env = Monitor(IDSDefenseEnv(seed=seed))
 
-    tb_log_dir = os.path.join(os.path.dirname(__file__), "tb", f"{ALGO}_seed{seed}")
-    # Save best model (peak eval reward) — consistent with PPO-Tuned seed42 methodology
     best_model_path = os.path.join(models_dir, f"{ALGO}_seed{seed}_best")
     eval_callback = EvalCallback(
         eval_env,
@@ -66,24 +68,13 @@ def main():
         verbose=0,
     )
 
-    # SB3 PPO defaults — no tuning
+    # SB3 PPO — 100% strict default hyperparameters
     model = PPO(
         "MlpPolicy",
         env,
-        learning_rate=3e-4,       # SB3 default
-        n_steps=2048,             # SB3 default
-        batch_size=64,            # SB3 default
-        n_epochs=10,              # SB3 default
-        gamma=0.99,               # SB3 default
-        gae_lambda=0.95,          # SB3 default
-        clip_range=0.2,           # SB3 default
-        ent_coef=0.0,             # SB3 default
-        vf_coef=0.5,              # SB3 default
-        max_grad_norm=0.5,        # SB3 default
         seed=seed,
         verbose=1,
-        tensorboard_log=tb_log_dir,
-        policy_kwargs=dict(net_arch=[64, 64]),  # SB3 default arch
+        tensorboard_log=None,
     )
 
     model.learn(
@@ -93,15 +84,9 @@ def main():
         reset_num_timesteps=True,
     )
 
+    # Final model is primary — do NOT overwrite with best model
     model.save(output_path)
-    # Also load and re-save best model as the canonical eval file
-    best_zip = os.path.join(best_model_path, "best_model.zip")
-    if os.path.exists(best_zip):
-        import shutil
-        shutil.copy2(best_zip, output_path + ".zip")
-        print(f"[+] Saved best_model → {output_path}.zip")
-    else:
-        print(f"[+] Saved final_model → {output_path}.zip")
+    print(f"[+] Saved final_model (primary) → {output_path}.zip")
 
 if __name__ == "__main__":
     main()
