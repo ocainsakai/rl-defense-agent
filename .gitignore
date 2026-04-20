@@ -492,9 +492,13 @@ AI RL/runs/run_v4_30d/
 AI RL/runs/run_v5_30d/
 AI RL/runs/run_v6_30d/
 AI RL/runs/run_v7_30d/
+# Datasets - ignore large data files and results
+datasets/*/raw_data/
+datasets/*/results/
+datasets/*/charts/
+datasets/*/processed/
 datasets/CSE-CIC-IDS2018/processed/
-datasets/CSE-CIC-IDS2018/pcap_cache/
-datasets/CSE-CIC-IDS2018/filtered/
+datasets/combined_analysis/charts/
 training_data_retrain.jsonl
 .claude/scheduled_tasks.lock
 .codex

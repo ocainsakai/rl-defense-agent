@@ -1,0 +1,462 @@
+{
+  "Friday-23-02-2018": {
+    "raw-ppo": {
+      "overall_accuracy": 0.9934,
+      "total_rows": 9429,
+      "correct_rows": 9367,
+      "per_class": {
+        "benign": {
+          "total": 1702,
+          "correct": 1668,
+          "accuracy": 0.98,
+          "recall": 0.98,
+          "mitigate_rate": null,
+          "expected_action": "Allow",
+          "pred_dist": {
+            "Allow": 1668,
+            "Redirect": 34
+          },
+          "timeline": {},
+          "raw_ppo": {
+            "accuracy": 0.98,
+            "recall": 0.98,
+            "mitigate_rate": null,
+            "pred_dist": {
+              "Allow": 1668,
+              "Redirect": 34
+            }
+          }
+        },
+        "brute_force": {
+          "total": 3510,
+          "correct": 3509,
+          "accuracy": 0.9997,
+          "recall": 0.9997,
+          "mitigate_rate": 1.0,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "RateLimit": 1,
+            "Redirect": 3509
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "RateLimit": 1,
+              "Redirect": 209
+            },
+            "300s+   (long-run)": {
+              "Redirect": 3300
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9997,
+            "recall": 0.9997,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "RateLimit": 1,
+              "Redirect": 3509
+            }
+          }
+        },
+        "xss": {
+          "total": 4136,
+          "correct": 4134,
+          "accuracy": 0.9995,
+          "recall": 0.9995,
+          "mitigate_rate": 1.0,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "RateLimit": 2,
+            "Redirect": 4134
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "RateLimit": 2,
+              "Redirect": 234
+            },
+            "300s+   (long-run)": {
+              "Redirect": 3900
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9995,
+            "recall": 0.9995,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "RateLimit": 2,
+              "Redirect": 4134
+            }
+          }
+        },
+        "sqli": {
+          "total": 81,
+          "correct": 56,
+          "accuracy": 0.6914,
+          "recall": 0.6914,
+          "mitigate_rate": 0.716,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 56,
+            "RateLimit": 2,
+            "Allow": 23
+          },
+          "timeline": {
+            "15-60s  (escalate)": {
+              "Redirect": 4
+            },
+            "60-300s (sustained)": {
+              "RateLimit": 2,
+              "Redirect": 22,
+              "Allow": 7
+            },
+            "300s+   (long-run)": {
+              "Redirect": 30,
+              "Allow": 16
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.6914,
+            "recall": 0.6914,
+            "mitigate_rate": 0.716,
+            "pred_dist": {
+              "Redirect": 56,
+              "RateLimit": 2,
+              "Allow": 23
+            }
+          }
+        }
+      },
+      "confusion_matrix": {
+        "Allow": {
+          "Allow": 1668,
+          "Redirect": 34
+        },
+        "Redirect": {
+          "RateLimit": 5,
+          "Redirect": 7699,
+          "Allow": 23
+        }
+      },
+      "raw_ppo_overall_accuracy": 0.9934,
+      "confusion_matrix_raw_ppo": {
+        "Allow": {
+          "Allow": 1668,
+          "Redirect": 34
+        },
+        "Redirect": {
+          "RateLimit": 5,
+          "Redirect": 7699,
+          "Allow": 23
+        }
+      },
+      "_audit": {
+        "raw_ppo_diff_count": 0,
+        "safety_net_override_count": 0,
+        "total_rows": 9429
+      }
+    },
+    "stateless": {
+      "overall_accuracy": 0.994,
+      "total_rows": 9429,
+      "correct_rows": 9372,
+      "per_class": {
+        "benign": {
+          "total": 1702,
+          "correct": 1668,
+          "accuracy": 0.98,
+          "recall": 0.98,
+          "mitigate_rate": null,
+          "expected_action": "Allow",
+          "pred_dist": {
+            "Allow": 1668,
+            "Redirect": 34
+          },
+          "timeline": {},
+          "raw_ppo": {
+            "accuracy": 0.98,
+            "recall": 0.98,
+            "mitigate_rate": null,
+            "pred_dist": {
+              "Allow": 1668,
+              "Redirect": 34
+            }
+          }
+        },
+        "brute_force": {
+          "total": 3510,
+          "correct": 3510,
+          "accuracy": 1.0,
+          "recall": 1.0,
+          "mitigate_rate": 1.0,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 3510
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "Redirect": 210
+            },
+            "300s+   (long-run)": {
+              "Redirect": 3300
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9997,
+            "recall": 0.9997,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "RateLimit": 1,
+              "Redirect": 3509
+            }
+          }
+        },
+        "xss": {
+          "total": 4136,
+          "correct": 4136,
+          "accuracy": 1.0,
+          "recall": 1.0,
+          "mitigate_rate": 1.0,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 4136
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "Redirect": 236
+            },
+            "300s+   (long-run)": {
+              "Redirect": 3900
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9995,
+            "recall": 0.9995,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "RateLimit": 2,
+              "Redirect": 4134
+            }
+          }
+        },
+        "sqli": {
+          "total": 81,
+          "correct": 58,
+          "accuracy": 0.716,
+          "recall": 0.716,
+          "mitigate_rate": 0.716,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 58,
+            "Allow": 23
+          },
+          "timeline": {
+            "15-60s  (escalate)": {
+              "Redirect": 4
+            },
+            "60-300s (sustained)": {
+              "Redirect": 24,
+              "Allow": 7
+            },
+            "300s+   (long-run)": {
+              "Redirect": 30,
+              "Allow": 16
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.6914,
+            "recall": 0.6914,
+            "mitigate_rate": 0.716,
+            "pred_dist": {
+              "Redirect": 56,
+              "RateLimit": 2,
+              "Allow": 23
+            }
+          }
+        }
+      },
+      "confusion_matrix": {
+        "Allow": {
+          "Allow": 1668,
+          "Redirect": 34
+        },
+        "Redirect": {
+          "Redirect": 7704,
+          "Allow": 23
+        }
+      },
+      "raw_ppo_overall_accuracy": 0.9934,
+      "confusion_matrix_raw_ppo": {
+        "Allow": {
+          "Allow": 1668,
+          "Redirect": 34
+        },
+        "Redirect": {
+          "RateLimit": 5,
+          "Redirect": 7699,
+          "Allow": 23
+        }
+      },
+      "_audit": {
+        "raw_ppo_diff_count": 0,
+        "safety_net_override_count": 5,
+        "total_rows": 9429
+      }
+    },
+    "window-reset": {
+      "overall_accuracy": 0.9622,
+      "total_rows": 9429,
+      "correct_rows": 9073,
+      "per_class": {
+        "benign": {
+          "total": 1702,
+          "correct": 1695,
+          "accuracy": 0.9959,
+          "recall": 0.9959,
+          "mitigate_rate": null,
+          "expected_action": "Allow",
+          "pred_dist": {
+            "Allow": 1695,
+            "Redirect": 7
+          },
+          "timeline": {},
+          "raw_ppo": {
+            "accuracy": 0.98,
+            "recall": 0.98,
+            "mitigate_rate": null,
+            "pred_dist": {
+              "Allow": 1668,
+              "Redirect": 34
+            }
+          }
+        },
+        "brute_force": {
+          "total": 3510,
+          "correct": 3449,
+          "accuracy": 0.9826,
+          "recall": 0.9826,
+          "mitigate_rate": 1.0,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 3449,
+            "Block": 61
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "Redirect": 207,
+              "Block": 3
+            },
+            "300s+   (long-run)": {
+              "Redirect": 3242,
+              "Block": 58
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9997,
+            "recall": 0.9997,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "RateLimit": 1,
+              "Redirect": 3509
+            }
+          }
+        },
+        "xss": {
+          "total": 4136,
+          "correct": 3871,
+          "accuracy": 0.9359,
+          "recall": 0.9359,
+          "mitigate_rate": 1.0,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 3871,
+            "Block": 265
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "Redirect": 222,
+              "Block": 14
+            },
+            "300s+   (long-run)": {
+              "Redirect": 3649,
+              "Block": 251
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9995,
+            "recall": 0.9995,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "RateLimit": 2,
+              "Redirect": 4134
+            }
+          }
+        },
+        "sqli": {
+          "total": 81,
+          "correct": 58,
+          "accuracy": 0.716,
+          "recall": 0.716,
+          "mitigate_rate": 0.8395,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 58,
+            "Allow": 13,
+            "Block": 10
+          },
+          "timeline": {
+            "15-60s  (escalate)": {
+              "Redirect": 4
+            },
+            "60-300s (sustained)": {
+              "Redirect": 24,
+              "Allow": 4,
+              "Block": 3
+            },
+            "300s+   (long-run)": {
+              "Redirect": 30,
+              "Allow": 9,
+              "Block": 7
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.6914,
+            "recall": 0.6914,
+            "mitigate_rate": 0.716,
+            "pred_dist": {
+              "Redirect": 56,
+              "RateLimit": 2,
+              "Allow": 23
+            }
+          }
+        }
+      },
+      "confusion_matrix": {
+        "Allow": {
+          "Allow": 1695,
+          "Redirect": 7
+        },
+        "Redirect": {
+          "Redirect": 7378,
+          "Block": 336,
+          "Allow": 13
+        }
+      },
+      "raw_ppo_overall_accuracy": 0.9934,
+      "confusion_matrix_raw_ppo": {
+        "Allow": {
+          "Allow": 1668,
+          "Redirect": 34
+        },
+        "Redirect": {
+          "RateLimit": 5,
+          "Redirect": 7699,
+          "Allow": 23
+        }
+      },
+      "_audit": {
+        "raw_ppo_diff_count": 366,
+        "safety_net_override_count": 3,
+        "total_rows": 9429
+      }
+    }
+  }
+}
