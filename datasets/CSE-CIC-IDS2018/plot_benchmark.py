@@ -75,11 +75,11 @@ def plot_recall_comparison(day_data: dict, out_dir: str):
     for bar in bars1:
         h = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2, h + 0.5,
-                f'{h:.1f}%', ha='center', va='bottom', fontsize=9, color='#1565C0', fontweight='bold')
+                f'{h:.2f}%', ha='center', va='bottom', fontsize=9, color='#1565C0', fontweight='bold')
     for bar in bars2:
         h = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2, h + 0.5,
-                f'{h:.1f}%', ha='center', va='bottom', fontsize=9, color='#2E7D32', fontweight='bold')
+                f'{h:.2f}%', ha='center', va='bottom', fontsize=9, color='#2E7D32', fontweight='bold')
 
     # Sample size annotation
     for i, (lbl, n) in enumerate(zip(display, samples)):
@@ -87,7 +87,7 @@ def plot_recall_comparison(day_data: dict, out_dir: str):
 
     ax.set_xlabel('Traffic Type', fontsize=11)
     ax.set_ylabel('Recall (%)', fontsize=11)
-    ax.set_title('Per-class Recall: L1 Raw PPO vs L2 AI Agent\n(CIC-IDS2018 Thursday)', fontsize=12, fontweight='bold')
+    ax.set_title('Per-class Recall: L1 Raw PPO vs L2 AI Agent\n(CIC-IDS2018 Friday 23-02-2018)', fontsize=12, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(display, fontsize=11)
     ax.set_ylim(0, 115)
@@ -128,7 +128,7 @@ def plot_confusion_matrix(day_data: dict, out_dir: str):
     ax.set_yticklabels(gt_labels, fontsize=11)
     ax.set_xlabel('Predicted Action', fontsize=11)
     ax.set_ylabel('Ground Truth', fontsize=11)
-    ax.set_title('Confusion Matrix — L1 Raw PPO\n(CIC-IDS2018 Thursday, row-normalized)', fontsize=12, fontweight='bold')
+    ax.set_title('Confusion Matrix — L1 Raw PPO\n(CIC-IDS2018 Friday 23-02-2018, row-normalized)', fontsize=12, fontweight='bold')
 
     for i in range(len(gt_labels)):
         for j in range(len(actions)):
@@ -137,7 +137,7 @@ def plot_confusion_matrix(day_data: dict, out_dir: str):
             if count == 0:
                 continue
             color = 'white' if pct > 0.55 else 'black'
-            ax.text(j, i, f'{pct*100:.1f}%\n({count})',
+            ax.text(j, i, f'{pct*100:.2f}%\n({count})',
                     ha='center', va='center', fontsize=9.5, color=color, fontweight='bold')
 
     plt.colorbar(im, ax=ax, label='Recall fraction')
@@ -188,10 +188,10 @@ def plot_timeline(day_data: dict, out_dir: str):
             if tot == 0:
                 continue
             if r > 0 and r / tot >= 0.05:
-                ax.text(i, r/2, f'{r/tot*100:.0f}%', ha='center', va='center',
+                ax.text(i, r/2, f'{r/tot*100:.1f}%', ha='center', va='center',
                         fontsize=8.5, color='white', fontweight='bold')
             if b > 0 and b / tot >= 0.05:
-                ax.text(i, r + b/2, f'{b/tot*100:.0f}%', ha='center', va='center',
+                ax.text(i, r + b/2, f'{b/tot*100:.1f}%', ha='center', va='center',
                         fontsize=8.5, color='white', fontweight='bold')
 
         ax.set_title(disp, fontsize=12, fontweight='bold')
@@ -235,7 +235,7 @@ def plot_pred_distribution(day_data: dict, out_dir: str):
         # Label nếu phần đủ lớn
         for i, (c, b) in enumerate(zip(counts, bottoms)):
             if c >= 2.0:
-                ax.text(i, b + c/2, f'{c:.1f}%', ha='center', va='center',
+                ax.text(i, b + c/2, f'{c:.2f}%', ha='center', va='center',
                         fontsize=9, color='white', fontweight='bold')
         bottoms = bottoms + np.array(counts)
 
@@ -243,7 +243,7 @@ def plot_pred_distribution(day_data: dict, out_dir: str):
     ax.set_xticklabels(display, fontsize=11)
     ax.set_ylabel('Proportion of predictions (%)', fontsize=11)
     ax.set_ylim(0, 110)
-    ax.set_title('Prediction Distribution per Traffic Type — L1 Raw PPO\n(CIC-IDS2018 Thursday)', fontsize=12, fontweight='bold')
+    ax.set_title('Prediction Distribution per Traffic Type — L1 Raw PPO\n(CIC-IDS2018 Friday 23-02-2018)', fontsize=12, fontweight='bold')
     ax.yaxis.grid(True, linestyle='--', alpha=0.4, zorder=0)
     ax.set_axisbelow(True)
     ax.legend(fontsize=10, loc='upper right',
@@ -281,14 +281,14 @@ def plot_mitigate_rate(day_data: dict, out_dir: str):
                       color=colors[i], alpha=0.85, zorder=3)
         for bar, r in zip(bars, rates):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                    f'{r:.1f}%', ha='center', va='bottom', fontsize=8.5,
+                    f'{r:.2f}%', ha='center', va='bottom', fontsize=8.5,
                     color=colors[i], fontweight='bold')
 
     ax.set_xticks(x)
     ax.set_xticklabels(display, fontsize=11)
     ax.set_ylabel('Recall — Correct Action (%)', fontsize=11)
     ax.set_ylim(60, 115)
-    ax.set_title('Per-class Recall Across 3 Evaluation Layers\n(CIC-IDS2018 Thursday)', fontsize=12, fontweight='bold')
+    ax.set_title('Per-class Recall Across 3 Evaluation Layers\n(CIC-IDS2018 Friday 23-02-2018)', fontsize=12, fontweight='bold')
     ax.yaxis.grid(True, linestyle='--', alpha=0.4, zorder=0)
     ax.set_axisbelow(True)
     ax.legend(fontsize=10)
@@ -310,7 +310,7 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     results = load_results(args.results)
 
-    day = 'Thursday-22-02-2018'
+    day = 'Friday-23-02-2018'
     if day not in results:
         day = next(iter(results))
     day_data = results[day]
