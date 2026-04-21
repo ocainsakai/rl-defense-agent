@@ -9,6 +9,51 @@ Nguồn số liệu hiện tại:
 - Metric helpers: `AI RL/Benchmark/metrics.py`
 - Chart: `AI RL/Benchmark/charts/`
 
+## 0. Mục tiêu benchmark + khác biệt thuật toán
+
+Benchmark 3 thuật toán nhằm sàng lọc và chọn thuật toán phù hợp cho bài toán. Phần benchmark bổ sung mô tả định nghĩa, đặc trưng, và khác biệt của 3 thuật toán để người đọc hiểu vì sao chọn PPO làm thuật toán chính thức cho model.
+
+Nguyên tắc lựa chọn:
+
+- Dùng benchmark như một bước sàng lọc thực nghiệm, không phải để chứng minh một thuật toán thắng tuyệt đối.
+- Ưu tiên thuật toán giữ được tradeoff bảo mật-availability tốt nhất trong điều kiện triển khai thực tế.
+
+### DQN (Deep Q-Network)
+
+Định nghĩa: Thuật toán Value-Based và Off-policy. Sử dụng mạng neural để xấp xỉ hàm giá trị $Q(s, a)$, dự đoán phần thưởng tích lũy cho mỗi hành động tại một trạng thái.
+
+Đặc trưng:
+
+- Dùng Experience Replay để phá vỡ tương quan chuỗi mẫu.
+- Dùng Target Network để ổn định mục tiêu huấn luyện.
+- Phù hợp nhất với bài toán có không gian hành động rời rạc (discrete action space).
+
+### A2C (Advantage Actor-Critic)
+
+Định nghĩa: Phiên bản đồng bộ của A3C, thuộc họ Actor-Critic. Kết hợp Actor (học chính sách) và Critic (đánh giá hành động bằng hàm giá trị).
+
+Đặc trưng:
+
+- Dùng Advantage $A(s, a) = Q(s, a) - V(s)$ để giảm phương sai khi cập nhật.
+- On-policy: học trực tiếp từ các trajectory vừa thu thập.
+- Hoạt động tốt trong cả không gian hành động rời rạc và liên tục.
+
+### PPO (Proximal Policy Optimization)
+
+Định nghĩa: Thuật toán Policy Gradient cải tiến, khắc phục vấn đề nhạy cảm với tốc độ học của các thuật toán truyền thống.
+
+Đặc trưng:
+
+- Dùng Clipped Surrogate Objective để giữ bản cập nhật chính sách không lệch quá xa chính sách cũ.
+- Ổn định cao, dễ cấu hình, thường là mặc định trong nhiều nghiên cứu RL.
+- Hỗ trợ huấn luyện song song trên nhiều môi trường.
+
+### Khác biệt cốt lõi giữa 3 thuật toán
+
+- DQN là Value-Based (học $Q$), A2C và PPO là Policy-Based/Actor-Critic (học chính sách trực tiếp).
+- DQN là Off-policy, A2C/PPO là On-policy.
+- PPO ưu tiên ổn định cập nhật, A2C ưu tiên đơn giản và nhanh, DQN phù hợp action rời rạc.
+
 ## 1. Thông điệp chính cần giữ
 
 Kết luận đúng và cân bằng:
