@@ -1,0 +1,174 @@
+{
+  "Thursday-06-07-2017": {
+    "window-reset": {
+      "overall_accuracy": 0.9051,
+      "total_rows": 3964,
+      "correct_rows": 3588,
+      "per_class": {
+        "benign": {
+          "total": 500,
+          "correct": 498,
+          "accuracy": 0.996,
+          "recall": 0.996,
+          "mitigate_rate": null,
+          "expected_action": "Allow",
+          "pred_dist": {
+            "Allow": 498,
+            "Redirect": 2
+          },
+          "timeline": {},
+          "raw_ppo": {
+            "accuracy": 0.976,
+            "recall": 0.976,
+            "mitigate_rate": null,
+            "pred_dist": {
+              "Allow": 488,
+              "Redirect": 12
+            }
+          }
+        },
+        "brute_force": {
+          "total": 2306,
+          "correct": 2019,
+          "accuracy": 0.8755,
+          "recall": 0.8755,
+          "mitigate_rate": 0.9666,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "RateLimit": 4,
+            "Redirect": 2019,
+            "Block": 206,
+            "Allow": 77
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "RateLimit": 2,
+              "Redirect": 182,
+              "Block": 21,
+              "Allow": 2
+            },
+            "300s+   (long-run)": {
+              "Redirect": 1837,
+              "Block": 185,
+              "Allow": 75,
+              "RateLimit": 2
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9471,
+            "recall": 0.9471,
+            "mitigate_rate": 0.9861,
+            "pred_dist": {
+              "RateLimit": 90,
+              "Redirect": 2184,
+              "Allow": 32
+            }
+          }
+        },
+        "xss": {
+          "total": 1136,
+          "correct": 1053,
+          "accuracy": 0.9269,
+          "recall": 0.9269,
+          "mitigate_rate": 0.9982,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "RateLimit": 2,
+            "Redirect": 1053,
+            "Allow": 2,
+            "Block": 79
+          },
+          "timeline": {
+            "15-60s  (escalate)": {
+              "RateLimit": 2,
+              "Redirect": 5,
+              "Allow": 2
+            },
+            "60-300s (sustained)": {
+              "Redirect": 211,
+              "Block": 16
+            },
+            "300s+   (long-run)": {
+              "Redirect": 837,
+              "Block": 63
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9912,
+            "recall": 0.9912,
+            "mitigate_rate": 0.9965,
+            "pred_dist": {
+              "RateLimit": 6,
+              "Redirect": 1126,
+              "Allow": 4
+            }
+          }
+        },
+        "sqli": {
+          "total": 22,
+          "correct": 18,
+          "accuracy": 0.8182,
+          "recall": 0.8182,
+          "mitigate_rate": 0.8636,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 18,
+            "Block": 1,
+            "Allow": 3
+          },
+          "timeline": {
+            "0-15s   (initial)": {
+              "Redirect": 4
+            },
+            "15-60s  (escalate)": {
+              "Redirect": 4
+            },
+            "60-300s (sustained)": {
+              "Redirect": 10,
+              "Block": 1,
+              "Allow": 3
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.8182,
+            "recall": 0.8182,
+            "mitigate_rate": 0.8182,
+            "pred_dist": {
+              "Redirect": 18,
+              "Allow": 4
+            }
+          }
+        }
+      },
+      "confusion_matrix": {
+        "Allow": {
+          "Allow": 498,
+          "Redirect": 2
+        },
+        "Redirect": {
+          "RateLimit": 6,
+          "Redirect": 3090,
+          "Block": 286,
+          "Allow": 82
+        }
+      },
+      "raw_ppo_overall_accuracy": 0.9627,
+      "confusion_matrix_raw_ppo": {
+        "Allow": {
+          "Allow": 488,
+          "Redirect": 12
+        },
+        "Redirect": {
+          "RateLimit": 96,
+          "Redirect": 3328,
+          "Allow": 40
+        }
+      },
+      "_audit": {
+        "raw_ppo_diff_count": 569,
+        "safety_net_override_count": 161,
+        "total_rows": 3964
+      }
+    }
+  }
+}

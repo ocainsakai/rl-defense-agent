@@ -1,0 +1,167 @@
+{
+  "Thursday-06-07-2017": {
+    "stateless": {
+      "overall_accuracy": 0.9849,
+      "total_rows": 3964,
+      "correct_rows": 3904,
+      "per_class": {
+        "benign": {
+          "total": 500,
+          "correct": 498,
+          "accuracy": 0.996,
+          "recall": 0.996,
+          "mitigate_rate": null,
+          "expected_action": "Allow",
+          "pred_dist": {
+            "Allow": 498,
+            "Redirect": 2
+          },
+          "timeline": {},
+          "raw_ppo": {
+            "accuracy": 0.976,
+            "recall": 0.976,
+            "mitigate_rate": null,
+            "pred_dist": {
+              "Allow": 488,
+              "Redirect": 12
+            }
+          }
+        },
+        "brute_force": {
+          "total": 2306,
+          "correct": 2259,
+          "accuracy": 0.9796,
+          "recall": 0.9796,
+          "mitigate_rate": 0.9861,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "RateLimit": 15,
+            "Redirect": 2259,
+            "Allow": 32
+          },
+          "timeline": {
+            "60-300s (sustained)": {
+              "RateLimit": 3,
+              "Redirect": 202,
+              "Allow": 2
+            },
+            "300s+   (long-run)": {
+              "Redirect": 2057,
+              "RateLimit": 12,
+              "Allow": 30
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9471,
+            "recall": 0.9471,
+            "mitigate_rate": 0.9861,
+            "pred_dist": {
+              "RateLimit": 90,
+              "Redirect": 2184,
+              "Allow": 32
+            }
+          }
+        },
+        "xss": {
+          "total": 1136,
+          "correct": 1129,
+          "accuracy": 0.9938,
+          "recall": 0.9938,
+          "mitigate_rate": 0.9965,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "RateLimit": 3,
+            "Redirect": 1129,
+            "Allow": 4
+          },
+          "timeline": {
+            "15-60s  (escalate)": {
+              "RateLimit": 2,
+              "Redirect": 5,
+              "Allow": 2
+            },
+            "60-300s (sustained)": {
+              "Allow": 2,
+              "RateLimit": 1,
+              "Redirect": 224
+            },
+            "300s+   (long-run)": {
+              "Redirect": 900
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.9912,
+            "recall": 0.9912,
+            "mitigate_rate": 0.9965,
+            "pred_dist": {
+              "RateLimit": 6,
+              "Redirect": 1126,
+              "Allow": 4
+            }
+          }
+        },
+        "sqli": {
+          "total": 22,
+          "correct": 18,
+          "accuracy": 0.8182,
+          "recall": 0.8182,
+          "mitigate_rate": 0.8182,
+          "expected_action": "Redirect",
+          "pred_dist": {
+            "Redirect": 18,
+            "Allow": 4
+          },
+          "timeline": {
+            "0-15s   (initial)": {
+              "Redirect": 4
+            },
+            "15-60s  (escalate)": {
+              "Redirect": 4
+            },
+            "60-300s (sustained)": {
+              "Redirect": 10,
+              "Allow": 4
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 0.8182,
+            "recall": 0.8182,
+            "mitigate_rate": 0.8182,
+            "pred_dist": {
+              "Redirect": 18,
+              "Allow": 4
+            }
+          }
+        }
+      },
+      "confusion_matrix": {
+        "Allow": {
+          "Allow": 498,
+          "Redirect": 2
+        },
+        "Redirect": {
+          "RateLimit": 18,
+          "Redirect": 3406,
+          "Allow": 40
+        }
+      },
+      "raw_ppo_overall_accuracy": 0.9627,
+      "confusion_matrix_raw_ppo": {
+        "Allow": {
+          "Allow": 488,
+          "Redirect": 12
+        },
+        "Redirect": {
+          "RateLimit": 96,
+          "Redirect": 3328,
+          "Allow": 40
+        }
+      },
+      "_audit": {
+        "raw_ppo_diff_count": 10,
+        "safety_net_override_count": 78,
+        "total_rows": 3964
+      }
+    }
+  }
+}

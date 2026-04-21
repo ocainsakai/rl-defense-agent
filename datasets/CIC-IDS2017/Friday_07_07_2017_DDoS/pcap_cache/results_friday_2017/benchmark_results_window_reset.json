@@ -1,0 +1,60 @@
+{
+  "Friday-07-07-2017-DDoS": {
+    "window-reset": {
+      "overall_accuracy": 0.9991,
+      "total_rows": 1169,
+      "correct_rows": 1168,
+      "per_class": {
+        "syn_flood": {
+          "total": 1169,
+          "correct": 1168,
+          "accuracy": 0.9991,
+          "recall": 0.9991,
+          "mitigate_rate": 0.9991,
+          "expected_action": "Block",
+          "pred_dist": {
+            "Block": 1168,
+            "Allow": 1
+          },
+          "timeline": {
+            "15-60s  (escalate)": {
+              "Block": 28,
+              "Allow": 1
+            },
+            "60-300s (sustained)": {
+              "Block": 240
+            },
+            "300s+   (long-run)": {
+              "Block": 900
+            }
+          },
+          "raw_ppo": {
+            "accuracy": 1.0,
+            "recall": 1.0,
+            "mitigate_rate": 1.0,
+            "pred_dist": {
+              "Block": 1169
+            }
+          }
+        }
+      },
+      "confusion_matrix": {
+        "Block": {
+          "Block": 1168,
+          "Allow": 1
+        }
+      },
+      "raw_ppo_overall_accuracy": 1.0,
+      "confusion_matrix_raw_ppo": {
+        "Block": {
+          "Block": 1169
+        }
+      },
+      "_audit": {
+        "raw_ppo_diff_count": 1,
+        "safety_net_override_count": 0,
+        "total_rows": 1169
+      }
+    }
+  }
+}
