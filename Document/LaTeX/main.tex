@@ -1,568 +1,1076 @@
+%============================================================
+% FPT University Capstone Project Thesis
+% Research and Development of AI Agent Capable of Adaptive
+% Self-Defense in Simulated Environments Based on
+% Reinforcement Learning Techniques
+% IAP491 — Group 3, 2026
+% Compiler: pdfLaTeX (Overleaf default)
+%============================================================
 \documentclass[12pt,a4paper]{report}
 
-% --- Cấu hình Tiếng Việt và Gói lệnh cần thiết ---
-\usepackage[utf8]{vietnam}
-\usepackage[english]{babel}
-\usepackage[left=3cm,right=2cm,top=2cm,bottom=2cm]{geometry}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{tabularx}
-\usepackage{titlesec}
+%--- Packages ---
+\usepackage[top=25mm,bottom=25mm,left=25mm,right=25mm]{geometry}
 \usepackage{indentfirst}
+\setlength{\parindent}{1.27cm}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{mathptmx}          % Times New Roman equivalent for pdfLaTeX
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
 \usepackage{cite}
-\usepackage{setspace}       % Line spacing control
-\usepackage{parskip}        % Better paragraph spacing
-\usepackage{fancyhdr}       % Header/footer customization
-\usepackage{amsmath}        % Math formatting
-\usepackage{amssymb}        % Math symbols
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{url}
 
-% --- Hyperref configuration ---
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue,
-    citecolor=blue,
-    urlcolor=blue
-}
-
-% --- Line spacing ---
+%--- Line spacing ---
 \onehalfspacing
 
-% --- Thông tin Trang bìa ---
+%--- Chapter heading format ---
+\titleformat{\chapter}[display]
+  {\normalfont\Large\bfseries\centering}
+  {CHAPTER \thechapter}{0pt}{\Large\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
 
-\title{Capstone Project Document \\ \large An AI Agent capable of autonomous decision-making for network defense within a simulation environment}
-\author{Hồ Lê Bình, Nguyễn Hoàng Trí, Phạm Tuấn Anh, Trịnh Nguyễn Yến Vy}
-\date{Tháng 01, 2026}
+%--- Header/footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\small\thepage}
+\fancyhead[L]{\small\leftmark}
+\renewcommand{\headrulewidth}{0.4pt}
 
+%--- Hyperref setup ---
+\hypersetup{
+  pdftitle={Research and Development of AI Agent Capable of Adaptive Self-Defense in Simulated Environments Based on Reinforcement Learning Techniques},
+  pdfauthor={Group 3 — IAP491},
+  pdfsubject={Capstone Project Thesis},
+  pdfkeywords={Reinforcement Learning, Network Defense, PPO, Cybersecurity}
+}
+
+%--- Table column type ---
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+%============================================================
 \begin{document}
 
-% --- TRANG BÌA ---
+%============================================================
+% TITLE PAGE
+%============================================================
 \begin{titlepage}
-    \begin{figure}[h]
-    \centering
-    % Nhóm 1: Bên trái dành cho ảnh
-    \begin{minipage}{0.4\textwidth}
-        \centering
-        \includegraphics[width=0.8\linewidth]{Picture2.png}
-    \end{minipage}
-    % Nhóm 2: Bên phải dành cho chữ
-    \begin{minipage}{0.5\textwidth}
-        \centering
-        \textbf{MINISTRY OF EDUCATION AND TRAINING}\\
-    \end{minipage}
-    \end{figure}
-    \centering
-    \vspace{2cm}
-    \textbf{\huge FPT UNIVERSITY}\\
-    \vspace{2cm}
-    \large \textbf{Capstone Project Document}\\
-    \vspace{2cm}
-    \Large \textbf{An AI Agent capable of autonomous decision-making for network defense within a simulation environment}\\
-    \vspace{6cm}
-    
-    \begin{table}[h]
-        \centering
-        \begin{tabular}{|l|l|c|}
-            \hline
-            \textbf{\large Group Member} & \textbf{\large Student's Name} & \textbf{\large Student's ID} \\ \hline
-            Student 1 & Hồ Lê Bình & SE183564\\ \hline
-            Student 2 & Nguyễn Hoàng Trí & SE183413\\ \hline
-            Student 3 & Phạm Tuấn Anh & SE183403  \\ \hline
-            Student 4 & Trịnh Nguyễn Yến Vy  & SE183776 \\ \hline
-        \end{tabular}
-    \end{table}
+\begin{center}
+\textbf{\large MINISTRY OF EDUCATION AND TRAINING}\\[0.3em]
+\textbf{\large FPT UNIVERSITY}\\[2em]
 
-    \vfill
-    \textbf{Supervisor:} Mai Hoàng Đỉnh \\
-    \vspace{1cm}
-    Hồ Chí Minh, 01/2026
+\rule{\linewidth}{0.5pt}\\[0.5em]
+
+\vspace{2em}
+{\LARGE\bfseries CAPSTONE PROJECT DOCUMENT}\\[2em]
+
+\vspace{1.5em}
+{\Large\bfseries Research and Development of AI Agent Capable\\[0.3em]
+of Adaptive Self-Defense in Simulated Environments\\[0.3em]
+Based on Reinforcement Learning Techniques}\\[3em]
+
+\vspace{1em}
+\begin{tabular}{ll}
+\textbf{Group Members:} & Ho Le Binh \\ 
+                        & Nguyen Hoang Tri \\
+                        & Pham Tuan Anh \\
+                        & Trinh Nguyen Yen Vy \\[1.5em]
+\textbf{Supervisor:}    & Mai Hoang Dinh \\[1.5em]
+\textbf{Capstone Code:} & IAP491 \\
+\end{tabular}
+
+\vfill
+{\large Ho Chi Minh, 2026}
+\end{center}
 \end{titlepage}
 
-\newpage
-\begin{center}
-    \Large \textbf{ABSTRACT}
-\end{center}
-\vspace{0.5cm}
+%============================================================
+% FRONT MATTER
+%============================================================
+\pagenumbering{roman}
+\setcounter{page}{1}
 
-The rapid automation and scalability of modern cyber attacks have rendered traditional rule-based security mechanisms increasingly ineffective. In the contemporary cybersecurity landscape, threats are evolving with unprecedented complexity and automation. Traditional defense mechanisms, primarily rule-based firewalls and static Intrusion Detection Systems (IDS), often fail to counter novel zero-day attacks or adapt to dynamic adversary tactics in real-time.
+%--- Abstract ---
+\chapter*{ABSTRACT}
+\addcontentsline{toc}{chapter}{ABSTRACT}
 
-This study addresses these limitations by developing an Adaptive AI Defense Agent utilizing Reinforcement Learning (RL). Unlike traditional supervised learning, the proposed RL agent learns optimal defense strategies through autonomous interaction with a simulated environment via a trial-and-error mechanism. The project implements a customized network topology using OpenAI Gymnasium and Mininet, where the agent is trained to observe network states and execute enforcement actions---such as rate limiting, blocking, and honeypot redirection---to maximize system security while maintaining service availability.
+\noindent\textbf{Research and Development of AI Agent Capable of Adaptive Self-Defense in Simulated Environments Based on Reinforcement Learning Techniques}
 
-Performance is evaluated against multi-vector attack baselines, with results visualized through Wazuh SIEM. The findings demonstrate that autonomous AI agents can significantly enhance the resilience of network infrastructures against adaptive threats. This work contributes a reproducible simulation framework and demonstrates the feasibility of reinforcement learning-based autonomous network defense.
+\bigskip
+\noindent\textbf{Background:} Traditional network defense relies on static rules and signature-based detection, struggling to adapt to automated, evolving cyber attacks. This work addresses the need for autonomous defense systems using Reinforcement Learning (RL) to learn optimal defensive policies.
 
+\medskip
+\noindent\textbf{Methods:} We developed an RL-based Defense Agent (RL Defense Agent) using Proximal Policy Optimization trained in simulation with 5 attack types (SYN Flood, Port Scan, Brute-Force, SQL Injection, XSS). The agent observes a 34-dimensional feature vector comprising 20D NIDS sensor features combining network-level metrics (packet rate, inter-arrival time, port distribution) and HTTP payload features (SQL/XSS detection via OWASP CRS), plus 10D per-IP temporal state (action history, escalation score, session memory) and 4D closed-loop effect feedback from the previous step. It selects from four hierarchical defensive actions: Allow, RateLimit, Redirect-to-Honeypot, and Block. The Observation Module (NetworkSniffer + FlowManager + FlowFeatureCalculator) converts raw packets into the observation vector in real time. Training proceeded for approximately 350{,}000 timesteps with evaluation every 12{,}000 steps.
+
+\medskip
+\noindent\textbf{Results:} The RL agent achieved a \textbf{77.3\% detection rate} on active-threat traffic steps, with stable convergence across 5 independent seeds (std 0.021, 28\% variance reduction over SB3 defaults). The policy balanced security and availability: 93.2\% legitimate traffic allowed (FPR 6.8\%). Training converged smoothly with +475\% reward improvement, safe policy updates (KL-divergence: 0.012$\to$0.003). The HTTP payload feature group (F12--F20) is essential for SQLi/XSS detection; the PayloadNormalizer and CRS rules work synergistically to handle double-encoded evasion.
+
+\medskip
+\noindent\textbf{Conclusions:} This work demonstrates RL's feasibility for autonomous network defense. The agent learns stable, differentiated policies across diverse attacks while balancing mitigation with availability. A hybrid architecture combining static rate-limiting with RL for application-layer analysis is necessary to address system latency constraints. Future work includes multi-agent coordination and simulation-to-reality validation.
+
+\medskip
+\noindent\textbf{Keywords:} Reinforcement Learning, Autonomous Network Defense, Proximal Policy Optimization, Cybersecurity Defense Agent, Feature Engineering, Payload Normalization, OWASP ModSecurity CRS, Observation Module, Policy Learning, Network Traffic Analysis
+
+%--- Acknowledgement ---
+\chapter*{ACKNOWLEDGEMENT}
+\addcontentsline{toc}{chapter}{ACKNOWLEDGEMENT}
+
+The completion of this Capstone Project would not have been possible without the guidance, support, and encouragement of many individuals and institutions.
+
+First and foremost, we would like to express our sincere gratitude to our supervisor for the invaluable guidance, constructive feedback, and continuous encouragement throughout the duration of this project. Your expertise and patience have been indispensable in shaping the direction and quality of this research.
+
+We are deeply grateful to the Faculty of Information Technology at FPT University for providing a stimulating academic environment and access to the computational resources and laboratory facilities necessary for our experiments.
+
+We would like to thank the open-source communities behind Stable-Baselines3, Gymnasium, Mininet/Containernet, Scapy, and the OWASP ModSecurity Core Rule Set. The availability of these high-quality tools made our research technically feasible.
+
+We also acknowledge the researchers who made their datasets publicly available, particularly the LSNM2024 dataset from the University of New Brunswick and the Mutated Packet Dataset from Abu Al-Haija et al. (2025).
+
+Finally, we thank our families and friends for their patience, understanding, and unwavering moral support throughout this journey.
+
+\bigskip
+\noindent\textit{Ho Chi Minh, April 2026}\\[0.5em]
+
+\clearpage
+%--- TOC, LOF, LOT ---
 \tableofcontents
+\listoffigures
+\addcontentsline{toc}{chapter}{LIST OF FIGURES}
 
-% --- CHƯƠNG 1 ---
+\listoftables
+\addcontentsline{toc}{chapter}{LIST OF TABLES}
+
+%--- Abbreviations ---
+\chapter*{ABBREVIATIONS}
+\addcontentsline{toc}{chapter}{ABBREVIATIONS}
+
+\begin{longtable}{L{3cm} L{11cm}}
+\toprule
+\textbf{Abbreviation} & \textbf{Full Meaning} \\
+\midrule
+\endhead
+AI & Artificial Intelligence \\
+API & Application Programming Interface \\
+CAPTCHA & Completely Automated Public Turing test to tell Computers and Humans Apart \\
+CRS & Core Rule Set \\
+CSV & Comma-Separated Values \\
+DDoS & Distributed Denial of Service \\
+DoS & Denial of Service \\
+RL & Reinforcement Learning \\
+FPR & False Positive Rate \\
+HTTP & Hypertext Transfer Protocol \\
+HTTPS & Hypertext Transfer Protocol Secure \\
+IDS & Intrusion Detection System \\
+KL & Kullback-Leibler (Divergence) \\
+MDP & Markov Decision Process \\
+MIME & Multipurpose Internet Mail Extensions \\
+ML & Machine Learning \\
+MTU & Maximum Transmission Unit \\
+NFKC & Compatibility Decomposition, followed by Canonical Composition \\
+NLP & Natural Language Processing \\
+OWASP & Open Web Application Security Project \\
+PCAP & Packet Capture Format \\
+PL & Paranoia Level \\
+PPO & Proximal Policy Optimization \\
+RQ & Research Question \\
+RFC & Request for Comments \\
+SB3 & Stable-Baselines3 \\
+SDN & Software-Defined Networking \\
+SIEM & Security Information and Event Management \\
+SLA & Service Level Agreement \\
+SOC & Security Operations Center \\
+SQL & Structured Query Language \\
+SQLi & SQL Injection \\
+SSH & Secure Shell \\
+SSL/TLS & Secure Sockets Layer / Transport Layer Security \\
+SYN & Synchronization flag (TCP) \\
+TCP & Transmission Control Protocol \\
+TLS & Transport Layer Security \\
+TTPs & Tactics, Techniques, and Procedures \\
+UDP & User Datagram Protocol \\
+VM & Virtual Machine \\
+XAI & Explainable Artificial Intelligence \\
+XML & Extensible Markup Language \\
+XSS & Cross-Site Scripting \\
+Zero-day & Previously unknown software vulnerability \\
+\bottomrule
+\end{longtable}
+
+%============================================================
+% MAIN MATTER
+%============================================================
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+%============================================================
 \chapter{INTRODUCTION}
+%============================================================
 
 \section{Background}
 
-The cybersecurity landscape has undergone a significant transformation over the past decade, driven by the rapid growth of digital infrastructures, cloud computing, and large-scale interconnected networks.
-Alongside these developments, cyber threats have become increasingly automated, adaptive, and sophisticated, posing serious challenges to traditional security mechanisms.
+The cybersecurity landscape has undergone a significant transformation over the past decade, driven by the rapid growth of digital infrastructure, cloud computing, and large-scale interconnected networks. In parallel with these developments, cyber threats have become increasingly automated, adaptive, and sophisticated, posing serious challenges to traditional security mechanisms.
 
 \subsection{Escalation of Cyber Threats and Attack Automation}
 
-Modern cyber attacks are no longer predominantly manual or opportunistic.
-Instead, adversaries increasingly rely on automated tools to perform large-scale reconnaissance, vulnerability scanning, credential stuffing, and exploitation at machine speed.
-According to the Verizon Data Breach Investigations Report (DBIR), approximately 60\% of confirmed data breaches involve the human element, including social engineering, credential misuse, and user error, while the exploitation of software vulnerabilities and web applications continues to rise \cite{verizonDBIR2025}.
+Modern cyber attacks are no longer primarily manual or opportunistic in nature. Instead, adversaries increasingly rely on automated tools to carry out large-scale reconnaissance, vulnerability scanning, credential stuffing, and exploitation at machine speed. \textbf{According to Verizon's Data Breach Investigations Report (DBIR), approximately 60\% of confirmed data breaches involved human elements, including social engineering, credential abuse, and user errors, while exploitation of software and web application vulnerabilities continues to rise \cite{verizonDBIR2024}.}
 
-Furthermore, web application attacks and system intrusions remain among the most prevalent breach patterns.
-These attacks are often highly automated, enabling threat actors to rapidly identify exposed services and exploit weaknesses across thousands of targets simultaneously.
-Such large-scale automation significantly reduces the effectiveness of static, rule-based security systems that rely on predefined signatures or manually crafted rules \cite{verizonDBIR2024}.
+Furthermore, web application attacks and system intrusions remain among the most prevalent breach patterns. These attacks are often highly automated, enabling threat actors to quickly identify exposed services and exploit weaknesses across thousands of targets simultaneously. Such large-scale automation significantly reduces the effectiveness of static, rule-based security systems that rely on predefined signatures or manually crafted rules \cite{verizonDBIR2024}.
 
-In addition to external adversaries, insider-related incidents represent a substantial portion of cybersecurity breaches.
-Earlier DBIR findings indicate that nearly 30\% of data breaches involved internal actors, either through malicious intent or unintentional actions, highlighting that threats can originate from within organizational boundaries as well as from external attackers \cite{verizonDBIR2020}.
-This diversity of threat actors further complicates the defense landscape and demands more adaptive security strategies.
+In addition to external adversaries, insider-related incidents account for a significant portion of cybersecurity breaches. Earlier DBIR findings indicate that nearly \textit{30\% of data breaches involved internal actors}, whether through malicious intent or inadvertent actions, highlighting that threats can originate from within organizational boundaries as well as from external attackers \cite{verizonDBIR2020}. This diversity of threat actors further complicates the defense landscape and demands more adaptive security strategies.
 
 \subsection{Economic Impact of Data Breaches}
 
-Beyond technical consequences, cyber attacks impose severe financial and operational costs on organizations.
-According to the IBM–Ponemon Institute Cost of a Data Breach Report, the global average cost of a data breach has reached several million US dollars per incident, with significantly higher costs observed in highly regulated industries and large enterprises \cite{ibmPonemon2024}.
-These costs include incident response, system recovery, legal penalties, reputational damage, and long-term loss of customer trust.
+Beyond the technical consequences, cyber attacks impose severe financial and operational costs on organizations. According to the IBM--Ponemon Institute Cost of a Data Breach Report, the global average cost of a data breach has reached several million US dollars per incident, with significantly higher costs observed in regulated industries and large enterprises \cite{ibmPonemon2024}. These costs \textit{encompass incident response, system recovery, legal penalties, reputational damage, and long-term erosion of customer trust.}
 
-The increasing frequency and scale of cyber incidents, combined with their substantial economic impact, underscore the necessity for faster detection and response mechanisms.
-Delayed or ineffective responses can dramatically amplify financial losses, making real-time or near-real-time defense capabilities a critical requirement for modern network infrastructures.
+The increasing frequency and scale of cyber incidents, combined with their substantial economic impact, underscore the need for faster detection and response mechanisms. Delayed or ineffective responses can significantly amplify financial losses, making real-time or near-real-time defense capability a critical requirement for modern network infrastructures.
 
 \subsection{Evolution of Network Infrastructure and Operational Challenges}
 
-The evolution from traditional on-premise hardware toward virtualized and cloud-based infrastructures has further expanded the attack surface.
-Technologies such as virtualization, containerization, and software-defined networking enable flexible and scalable deployments, but they also generate massive volumes of network traffic and security events.
-As a result, Security Operations Centers (SOCs) are frequently overwhelmed by an excessive number of alerts, a phenomenon commonly referred to as \emph{alert fatigue} \cite{alertFatigue2022}.
+The shift from traditional on-premise hardware to virtualized and cloud-based infrastructure has further expanded the attack surface. Technologies such as virtualization, containerization, and software-defined networking (SDN) enable flexible and scalable deployments, but they also generate large volumes of network traffic and security events. As a result, \textit{Security Operations Centers (SOCs) are frequently overwhelmed by excessive alert volumes, a phenomenon commonly referred to as ``alert fatigue.''} \cite{alertFatigue2022}
 
-In such environments, human analysts struggle to manually inspect and correlate alerts in a timely manner.
-Critical security incidents may be overlooked or detected too late, allowing attackers to persist within networks for extended periods.
-This operational bottleneck exposes the limitations of purely human-driven security monitoring in large-scale, high-speed network environments.
+In such environments, human analysts struggle to manually inspect and correlate alerts in a timely manner. Critical security incidents may be overlooked or detected too late, allowing attackers to persist within the network for extended periods. This operational bottleneck exposes the limitations of entirely human-driven security monitoring in large-scale, high-velocity network environments.
 
-\subsection{Need for Autonomous and Adaptive Defense Systems}
+\subsection{The Need for Autonomous and Adaptive Defense Systems}
 
-Given the automation of cyber attacks, the economic consequences of breaches, and the complexity of modern network infrastructures, there is a growing need for autonomous and adaptive defense mechanisms.
-Artificial Intelligence (AI), particularly Reinforcement Learning (RL), has emerged as a promising approach to address these challenges \cite{nguyen2021deep}.
+Given the automation of cyber attacks, the economic consequences of breaches, and the complexity of modern network infrastructure, the demand for autonomous and adaptive defense mechanisms is growing. Artificial Intelligence (AI), and specifically Reinforcement Learning (RL), has emerged as a promising approach to addressing these challenges.
 
-Unlike traditional supervised learning methods that rely on labeled datasets, RL enables agents to learn optimal defense strategies through continuous interaction with the environment.
-By observing network states and receiving feedback in the form of rewards or penalties, an RL-based defense agent can dynamically adapt its behavior to evolving attack patterns.
-This capability makes RL especially suitable for real-time network defense scenarios, where attack strategies and system conditions change rapidly.
+Unlike traditional supervised learning methods that rely on labeled datasets, RL enables agents to learn optimal defensive strategies through continuous interaction with the environment. By observing network state and receiving feedback in the form of rewards or penalties, an RL-based defense agent can dynamically adjust its behavior to evolving attack patterns. This capability makes RL particularly well-suited for real-time network defense scenarios, where attack strategies and system conditions change rapidly.
 
-Consequently, the integration of autonomous AI agents into network defense architectures represents a critical step toward enhancing the resilience and responsiveness of cybersecurity systems.
+Accordingly, the integration of autonomous AI agents into network defense architectures represents an important step toward enhancing the resilience and responsiveness of cybersecurity systems.
 
 \section{Problem Statement}
 
-Despite significant advances in cybersecurity technologies, most existing network defense mechanisms remain largely reactive and heavily dependent on predefined rules and human intervention.
-Traditional security solutions, such as rule-based firewalls, signature-based Intrusion Detection Systems (IDS), and manually configured access control policies, are effective only against known attack patterns.
-These systems struggle to detect zero-day attacks, adapt to evolving adversarial behaviors, or respond at the speed required to counter highly automated threats.
+Despite significant advances in cybersecurity technology, most current network defense mechanisms remain primarily reactive and heavily dependent on predefined rules and human intervention. Traditional security solutions — such as rule-based firewalls, signature-based Intrusion Detection Systems (IDS), and manually configured access control policies — are only effective against known attack patterns. These systems struggle to adapt to evolving adversarial behavior or to respond at the speed required to counter highly automated threats.
 
-Furthermore, modern network environments generate massive volumes of security-related data due to the adoption of cloud computing, virtualization, and software-defined networking.
-Security Operations Centers (SOCs) are often overwhelmed by continuous streams of alerts, leading to delayed responses and an increased risk of alert fatigue.
-As a result, human analysts may overlook critical threats or react too slowly, allowing attackers to maintain persistence within the network.
+Furthermore, modern network environments generate large volumes of security-relevant data due to the adoption of cloud computing, virtualization, and software-defined networking. Security Operations Centers (SOCs) are frequently overwhelmed by continuous alert streams, leading to delayed responses and increased risk of alert fatigue. As a result, human analysts may miss critical threats or respond too slowly, allowing attackers to maintain a presence in the network.
 
-Another key limitation of existing defense approaches is the lack of autonomous decision-making capabilities.
-Most security systems rely on static policies or require manual tuning by administrators, making them unsuitable for dynamic and adversarial environments where attack strategies change rapidly.
-Even machine learning-based solutions frequently depend on supervised learning techniques that require large, labeled datasets, which are difficult to obtain and quickly become outdated in real-world cybersecurity scenarios.
+Another key limitation of existing defense approaches is the lack of autonomous decision-making. Most security systems rely on static policies or require manual tuning by administrators, making them ill-suited for dynamic and adversarial environments where attack strategies change rapidly. Even machine learning-based solutions often depend on supervised learning techniques that require large, labeled datasets, which are difficult to collect and quickly become outdated in real-world cybersecurity scenarios.
 
-Given these challenges, there is a clear need for an adaptive defense mechanism that can autonomously observe network conditions, identify malicious behaviors, and execute appropriate mitigation actions in real time.
-Such a system must be capable of learning from interaction with the environment, balancing security objectives with service availability, and continuously adapting to new attack patterns without requiring explicit prior knowledge of all possible threats.
+In light of these challenges, there is a clear need for an adaptive defense mechanism that can autonomously observe network conditions, identify malicious behavior, and execute appropriate mitigation actions in real time. Such a system must be capable of learning from environmental interactions, balancing security objectives with service availability, and continuously adapting to novel attack patterns without explicit prior knowledge of all possible threats.
 
-This project addresses these limitations by proposing an AI-driven network defense agent based on Reinforcement Learning (RL).
-By formulating network defense as a sequential decision-making problem, the RL agent is designed to learn optimal response strategies through trial-and-error interactions within a simulated network environment.
-The central problem investigated in this study is how to design, train, and evaluate an autonomous RL-based defense agent that can effectively mitigate diverse cyber attacks while maintaining acceptable network performance.
+This project addresses the above limitations by proposing an AI-driven network defense agent based on Reinforcement Learning (RL). By framing network defense as a sequential decision-making problem, the RL agent is designed to learn optimal response strategies through trial-and-error interactions. The central problem investigated in this work is: \textit{how to design, train, and evaluate an autonomous RL-based defense agent that can effectively mitigate diverse cyber attacks while maintaining acceptable network performance.}
 
-To address this problem, the study focuses on the following primary research questions:
+To address this problem, the research focuses on the following key research questions:
 
-\begin{enumerate}
-    \item \textbf{RQ1 (Comparative Effectiveness):} To what extent does a reinforcement learning-based agent outperform traditional rule-based mechanisms in mitigating automated and adaptive cyber attacks within a simulated environment?
-    
-    \item \textbf{RQ2 (Operational Trade-off):} How does the implementation of autonomous defensive actions (blocking, rate limiting, and redirection) affect the balance between attack mitigation success and legitimate service availability?
-    
-    \item \textbf{RQ3 (Policy Stability):} Can the RL-based agent develop and maintain a stable defense policy that remains effective across diverse and evolving attack vectors without manual reconfiguration?
-\end{enumerate}
+\begin{itemize}
+  \item \textbf{RQ1 (Comparative Effectiveness):} To what extent does a reinforcement learning-based agent outperform traditional rule-based mechanisms in mitigating automated and adaptive cyber attacks within a simulated environment?
+  \item \textbf{RQ2 (Operational Trade-off):} How does the implementation of autonomous defensive actions (blocking, rate limiting, and redirection) affect the balance between attack mitigation success and legitimate service availability?
+  \item \textbf{RQ3 (Policy Stability):} Can the RL-based agent develop and maintain a stable defense policy that remains effective across diverse and evolving attack vectors without manual reconfiguration?
+\end{itemize}
 
 \section{Research Objectives}
 
-The primary objective of this project is to design, implement, and evaluate an autonomous AI-based network defense system capable of making real-time security decisions in a dynamic and adversarial environment.
-To achieve this overarching goal, the study is guided by the following specific research objectives:
+The primary objective of this project is to design, implement, and evaluate an autonomous AI-based network defense system capable of making real-time security decisions in a dynamic and adversarial environment. To achieve this overarching goal, the research is guided by the following specific objectives:
 
 \begin{itemize}
-    \item Investigate the applicability of Reinforcement Learning (RL) techniques for autonomous decision-making in network defense scenarios, particularly in environments characterized by automated and adaptive cyber attacks.
-    
-    \item Design and construct a simulated network environment that accurately represents real-world network infrastructures, including production servers, attackers, and defensive components, using the Gymnasium framework and Mininet.
-    
-    \item Develop an RL-based defense agent capable of observing network states, identifying anomalous or malicious behaviors, and selecting appropriate mitigation actions such as blocking, rate limiting, or traffic redirection.
-    
-    \item Define and implement a reward function that balances security effectiveness with system performance, ensuring that defensive actions mitigate attacks while preserving service availability.
-    
-    \item Evaluate the performance of the proposed defense agent against multiple attack scenarios by measuring key metrics such as attack mitigation rate, response time, false positive rate, and overall network stability.
+  \item \textbf{Investigate} the applicability of Reinforcement Learning (RL) techniques for autonomous decision-making in network defense scenarios, particularly in environments characterized by automated and adaptive cyber attacks.
+  \item \textbf{Design} and construct a simulated network environment that accurately represents real-world network infrastructure, including production servers, attackers, and defense components using Mininet.
+  \item \textbf{Develop} an RL-based defense agent capable of observing network state, identifying anomalous or malicious behavior, and selecting appropriate mitigation actions: blocking, rate limiting, or traffic redirection.
+  \item \textbf{Define} and implement a reward function that balances security effectiveness with system performance, ensuring that defensive actions mitigate attacks while maintaining service availability.
+  \item \textbf{Evaluate} the performance of the proposed defense agent against multiple attack scenarios by measuring key metrics such as attack mitigation rate, response time, false positive rate, and overall network stability.
 \end{itemize}
 
-By addressing these objectives, the project aims to demonstrate the feasibility and effectiveness of Reinforcement Learning as a foundation for autonomous network defense systems and to provide empirical insights into their behavior under diverse attack conditions.
+\section{Significance of the Research}
+
+This research contributes to the field of cybersecurity by exploring the feasibility of autonomous network defense using Reinforcement Learning. The approach aims to advance beyond traditional security mechanisms through the integration of adaptive, self-learning defense systems.
+
+From a technical perspective, the project provides a practical implementation of an RL-based defense agent integrated with a simulated network environment. The combination of Gymnasium, Mininet, and Linux-based mitigation techniques demonstrates how reinforcement learning can be applied to real-world-inspired network scenarios. Integration with Wazuh SIEM further illustrates the potential for combining autonomous defense agents with existing security monitoring platforms.
+
+From an academic perspective, this research provides empirical insights into the behavior of reinforcement learning agents under diverse network attack scenarios. The evaluation results contribute to understanding how autonomous agents balance security effectiveness with service availability — a critical trade-off in network defense. These findings can serve as a reference for future research on adaptive cybersecurity systems and RL-based decision-making.
+
+Finally, from a practical and industrial perspective, the proposed framework highlights the potential of AI-driven autonomous defense systems in reducing the operational burden on human security analysts. By automating detection and response processes, such systems can mitigate alert fatigue and enable faster, more consistent responses to cyber threats.
 
 \section{Scope and Limitations}
 
-This section defines the scope of the research and clarifies the limitations of the proposed approach in order to establish realistic expectations for the outcomes of the study.
+\subsection{Research Scope}
 
-\subsection{Scope of the Study}
+The scope of this project focuses on designing and evaluating an autonomous network defense agent in a controlled simulation environment. The research emphasizes decision-making at the network level and the lightweight application layer.
 
-The scope of this project is focused on the design and evaluation of an autonomous network defense agent within a controlled simulation environment.
-The research emphasizes decision-making at the network level rather than application-level security or user behavior analysis.
-
-\subsubsection{Attack Simulation}
-
-The simulated environment incorporates multiple categories of cyber attacks inspired by the MITRE ATT\&CK framework \cite{mitreAttack2023}.
-These attacks are selected to represent common and impactful threat vectors observed in real-world networks and include:
-
+\textbf{Attack Simulation.} The simulation environment incorporates multiple network attack types inspired by the MITRE ATT\&CK framework:
 \begin{itemize}
-    \item Denial-of-Service (DoS) and Distributed Denial-of-Service (DDoS) attacks, such as TCP SYN flood, UDP flood.
-    \item Reconnaissance activities, including port scanning.
-    \item Web and authentication-based attacks, such as brute-force login attempts and SQL injection, XSS.
+  \item Denial of Service (DoS) and Distributed Denial of Service (DDoS) attacks, such as TCP/SYN flood.
+  \item Port scanning reconnaissance.
+  \item Web and authentication-based attacks: login brute-force, SQL injection, and XSS.
 \end{itemize}
 
-\subsubsection{Defense Mechanisms}
-
-The defense agent is designed to execute mitigation actions at the operating system and network layer.
-These actions include:
-
+\textbf{Action Space.} The defense agent is designed to execute mitigation actions at the OS and network layer:
 \begin{itemize}
-    \item \textbf{[ALLOW]} Default action: allowing normal traffic to pass through without intervention.
-    \item \textbf{[BLOCK]} Blocking malicious IP addresses using firewall rules.
-    \item \textbf{[RATE]} Rate limiting suspicious traffic to reduce attack impact while preserving legitimate services.
-    \item \textbf{[REDIRECT]} Redirecting selected traffic to honeypots to isolate attackers and gather intelligence.
+  \item \textbf{[ALLOW]} Default: permit traffic.
+  \item \textbf{[RATE]} Rate limiting for suspicious traffic to reduce attack impact while maintaining legitimate services.
+  \item \textbf{[REDIRECT]} Redirect selected traffic to honeypots to isolate attackers and gather threat intelligence.
+  \item \textbf{[BLOCK]} Block malicious IP addresses using firewall rules.
 \end{itemize}
 
-All defensive actions are implemented using Linux-based mechanisms, such as \texttt{iptables} and traffic control (\texttt{tc}), within the simulated network.
+All defensive actions are implemented using \texttt{iptables} and traffic control (\texttt{tc}) mechanisms in the simulated network.
 
-\subsubsection{Technology Stack}
+\textbf{Technology Stack.} Python, Gymnasium, Mininet/Containernet, Stable-Baselines3, Wazuh SIEM, Docker, PHP, MySQL.
 
-The implementation leverages a set of widely adopted open-source tools and frameworks, including:
+\subsection{Research Limitations}
 
-\begin{itemize}
-    \item Python as the primary programming language.
-    \item Gymnasium for defining the reinforcement learning environment.
-    \item Mininet for emulating virtual network topologies.
-    \item PyTorch and Stable Baselines3 for training reinforcement learning models.
-    \item Wazuh SIEM for log collection, visualization, and performance monitoring.
-\end{itemize}
+First, the proposed defense system was evaluated \textbf{exclusively in a simulation environment}. Although the simulation was designed to approximate real-world network behavior, results may differ when deployed in production environments due to hardware constraints, network heterogeneity, and unpredictable user behavior.
 
-\subsection{Limitations of the Study}
+Second, the \textbf{attack scenarios considered are limited to a predefined set of attack types}. Advanced threats such as zero-day exploit, supply chain attacks, and sophisticated lateral movement techniques are outside the scope of this research.
 
-Despite its contributions, this study has several limitations that should be acknowledged.
+Third, the performance of the RL agent is influenced by \textbf{the quality of the reward function and the representativeness of the simulation environment}. Suboptimal reward design or insufficient state representation may limit the agent's ability to generalize to unseen scenarios.
 
-First, the proposed defense system is evaluated exclusively within a simulated environment.
-Although the simulation is designed to approximate real-world network behavior, results may differ when deployed in production environments due to factors such as hardware constraints, network heterogeneity, and unpredictable user behavior.
+Finally, the system was implemented and tested on the Ubuntu Linux platform. \textbf{Portability of the proposed approach to other operating systems or large-scale distributed cloud environments has not been evaluated and remains a topic for future research.}
 
-Second, the attack scenarios considered in this research are limited to a predefined set of attack types.
-Advanced threats such as zero-day exploits, supply chain attacks, and sophisticated lateral movement techniques are outside the scope of this study.
+\section{Thesis Structure}
 
-Third, the performance of the reinforcement learning agent is influenced by the quality of the reward function and the representativeness of the simulated environment.
-Suboptimal reward design or incomplete state representation may limit the agent’s ability to generalize to unseen scenarios.
+The remainder of this thesis is organized as follows:
 
-Finally, the system is implemented and tested on Ubuntu Linux platforms.
-The portability of the proposed approach to other operating systems or large-scale distributed cloud environments is not evaluated in this work and remains a topic for future research.
+\textbf{Chapter 2 --- Literature Review} presents the theoretical foundations of Reinforcement Learning, network simulation environments, automated incident response mechanisms, and network traffic feature extraction techniques. This chapter also identifies the research gaps that the project addresses.
 
-\section{Significance of the Study}
+\textbf{Chapter 3 --- Methodology} describes the system design, including the MDP problem formulation, PPO agent architecture, 20-feature extraction pipeline, Containernet network topology, and real-time enforcement mechanism via iptables.
 
-This study contributes to the field of cybersecurity by exploring the feasibility of autonomous network defense using Reinforcement Learning.
-By formulating network defense as a sequential decision-making problem, the proposed approach advances beyond traditional rule-based and reactive security mechanisms toward adaptive and self-learning defense systems.
+\textbf{Chapter 4 --- Experimental Results} presents and analyzes the system evaluation results, including attack detection accuracy, training convergence curves, comparison with baseline methods, and practical implications.
 
-From a technical perspective, the project provides a practical implementation of an RL-based defense agent integrated with a simulated network environment.
-The combination of Gymnasium, Mininet, and Linux-based mitigation techniques demonstrates how reinforcement learning can be applied to real-world-inspired network scenarios.
-The integration with Wazuh SIEM further illustrates the potential for combining autonomous defense agents with existing security monitoring platforms to enhance visibility and operational awareness.
+\textbf{Chapter 5 --- Discussion} interprets the findings in a broader context, discusses limitations, and proposes future research directions.
 
-From an academic standpoint, this research offers empirical insights into the behavior of reinforcement learning agents under diverse cyber attack scenarios.
-The evaluation results contribute to a better understanding of how autonomous agents balance security effectiveness with service availability, a critical trade-off in network defense.
-The findings may serve as a reference for future studies investigating adaptive cybersecurity systems and reinforcement learning-based decision-making.
+\textbf{Chapter 6 --- Conclusion} synthesizes the main contributions and provides final remarks on the feasibility of Reinforcement Learning for autonomous network defense.
 
-Finally, from a practical and industrial perspective, the proposed framework highlights the potential of AI-driven autonomous defense systems to reduce the operational burden on human security analysts.
-By automating detection and response processes, such systems can mitigate alert fatigue and enable faster, more consistent reactions to cyber threats.
-This study thus lays foundational groundwork for future research and development of intelligent, scalable, and resilient network defense solutions.
 
-% --- CHƯƠNG 2 ---
 \chapter{LITERATURE REVIEW}
-\section{Reinforcement Learning Fundamentals}
 
-Reinforcement Learning (RL) is a branch of machine learning that focuses on enabling agents to learn optimal behaviors through interaction with an environment.
-Unlike supervised learning, which relies on labeled datasets, RL allows an agent to learn directly from experience by receiving feedback in the form of rewards or penalties.
-This learning paradigm is particularly suitable for dynamic and adversarial domains such as cybersecurity, where labeled data is scarce and attack strategies evolve continuously.
+\section{Review of Previous Studies}
 
-\subsection{Reinforcement Learning Framework}
+\subsection{Fundamentals of Reinforcement Learning}
 
-The reinforcement learning process is typically modeled as an interaction between an agent and an environment.
-At each discrete time step, the agent observes the current state of the environment and selects an action according to its policy.
-In response, the environment transitions to a new state and provides a scalar reward that reflects the quality of the agent’s action.
+Reinforcement Learning (RL) is a subfield of machine learning focused on enabling Agents to learn optimal behaviors through interaction with an Environment. Unlike supervised learning, which relies on labeled datasets, RL allows an Agent to learn directly from experience by receiving feedback in the form of rewards or penalties. This learning paradigm is particularly well-suited for dynamic and adversarial domains like cybersecurity, where labeled data is scarce, and attack strategies continuously evolve.
 
-This interaction is commonly formalized using a Markov Decision Process (MDP), defined by a tuple $(S, A, P, R, \gamma)$, where:
+\subsubsection*{Agent Classification and Architecture}
+
+According to Russell \& Norvig's taxonomy in \textit{Artificial Intelligence: A Modern Approach}, intelligent systems can be classified by their architectural complexity. In the context of cybersecurity, lower-level architectures have demonstrated significant limitations when confronting modern, polymorphic threats.
+
+\begin{table}[htbp]
+\centering
+\caption{Classification of Intelligent Agents in Cybersecurity}
+\label{tab:agent_classification}
+\begin{tabular}{L{3.5cm} L{5cm} L{6cm}}
+\toprule
+\textbf{Architecture} & \textbf{Cybersecurity Equivalent} & \textbf{Demonstrated Limitations} \\
+\midrule
+Simple Reflex & condition--action rules & Fails in partially observable networks. \\
+Model-Based Reflex & Maintains internal state; uses condition-action rules. & Lacks a utility function for optimization; cannot learn. \\
+Goal-Based & Utilizes search/planning to achieve explicit goals. & Cannot easily balance competing goals (e.g., security vs. availability). \\
+Utility-Based & Chooses actions maximizing expected utility. & Utility must be pre-defined and static. \\
+\textbf{Learning Agent} & Features a Critic, Learning Element, Performance Element, and Problem Generator; improves via experience. & Requires robust feedback mechanisms and sufficient training data. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In the context of Deep Reinforcement Learning for cybersecurity, the \textit{Performance element} corresponds to the policy neural network mapping observations to actions, the \textit{Critic} to the value network estimating state values, the \textit{Learning element} to the optimization algorithm updating the weights, and the \textit{Problem generator} to the dynamic simulated network environment.
+
+\subsubsection*{Task Environment Analysis}
+
+To justify the application of Deep RL, the network defense domain must be analyzed according to its fundamental task environment properties:
+
+\begin{table}[htbp]
+\centering
+\caption{Task Environment Analysis for Network Defense}
+\label{tab:task_environment}
+\begin{tabular}{L{3cm} L{4cm} L{8cm}}
+\toprule
+\textbf{Property} & \textbf{Value} & \textbf{Design Consequence} \\
+\midrule
+Observability & \textbf{Partially Observable} & The Agent cannot directly observe the attacker's true intent; it only observes network traffic manifestations. \\
+Determinism & \textbf{Stochastic} & The same defensive action may yield different results due to network noise, latency, or TCP retries. \\
+Episodicity & \textbf{Sequential} & Current defensive actions directly influence future network states and Agent responses. \\
+Dynamics & \textbf{Dynamic} & The network environment changes continuously even when the Agent takes no action. \\
+State/Action & \textbf{Continuous / Discrete} & High-dimensional continuous observation space with discrete mitigation actions. \\
+Adversarial & \textbf{Multi-agent / Adversarial} & The presence of an intelligent attacker creates a non-stationary environment. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These properties confirm that traditional rule-based mechanisms are insufficient, necessitating an adaptive, learning-based approach.
+
+\subsubsection*{The Partially Observable Markov Decision Process (POMDP)}
+
+Because network traffic is only partly observable and unpredictable, the interaction between the defense agent and the environment is modeled as a \textbf{Partially Observable Markov Decision Process (POMDP)}, defined by the 7-tuple $\langle \mathcal{S}, \mathcal{A}, \mathcal{O}, T, Z, R, \gamma \rangle$:
+
+\begin{table}[htbp]
+\centering
+\caption{POMDP Components in Network Defense}
+\label{tab:pomdp_components}
+\begin{tabular}{C{1.5cm} L{13cm}}
+\toprule
+\textbf{Symbol} & \textbf{Definition} \\
+\midrule
+$\mathcal{S}$ & \textbf{State Space}: The true state of the network (e.g., true attacker intent, hidden connections). \\
+$\mathcal{A}$ & \textbf{Action Space}: Available defensive maneuvers (Allow, RateLimit, Redirect, Block). \\
+$\mathcal{O}$ & \textbf{Observation Space}: The observable network features (traffic statistics, HTTP payloads). \\
+$T(s'|s,a)$ & \textbf{Transition Model}: Probability of moving to state $s'$ given state $s$ and action $a$. \\
+$Z(o|s',a)$ & \textbf{Observation Model}: Probability of observing $o$ given the true state $s'$ and action $a$. \\
+$R(s,a)$ & \textbf{Reward Function}: Scalar feedback balancing mitigation success and service availability. \\
+$\gamma$ & \textbf{Discount Factor}: $\gamma \in [0, 1]$, balancing immediate and long-term consequences. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Solving a POMDP exactly requires maintaining a \textbf{belief state} $b$, which is a probability distribution over all possible underlying states $\mathcal{S}$. The belief state is updated after each action $a$ and observation $o$ using the following Bayesian update:
+
+\begin{equation}
+b'(s') = \eta \cdot Z(o\mid s',a) \sum_{s \in \mathcal{S}} T(s'\mid s,a)\, b(s)
+\end{equation}
+
+where $\eta$ is a normalization constant (derived from the denominator of Bayes' rule to ensure the distribution sums to one). For complex networks with many states, this process is too demanding to compute exactly. Instead, practical systems construct an \textbf{approximate sufficient statistic} using an engineered observation vector $o \in \mathcal{O}$ that captures sufficient history and current context to approximate the Markov property, so the problem can be treated as a standard MDP.
+
+\subsubsection*{Mathematical Foundations of Reinforcement Learning}
+
+The primary objective of a reinforcement learning Agent is to learn a policy $\pi$ that maximizes the expected \textbf{Cumulative Discounted Return}, denoted as $G_t$:
+
+\begin{equation}
+G_t = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}
+\end{equation}
+
+where $\gamma \in [0, 1]$ is the discount factor that determines the present value of future rewards. To evaluate the quality of states and actions, RL frameworks utilize two fundamental functions:
 \begin{itemize}
-    \item $S$ represents the set of possible states.
-    \item $A$ denotes the set of available actions.
-    \item $P(s'|s,a)$ defines the state transition probability.
-    \item $R(s,a)$ is the reward function.
-    \item $\gamma \in [0,1]$ is the discount factor that balances immediate and future rewards.
+    \item \textbf{State-Value Function $V^\pi(s)$}: The expected return when starting from state $s$ and following policy $\pi$.
+    \item \textbf{Action-Value Function $Q^\pi(s,a)$}: The expected return when taking action $a$ in state $s$ and subsequently following policy $\pi$.
 \end{itemize}
 
-The objective of the agent is to learn a policy $\pi(a|s)$ that maximizes the expected cumulative reward over time.
-In the context of network defense, this corresponds to learning sequences of mitigation actions that reduce attack impact while maintaining acceptable system performance.
+In modern Actor-Critic architectures, the \textbf{Advantage Function} $A^\pi(s,a)$ is employed to reduce variance during training. It measures how much better a specific action is compared to the average behavior at that state:
 
-\subsection{Model-Free and Model-Based Reinforcement Learning}
+\begin{equation}
+A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)
+\end{equation}
 
-Reinforcement learning algorithms can be broadly categorized into model-based and model-free approaches.
-Model-based RL methods attempt to learn or utilize an explicit model of the environment’s dynamics, which can then be used for planning and decision-making.
-While such methods can be sample-efficient, accurately modeling complex network environments and attacker behaviors is often impractical.
+\subsubsection*{Model-Based and Model-Free Reinforcement Learning}
 
-Model-free RL, on the other hand, learns optimal policies directly from interactions without requiring an explicit model of the environment.
-These methods are more commonly applied in cybersecurity research due to their flexibility and ability to handle complex, partially observable environments.
-Popular model-free approaches include value-based methods and policy-based methods.
+Reinforcement learning algorithms are broadly categorized as either model-based or model-free. Model-based RL methods try to learn or utilize explicit models of how the environment works, which can then be used for planning and decision-making. While these methods may offer sample efficiency, accurately modeling complex network environments and attacker behaviors is often impractical.
 
-\subsection{Deep Reinforcement Learning}
+In contrast, model-free RL derives optimal policies directly from interactions with the environment, without requiring an explicit model. These methods are more prevalent in cybersecurity research due to their flexibility and ability to manage complex, partially observable environments. Common model-free approaches include value-based and policy-based methods.
 
-Traditional reinforcement learning techniques struggle to scale to environments with large or continuous state spaces.
-Deep Reinforcement Learning (DRL) addresses this limitation by integrating deep neural networks as function approximators for value functions or policies.
+\subsubsection*{Deep Reinforcement Learning and PPO}
 
-Value-based DRL methods, such as Deep Q-Networks (DQN), approximate the action-value function using neural networks and select actions that maximize expected rewards.
-Policy-based methods, in contrast, directly optimize the policy function and are often better suited for environments with continuous or high-dimensional action spaces.
+Traditional reinforcement learning techniques struggle to scale to environments featuring massive or continuous state spaces. Deep Reinforcement Learning (DRL) addresses this limitation by integrating deep neural networks as function approximators. DRL methods are broadly categorized into \textbf{Value-based methods}, such as Deep Q-Networks (DQN) \cite{mnih2015}, which approximate the action-value function to maximize expected rewards, and \textbf{Policy-based methods}, which directly optimize the policy function. Policy-based approaches are typically better suited for high-dimensional action spaces and stochastic environments common in network security.
 
-Among modern policy-based algorithms, Proximal Policy Optimization (PPO) has gained widespread adoption due to its stability and sample efficiency.
-PPO constrains policy updates to prevent overly large changes, thereby improving training stability.
-These characteristics make PPO particularly attractive for network defense scenarios, where unstable policies may lead to disruptive or overly aggressive mitigation actions.
+Among modern policy-based algorithms, \textbf{Proximal Policy Optimization (PPO)} has emerged as the standard approach due to its superior balance between sample efficiency and training stability. PPO optimizes a \textbf{Clipped Surrogate Objective} to ensure that policy updates do not deviate too drastically from the previous policy:
 
-Overall, reinforcement learning provides a flexible and powerful framework for autonomous decision-making.
-Its ability to learn from interaction and adapt to changing environments forms the theoretical foundation for the AI-based network defense agent proposed in this study \cite{suttonBarto2018,schulmanPPO2017}.
+\begin{equation}
+L^{CLIP}(\theta) = \hat{\mathbb{E}}_t \left[ \min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t) \right]
+\end{equation}
 
-\section{Network Simulation Environments}
-
-Effective training and evaluation of reinforcement learning agents in cybersecurity require controlled, reproducible, and observable environments.
-Deploying learning agents directly in production networks poses significant risks, including service disruption and unintended security violations.
-As a result, network simulation environments have become an essential research tool for developing and validating autonomous defense mechanisms.
-
-\subsection{Role of Simulation in Cybersecurity Research}
-
-Network simulations enable researchers to model complex infrastructures, generate realistic attack traffic, and observe system behavior under adversarial conditions.
-Unlike static datasets, simulated environments support interactive learning, where an agent’s actions directly influence future network states.
-This characteristic aligns naturally with reinforcement learning, which depends on continuous agent–environment interaction.
-
-Simulation-based approaches also allow the safe execution of destructive attack scenarios such as Distributed Denial-of-Service (DDoS), brute-force authentication attacks, and reconnaissance scanning.
-By isolating these activities from real-world systems, researchers can evaluate defense strategies without ethical or operational concerns.
-Moreover, simulation environments facilitate repeatable experiments, enabling fair comparisons between different learning algorithms and defense policies.
-
-\subsection{Mininet for Network Emulation}
-
-Mininet is a widely adopted network emulation framework that allows the creation of virtual networks using lightweight Linux containers.
-It provides realistic network behavior by leveraging the Linux kernel’s networking stack, enabling accurate modeling of latency, bandwidth, and packet loss.
-This level of fidelity makes Mininet suitable for simulating enterprise-scale network topologies, including routers, switches, servers, and end hosts.
-
-In cybersecurity research, Mininet has been extensively used to study intrusion detection systems, traffic analysis, and automated defense mechanisms.
-Its ability to dynamically reconfigure network topologies during runtime allows researchers to simulate evolving attack surfaces and defensive responses.
-Furthermore, Mininet integrates seamlessly with security tools such as Iptables, TC (Traffic Control), and packet inspection frameworks, enabling low-level enforcement of defensive actions.
-
-\subsection{Reinforcement Learning Environments with Gymnasium}
-
-Gymnasium, the successor of OpenAI Gym, provides a standardized interface for reinforcement learning environments.
-It defines clear abstractions for state spaces, action spaces, reward functions, and episode termination conditions.
-These abstractions simplify the integration of complex environments with reinforcement learning algorithms and training frameworks.
-
-In the context of network defense, Gymnasium serves as the bridge between the reinforcement learning agent and the simulated network.
-Network metrics such as traffic volume, connection rates, packet entropy, and alert signals can be encoded into numerical state representations.
-Similarly, defensive actions such as IP blocking, rate limiting, or traffic redirection can be mapped into discrete or continuous action spaces.
-
-The use of Gymnasium ensures compatibility with widely adopted reinforcement learning libraries, including Stable Baselines3.
-This compatibility allows rapid experimentation with modern deep reinforcement learning algorithms while maintaining reproducibility and modularity.
-
-\subsection{Hybrid Simulation Architectures}
-
-Recent research increasingly adopts hybrid simulation architectures that combine network emulation platforms with reinforcement learning frameworks.
-In such architectures, Mininet is responsible for generating realistic network behavior, while Gymnasium manages the reinforcement learning loop.
-This separation of concerns enables flexible experimentation and simplifies system maintenance.
-
-Hybrid environments also support the integration of monitoring and visualization tools, such as Security Information and Event Management (SIEM) systems.
-By feeding simulated network logs into SIEM platforms, researchers can observe how autonomous agents influence security metrics over time.
-This approach closely resembles real-world operational settings, enhancing the practical relevance of experimental results.
-
-Overall, network simulation environments form the experimental backbone of autonomous cybersecurity research.
-By combining realistic network emulation with standardized reinforcement learning interfaces, these environments enable the safe and effective development of adaptive defense agents \cite{lantzMininet2010,gymnasium2023}.
-
-\section{Automated Incident Response Mechanisms}
-
-As cyber attacks become increasingly fast, scalable, and automated, traditional manual incident response processes are no longer sufficient.
-Security Operation Centers (SOCs) often face delayed response times due to alert overload, human error, and limited situational awareness.
-Automated Incident Response (AIR) mechanisms aim to address these challenges by enabling rapid, consistent, and adaptive defensive actions.
-
-\subsection{From Detection to Response Automation}
-
-Conventional security systems primarily focus on detection, leaving response decisions to human operators.
-While Intrusion Detection Systems (IDS) can identify suspicious activities, the lack of automated enforcement allows attackers to continue exploiting systems during response delays.
-Recent research emphasizes the necessity of coupling detection mechanisms with automated response to minimize the attack dwell time.
-
-Automation enables immediate execution of predefined or adaptive actions once malicious behavior is identified.
-These actions include blocking malicious IP addresses, throttling abnormal traffic, isolating compromised hosts, or redirecting attackers to deception environments.
-By reducing reliance on manual intervention, automated response systems significantly improve reaction speed and operational consistency.
-
-\subsection{Rule-Based and Policy-Based Response Systems}
-
-Early automated response systems relied on static rules and predefined security policies.
-For example, if a connection threshold is exceeded, an IP address may be automatically blacklisted.
-While effective against known attack patterns, such rule-based approaches struggle to handle evolving threats and often generate false positives.
-
-Policy-based systems attempt to improve flexibility by defining higher-level response objectives.
-However, these systems still depend heavily on expert-defined policies and lack the ability to learn from environmental feedback.
-As attack strategies become more adaptive, static response logic increasingly fails to maintain an optimal balance between security and service availability.
-
-\subsection{Reinforcement Learning for Adaptive Incident Response}
-
-Reinforcement Learning (RL) introduces a paradigm shift in automated incident response by enabling agents to learn optimal defense strategies through interaction with the environment.
-Instead of relying on fixed rules, RL agents evaluate the consequences of their actions using reward signals derived from security and performance metrics.
-This approach allows the system to dynamically adapt response strategies to different attack intensities and patterns.
-
-In network defense scenarios, RL agents can autonomously select actions such as blocking, rate limiting, or monitoring based on the observed network state.
-Over time, the agent learns to minimize security risks while avoiding unnecessary disruptions to legitimate traffic.
-Several studies demonstrate that RL-based response systems outperform static approaches in handling complex, multi-stage attacks \cite{lopez2020application,nguyen2021deep}.
-
-\subsection{Low-Level Enforcement Mechanisms}
-
-Effective automated response requires reliable enforcement mechanisms at the network and system levels.
-Linux kernel-level tools such as Iptables and Traffic Control (TC) are commonly used to implement real-time defensive actions.
-Iptables enables fine-grained packet filtering and connection blocking, while TC allows dynamic traffic shaping and rate limiting.
-
-These mechanisms operate at a low level, ensuring minimal latency and high enforcement accuracy.
-By integrating RL decision-making with kernel-level controls, automated defense systems can respond to attacks with both intelligence and speed.
-Such integration bridges the gap between high-level AI reasoning and practical network security enforcement.
-
-\subsection{Deception-Based Response and Honeypots}
-
-Deception techniques play an increasingly important role in modern incident response strategies.
-Honeypots are decoy systems designed to attract attackers and observe malicious behavior without risking production assets.
-By redirecting suspicious traffic to honeypots, defenders can gather valuable intelligence while reducing direct attack impact.
-
-Automated redirection mechanisms allow deception to be applied dynamically, based on real-time threat assessments.
-When combined with RL, deception strategies can be selectively activated to maximize intelligence gain while minimizing system disruption.
-This adaptive use of honeypots enhances both defensive effectiveness and situational awareness.
-
-\subsection{Integration with SIEM Systems}
-
-Security Information and Event Management (SIEM) systems aggregate and correlate security logs from multiple sources to provide centralized visibility.
-Integrating automated response mechanisms with SIEM platforms allows administrators to monitor defensive actions and system performance in real time.
-Visualization and alert correlation improve trust in autonomous systems by providing transparency and auditability.
-
-In research environments, SIEM integration enables quantitative evaluation of response effectiveness through metrics such as alert reduction, response latency, and attack mitigation success.
-These insights are critical for validating autonomous defense agents and assessing their readiness for real-world deployment \cite{ibmSOAR2023,honeypotSurvey2021}.
-
-\section{Feature Engineering for Network Traffic}
-
-Feature engineering plays a critical role in applying machine learning and reinforcement learning techniques to network security.
-Raw network traffic, consisting of packets and flows, is inherently high-dimensional, noisy, and heterogeneous.
-Without appropriate feature representation, learning agents may struggle to distinguish between benign and malicious behaviors.
-
-\subsection{Packet-Level and Flow-Level Features}
-
-Network traffic features can generally be categorized into packet-level and flow-level representations.
-Packet-level features include attributes such as source and destination IP addresses, protocol types, packet sizes, and TCP flags.
-While packet-level data provides fine-grained visibility, it often results in high computational overhead and limited temporal context.
-
-Flow-level features aggregate packets sharing common characteristics within a time window.
-Common flow attributes include connection duration, number of packets, byte counts, average packet size, and inter-arrival times.
-Flow-based representations reduce data dimensionality and better capture behavioral patterns, making them more suitable for real-time analysis.
-
-\subsection{Statistical and Behavioral Features}
-
-Beyond basic header information, statistical features provide insights into traffic dynamics.
-Metrics such as packet rate, connection frequency, entropy of source or destination addresses, and variance of packet sizes are commonly used.
-These features are effective in detecting volumetric attacks such as Denial-of-Service (DoS) and Distributed Denial-of-Service (DDoS).
-
-Behavioral features capture deviations from normal traffic patterns over time.
-Examples include sudden spikes in connection attempts, abnormal protocol usage, and repeated authentication failures.
-Such features are particularly valuable for identifying reconnaissance activities and brute-force attacks.
-
-\subsection{Feature Extraction Tools and Techniques}
-
-Automated feature extraction tools are essential for real-time network monitoring.
-Scapy is a widely used Python-based framework for packet capturing and protocol analysis.
-It enables flexible parsing of packet headers and payloads, allowing custom feature extraction pipelines to be implemented.
-
-In simulated environments, packet capture can be combined with flow aggregation techniques to generate structured feature vectors.
-These vectors serve as numerical representations of the network state and are suitable as inputs for reinforcement learning agents.
-Efficient feature extraction ensures that state observations accurately reflect the current security posture of the network.
-
-\subsection{State Representation for Reinforcement Learning}
-
-In reinforcement learning-based defense systems, feature engineering directly influences the design of the state space.
-The state representation must balance informativeness with computational efficiency.
-Overly complex states may slow training and cause instability, while overly simplistic states may omit critical security signals.
-
-Typical state vectors may include normalized traffic statistics, alert counts, and resource utilization metrics.
-By encoding both security-related and performance-related features, the agent can learn policies that balance attack mitigation with service availability.
-This holistic state representation is essential for autonomous decision-making in dynamic network environments.
-
-\subsection{Feature Set for Defense Agent}
-
-This research employs a comprehensive set of 12 engineered features designed to capture both network-level and application-level attack indicators. Each feature is normalized to the range $[0, 1]$ to facilitate stable reinforcement learning training. The features are categorized into network traffic features and application layer features.
-
-\subsubsection{Network Traffic Features}
+where $r_t(\theta)$ is the probability ratio between the new and old policies, and $\epsilon$ is a hyperparameter (typically 0.2) that constrains the update. \textbf{The selection of PPO for this research is justified by several critical factors when compared to other DRL algorithms:}
 
 \begin{itemize}
-    \item \textbf{Feature 1 - Packet Rate:} Measures the average packet rate per second, calculated as $v = \min(\text{count} / 1000, 1.0)$. A threshold of $>1200$ packets per second indicates potential volumetric DoS/DDoS attacks \cite{nistSP800189,mahajanIMAP}.
-    
-    \item \textbf{Feature 2 - SYN Ratio:} Computes the ratio of SYN packets to ACK packets using $v = \min((\text{SYN} / \max(\text{ACK}, 1)) / 2.0, 1.0)$. A ratio exceeding 2.0 suggests SYN flood attacks with incomplete handshakes \cite{rfc4987,wangSYN2002}.
-    
-    \item \textbf{Feature 3 - Distinct Port Count:} Tracks unique destination ports accessed within a time window via $v = \min(\text{unique\_dst\_ports} / 50, 1.0)$. More than 20 ports accessed within 60 seconds triggers port scanning alerts \cite{jungPortscan2004}.
-    
-    \item \textbf{Feature 4 - RST Ratio:} Measures the proportion of RST (reset) packets to total packets as $v = \text{RST\_count} / \max(\text{Total\_pkts}, 1)$. A ratio exceeding 0.20 indicates potential backscatter from scanning activities \cite{paxsonBro1999}.
-    
-    \item \textbf{Feature 5 - Payload Length:} Normalizes payload size against the standard MTU using $v = \min(\text{len(payload)} / 1500, 1.0)$. Payloads exceeding 1500 bytes may indicate fragmentation attacks \cite{rfc894,rfc791}.
+    \item \textbf{Superior Stability over SAC}: Soft Actor-Critic (SAC) is often more sample-efficient because it is off-policy, but it can be unstable in environments with changing conditions and unpredictable rewards, like dynamic network traffic. PPO’s on-policy method and clipping mechanism help ensure steady improvement and prevent 'policy collapse' when an agent reacts too strongly to sudden network changes.
+    \item \textbf{Addressing DQN Limitations}: Traditional Deep Q-Networks (DQN) only work with discrete action spaces and often overestimate value functions. DQN also cannot handle the complex, continuous state spaces needed for advanced intrusion detection. PPO, as a policy-gradient method, manages these challenges more reliably.
+    \item \textbf{Operational Safety}: In network environments, unstable updates can cause serious service disruptions. PPO’s clipping keeps the agent’s learning within safe limits, preventing the disruptive or overly aggressive mitigation actions often that sometimes happen with basic policy gradient methods.
+    \item \textbf{Computational Efficiency}: PPO delivers performance comparable to TRPO but with significantly lower overhead, making it suitable for near-real-time requirements.
 \end{itemize}
 
-\subsubsection{Application Layer Features}
+Overall, reinforcement learning provides a flexible and robust framework for autonomous decision-making. Its capability to learn from interaction and adapt to fluctuating environments forms the theoretical foundation for the AI-driven network defense Agent proposed in this study \cite{schulmanPPO2017}.
+
+\subsection{Network Emulation and Simulation Environments}
+
+The training and evaluation of reinforcement learning agents in cybersecurity require environments that are controlled, reproducible, and observable. Deploying learning agents directly into production networks is risky, as it may cause service disruption or unintended security issues. To solve this, this research adopts a two-stage development framework: a high-speed custom simulation environment for training, followed by a high-fidelity emulation testbed for validation. This design helps connect theoretical learning models with more realistic deployment conditions.
+
+\subsubsection*{The Two-Stage Approach: Training vs. Validation}
+
+To balance the requirements of sample efficiency and operational realism, the proposed system is developed in two distinct stages:
 
 \begin{itemize}
-    \item \textbf{Feature 6 - HTTP Error Ratio:} Calculates the proportion of 4xx and 5xx HTTP responses as $v = \text{count}(4xx, 5xx) / \text{total\_responses}$. A ratio above 0.25 suggests fuzzing or enumeration attempts \cite{owaspAppSensor}.
-    
-    \item \textbf{Feature 7 - SQL Injection Signature:} Detects SQL injection patterns using regex matching with $v = \min(\text{count}(\text{Regex\_SQL}) / 3, 1.0)$. Any match triggers critical alerts based on OWASP ModSecurity Core Rule Set \cite{owaspModSecCRS}.
-    
-    \item \textbf{Feature 8 - XSS Signature:} Identifies cross-site scripting patterns via $v = \min(\text{count}(\text{Regex\_XSS}) / 3, 1.0)$, detecting tags such as \texttt{<script>} and event handlers \cite{owaspModSecCRS}.
-    
-    \item \textbf{Feature 9 - SQL Special Character Ratio:} Measures the density of SQL syntax characters ($'$, $-$, $;$, $\#$) using $v = \text{count}([' - ; \#]) / \text{len(payload)}$. Ratios above 0.08 indicate obfuscated SQLi attempts \cite{kruegelVigna2003}.
-    
-    \item \textbf{Feature 10 - XSS Special Character Ratio:} Computes the density of HTML/JavaScript characters ($<$, $>$, $/$, $($ $)$, $=$) as $v = \text{count}([< > / ( ) =]) / \text{len(payload)}$. Ratios exceeding 0.15 suggest XSS payloads \cite{kruegelVigna2003}.
-    
-    \item \textbf{Feature 11 - Percent Encoding Ratio:} Detects URL encoding evasion by calculating $v = \text{count}('\%') / \text{len(payload)}$. Ratios above 0.30 indicate double URL encoding attacks \cite{rfc3986}.
-    
-    \item \textbf{Feature 12 - Numeric Ratio:} Measures digit density via $v = \text{count(digits)} / \text{len(payload)}$ to detect hex injection or integer-based SQLi. Ratios above 0.40 in text fields are classified as malicious \cite{kozik2015}.
+    \item \textbf{Training Stage (Custom Simulation)}: The agent is mainly trained in a specialized closed-loop environment called IDSDefenseEnv. This environment uses probabilistic models, such as Normal, Poisson, and Beta distributions, to simulate network behavior ranging from normal traffic to multi-stage attacks such as SQL injection and XSS. The simulation is based on real-world traffic patterns from well-established datasets such as CIC-IDS2018, so that the learned policies reflect measured network statistics while still allowing the high-speed execution needed for DRL training.
+    \item \textbf{Validation Stage (Network Emulation)}: After training, the agent is deployed in a Mininet-based emulation environment. Unlike the training stage, which relies on simulated state transitions, this stage uses the real Linux networking stack. Actions such as blocking and rate-limiting are applied through iptables and tc on virtual hosts. This stage is used to validate the agent’s enforcement capability under realistic network latency, TCP/IP stack behavior, and service-level performance conditions.
 \end{itemize}
 
-These features are extracted in real-time from network packets and HTTP logs using Scapy and custom parsing modules. The thresholds are derived from established security research and validated against benchmark datasets including CIC-IDS2017 and UNSW-NB15.
+By combining an abstract, closed-loop simulation for learning with a kernel-level execution for verification, this research provides a practical way to develop adaptive agents that are both intelligent and usable in real deployment.
 
-\subsection{Challenges in Network Feature Engineering}
+\subsubsection*{The Role of Emulation in Cybersecurity Research}
 
-Feature engineering for network traffic presents several challenges.
-Encrypted traffic limits visibility into payload contents, requiring reliance on metadata and statistical features.
-Additionally, network behavior is highly dynamic, leading to concept drift that can degrade model performance over time.
+Network simulation helps researchers represent complex infrastructures, generate realistic attack traffic, and observe how systems behave under adversarial conditions. Unlike static datasets, a simulated environment supports interactive learning, where the agent’s actions can change future network states. This makes simulation well suited to reinforcement learning, which relies on continuous interaction between the agent and the environment.
 
-Another challenge lies in feature selection and normalization.
-Redundant or highly correlated features may negatively impact learning efficiency.
-Therefore, careful feature design and continuous evaluation are necessary to maintain robust and adaptive defense performance \cite{scapy2007,flowFeatureSurvey2020}.
+Simulation also makes it possible to safely execute destructive attack scenarios, such as DDoS, brute-force login attempts, and reconnaissance scanning. Since these activities are isolated from real-world systems, researchers can evaluate defense strategies without causing operational or ethical problems. In addition, simulated environments make experiments repeatable, allowing fair comparisons across different algorithms and defense strategies.
 
-\section{Summary and Research Gap}
+\subsubsection*{Mininet: From Abstract Simulation to High-Fidelity Emulation}
 
-This chapter reviewed the existing literature related to network security, reinforcement learning, automated incident response, and network traffic feature engineering.
-Traditional network defense mechanisms, such as rule-based firewalls and signature-based intrusion detection systems, remain effective against known attack patterns but struggle to adapt to novel and automated threats.
-The increasing scale and sophistication of cyber attacks have exposed the limitations of manual and static defense strategies.
+Mininet is a widely used network emulation framework that differs from traditional simulators by creating virtual networks in which each host runs on the real Linux kernel and uses the actual Linux networking stack. Rather than representing packet behavior through abstract mathematical models, Mininet relies on Linux network namespaces to create lightweight but realistic virtual hosts. As a result, these hosts can execute real binaries and interact with standard networking tools such as iptables, tc, and iproute2. This high level of realism makes it possible to evaluate defensive policies in an environment that closely resembles deployment on Linux-based production systems, thereby improving the practical transferability of the results.
 
-Recent advances in reinforcement learning demonstrate strong potential for adaptive and autonomous network defense.
-RL-based approaches enable systems to learn optimal response policies through interaction with dynamic environments, offering advantages over fixed-rule and policy-driven mechanisms.
-Research has shown that RL agents can effectively mitigate various attack types while considering system performance constraints.
+In the context of reinforcement learning, Mininet serves as a High-Fidelity Emulation Testbed. It permits the precise modeling of latency, bandwidth, and packet loss as they would occur on physical hardware, while supporting the dynamic reconfiguration of network topologies during runtime. By integrating with iptables and Traffic Control (tc), Mininet enables the Agent to face the same constraints and stochastic perturbations found in operational environments—an essential requirement for narrowing the gap between theoretical research and practical deployment.
 
-Network simulation environments, particularly those combining realistic emulation platforms with standardized RL interfaces, have become essential tools for cybersecurity research.
-Mininet enables high-fidelity modeling of network behavior, while Gymnasium provides a structured framework for agent–environment interaction.
-These environments allow safe, repeatable experimentation and facilitate the evaluation of autonomous defense strategies under controlled conditions.
+\subsubsection*{Reinforcement Learning Environments with Gymnasium}
 
-Despite these advancements, several research gaps remain.
-Many existing studies focus primarily on attack detection rather than closed-loop defense systems that integrate detection, decision-making, and enforcement.
-Furthermore, a significant portion of prior work evaluates defense effectiveness solely based on security metrics, without adequately considering the impact on legitimate traffic and service availability.
+Gymnasium, the successor to OpenAI Gym, provides a standardized interface for reinforcement learning environments. It delineates clear abstractions for the State space, Action space, reward function, and episode termination conditions. These abstractions simplify the integration of complex environments with reinforcement learning algorithms and training frameworks.
 
-Another limitation lies in the integration of learning agents with real-world enforcement mechanisms.
-While theoretical models demonstrate promising results, fewer studies implement low-level controls such as kernel-level packet filtering or traffic shaping.
-Additionally, the use of deception techniques, such as adaptive honeypots, is often treated as a static component rather than a dynamically learned response.
+Within the context of network defense, Gymnasium serves as the bridge between the reinforcement learning Agent and the simulated network. Network metrics such as traffic volume, connection rates, packet entropy, and alert signals can be encoded into numerical state representations. Similarly, defensive actions like IP blocking, rate limiting, or traffic redirection can be mapped to discrete or continuous action spaces.
 
-This research addresses these gaps by proposing an autonomous AI defense agent that operates in a closed-loop simulation environment.
-The system integrates reinforcement learning with realistic network emulation, low-level enforcement mechanisms, and deception-based defense strategies.
-By incorporating both security and performance metrics into the learning process, the proposed approach aims to achieve a balanced and practical solution for adaptive network defense.
+The utilization of Gymnasium ensures compatibility with widely adopted reinforcement learning libraries, including Stable Baselines3. This compatibility facilitates rapid experimentation with state-of-the-art deep reinforcement learning algorithms while maintaining reproducibility and modularity.
 
-The next chapter presents the system architecture and methodology, detailing the design of the simulation environment, the reinforcement learning framework, and the implementation of automated response mechanisms.
+\subsubsection*{Hybrid Simulation Architectures}
 
-\bibliographystyle{IEEEtran}
+Recent research increasingly adopts hybrid simulation architectures that fuse network emulation platforms with reinforcement learning frameworks. In such architectures, Mininet is responsible for generating realistic network behavior, while Gymnasium orchestrates the reinforcement learning loop. This separation of responsibilities enables flexible experimentation and simplifies system maintenance.
+
+Hybrid environments also support the integration of monitoring and visualization tools, such as Security Information and Event Management (SIEM) systems. However, it is critical to distinguish the role of SIEM from the Agent's primary observation loop. While SIEM platforms are utilized for \textbf{long-term audit, evidence storage, and human-centric visualization}, they are not the source of the RL Agent's real-time features. To ensure minimal latency and operational independence, the Agent relies on \textbf{dedicated high-speed network sensors (Sniffers)} that process traffic directly at the network interface. This separation prevents the inherent processing delays of SIEM log ingestion from impacting the Agent's 1-second decision window.
+
+Overall, network emulation environments form the empirical backbone of autonomous cybersecurity research. By combining realistic network emulation with standardized reinforcement learning interfaces and independent monitoring layers, these environments enable the safe and effective development of adaptive defense Agents \cite{lantzMininet2010}, \cite{gymnasium2023}.
+
+\subsection{The Evolution of Automated Incident Response}
+
+The trajectory of network defense has shifted from \textbf{Static Signature-Based Detection} (e.g., traditional Snort rules) to \textbf{Statistical Machine Learning}, and finally to \textbf{Autonomous Learning Agents}.
+Conventional security systems predominantly focus on detection, delegating response decisions to human operators. While Intrusion Detection Systems (IDS) can identify suspicious activities, the absence of automated enforcement permits attackers to continue exploiting the system during the response delay. \textbf{Recent research highlights the necessity of coupling detection mechanisms with automated responses to minimize attack dwell times.}
+
+Early automation (circa 2010s) centered on \textbf{Rule-Based and Policy-Based Response Systems}, which depended on static thresholds and predefined security policies. For instance, if a connection threshold is breached, an IP address might be automatically blacklisted. While effective against known attack patterns, such rule-based methods struggle to manage evolving, polymorphic threats and \textbf{frequently generate false positives} in high-traffic environments.
+
+The current frontier represents a shift toward \textbf{Reinforcement Learning for Adaptive Incident Response}. RL introduces a paradigm shift by enabling Agents to learn optimal defensive strategies through interaction with the Environment. Rather than relying on rigid rules, modern RL Agents evaluate the consequences of their actions utilizing reward signals derived from security and performance metrics. \textbf{This approach permits the system to dynamically tailor response strategies to varying attack intensities—an evolution from reactive blocking to proactive, intelligent mitigation.}
+
+In network defense scenarios, RL Agents can autonomously select actions such as blocking, rate limiting, or monitoring based on the observed network state. Over time, the Agent learns to mitigate security risks while avoiding unnecessary disruptions to legitimate traffic. \textbf{Several studies demonstrate that RL-based response systems outperform static methodologies in handling complex, multi-stage attacks.}
+
+\subsubsection*{Low-Level Enforcement Mechanisms}
+
+Effective automated response necessitates reliable enforcement mechanisms at the network and system levels. Linux kernel-level tools—primarily \textbf{iptables} and \textbf{Traffic Control (tc)}—are frequently employed to execute real-time defenses.
+
+\textbf{iptables} is the firewall management utility on Linux, operating at the kernel level to filter and route IP packets \cite{kroah2006linux}. It defines chains comprising multiple rules, each specifying matching criteria (address, port, protocol) and a target action (ACCEPT, DROP, REDIRECT, QUEUE). With an execution latency of $< 1$ms, \texttt{iptables} guarantees the near real-time response indispensable for network security. Primary actions include:
+
+\begin{itemize}
+    \item \textbf{ACCEPT}: Permits the packet to pass (default).
+    \item \textbf{DROP}: Discards the packet without sending a response.
+    \item \textbf{REDIRECT}: Reroutes the packet to an alternate port (utilized for honeypots).
+    \item \textbf{QUEUE}: Forwards the packet to userspace (where the RL Agent can process it).
+\end{itemize}
+
+\textbf{Traffic Control (tc)} is a traffic shaping utility that enables rate limiting and dynamic bandwidth throttling on network interfaces. In conjunction with \texttt{iptables}, TC permits the application of sophisticated defensive policies, such as limiting a specific IP to 10 packets per second.
+
+By integrating the decision-making of the RL Agent with these kernel-level controls, the automated defense system can react with both velocity (kernel) and intelligence (AI). This integration bridges the chasm between high-level reasoning and pragmatic network security enforcement.
+
+\subsubsection*{Deception-Based Response and Honeypots}
+
+Deception techniques increasingly play a pivotal role in modern incident response strategies. Honeypots are decoy systems designed to lure attackers and monitor malicious behavior without endangering production assets. By redirecting suspicious traffic to honeypots, defenders can accumulate valuable intelligence while mitigating direct attack impacts.
+
+\subsubsection*{Integration with SIEM Systems}
+
+Security Information and Event Management (SIEM) systems aggregate and correlate security logs from disparate sources to deliver centralized visibility. Integrating automated response mechanisms with SIEM platforms empowers administrators to oversee defensive actions and system performance in real-time. Alert visualization and correlation bolster trust in autonomous systems by conferring transparency and auditability.
+
+In research contexts, SIEM integration facilitates the quantitative evaluation of response efficacy through metrics such as alert reduction, response latency, and attack mitigation success. These insights are paramount for validating autonomous defense Agents and appraising their readiness for real-world deployment.
+
+\subsection{Feature Engineering and State Representation Design}
+
+Feature engineering is the process of transforming raw network data into a structured State representation that an RL Agent can interpret. However, a critical review of existing literature reveals a significant \textbf{"Information Asymmetry"} in how states are currently designed, spanning theoretical, operational, and adversarial dimensions.
+
+\subsubsection*{The Theory of Information Asymmetry in RL}
+
+In the broader context of reinforcement learning, \textbf{Information Asymmetry} is often a deliberate architectural choice used to stabilize training or improve skill transfer. \textbf{Galashov et al. (2019) \cite{galashov2019information}} demonstrated that imposing information constraints on certain policy components can force the Agent to learn more robust and reusable behaviors. Similarly, research into \textbf{Asymmetric Actor-Critic} architectures for Partially Observable Markov Decision Processes (POMDPs) suggests that providing "privileged information" to the Critic while restricting the Actor to real-world observations can significantly enhance convergence without introducing bias \cite{kaelbling2021informed}. Furthermore, hierarchical RL studies have shown that the trade-off between providing "too much" or "too little" history in the state representation determines whether learned skills are overly specific or too generalized \cite{merel2022priors}.
+
+\subsubsection*{Information Asymmetry in Cybersecurity}
+
+In cybersecurity, Information Asymmetry is an inherent property of the adversarial interaction. Many \textbf{Security Games} models emphasize that while an attacker can observe defensive maneuvers, the defender often cannot directly observe the attacker's actions, observing only the system's resulting state changes \cite{zhu2015game}. This is formally modeled as games with \textbf{incomplete information} or partial observability.
+
+Current research into \textbf{Adversarial Reinforcement Learning} in cyber simulations often grants the Agent access to internal system variables that are rarely available in real-world deployments, creating a gap between the "information set" in simulation and the signals available during operation \cite{nguyen2020adversarial}. As highlighted in recent surveys, this creates a distinct asymmetry between the ground-truth labels used during training and the local, noisy observations available to a defender in production infrastructures \cite{nguyen2023deep}. This asymmetry is not merely a technical flaw but a fundamental constraint of real-world cybersecurity, where the defender must operate under \textbf{Bounded Rationality} due to incomplete network visibility.
+
+\subsubsection*{The Dominance and Limitations of Traffic-Centric Features}
+
+In many studies, the problem of network defense via reinforcement learning is simplified into a classification task on static datasets such as NSL-KDD, AWID, or CSE-CIC-IDS2018. For instance, \textbf{Lopez-Martin et al. \cite{lopez2020application}} apply various Deep RL algorithms to intrusion detection, but the entire "environment" is merely a sampling function from the datasets. Rewards are calculated based on classification errors for individual records; thus, the framework is essentially supervised learning reformulated in RL terminology. Similarly, the \textbf{AE-SAC model \cite{gu2021effective}} and comparative studies on NSL-KDD/CICIDS2017 \cite{panigrahi2018detailed} evaluate performance entirely on pre-collected data, disconnected from a dynamic network system.
+
+The core limitation of this approach is the absence of a \textbf{feedback loop} between the Agent's actions and the system's subsequent state. When an Agent decides to block an IP or change defense configurations, a static dataset cannot reflect the resulting impact on traffic flow, latency, or service availability. This creates an \textbf{Offline-Online Asymmetry}: the model is trained on "dead" data with global statistics that are not available at decision-time in a live environment. Consequently, these systems operate in an \textbf{open-loop} manner, where actions serve only as right/wrong labels for historical logs rather than interventions in the network's evolution.
+
+Modern feature selection techniques, such as the \textbf{BBOFS-DRL} framework which uses binary butterfly optimization \cite{zhang2023bbofs} or hybrid feature selection for Random Forest models \cite{sahu2022hybrid}, still largely focus on optimizing classification accuracy on these static, "information-rich" offline spaces. This amplifies the risk of policy failure when transferred to a real-world infrastructure where only local, raw observations are available.
+
+\subsubsection*{The Payload-Metadata Gap in Web Defense}
+
+A granular analysis of recent literature (2022--2025) reveals a distinct divergence in how Reinforcement Learning is applied to network security, resulting in what this thesis defines as the \textbf{"Payload-Metadata Gap."}
+
+On one hand, RL research in \textbf{volumetric DDoS defense} is highly mature but remains almost exclusively focused on traffic metadata. Studies such as \textbf{Heseding (2022) \cite{heseding2022reinforcement}} utilize hierarchical heavy hitters and volume-based features (rate, bandwidth, flow frequency) to optimize TCAM filters at the data plane. Similarly, \textbf{Satpathy (2025) \cite{satpathy2025cloud}} proposes hybrid feature selection for DDoS detection in cloud environments, but the state representation relies entirely on flow-level statistics from datasets like CICDDoS2019, neglecting payload analysis. Even research targeting application-layer DDoS, such as \textbf{Feng et al. (2020) \cite{feng2020application}}, characterizes the environment through resource metrics (CPU/RAM/latency) rather than dissecting the malicious payloads of SQLi or XSS attacks.
+
+On the other hand, research into \textbf{Web Attack Defense (SQLi/XSS)} predominantly avoids Reinforcement Learning in favor of "heavy" Deep Learning or Natural Language Processing (NLP) models. Architectures using \textbf{CNN+LSTM (Tamang et al., 2024) \cite{tamang2024securing}} or hybrid deep networks (\textbf{Muttaqin \& Sudiana, 2024 \cite{muttaqin2024design}}) achieve high accuracy by processing raw HTTP strings and tokens. However, these NLP-heavy approaches introduce significant inference latency, making them impractical for the high-speed, kernel-level response loops required by RL Agents. Other machine learning-based WAFs (\textbf{Durm\c{u}\c{s}kaya \& Bayrakl\i, 2025 \cite{durmuskaya2025web}}) continue to focus on rich content representations that lack the lightweight, statistical nature necessary for on-policy learning in production environments.
+
+Furthermore, where Reinforcement Learning \textit{is} applied to exploits like XSS, it is currently skewed toward \textbf{offensive applications}. RL agents are utilized to evade filters (\textbf{Mondal et al., 2022 \cite{mondal2022xss}}), generate adversarial payloads (\textbf{Pasini et al., 2025 \cite{pasini2025xss}}), or automate black-box vulnerability detection (\textbf{Lee et al., 2022 \cite{lee2022link}}). There is a noticeable absence of research into \textbf{defensive, real-time RL Agents} that process lightweight payload features alongside traffic metadata to provide a unified, low-latency defense at the kernel level.
+
+\subsubsection*{Contextual Gap and the Snapshot Limitation}
+
+The common denominator of these studies is the lack of comprehensive representation of historical context and internal system states. The Agent primarily observes "snapshots" of current traffic, while the behavioral history of IPs, the Agent's previous decision chain, and service health indicators (latency, error rate, queue length, etc.) are not encoded into the state. Consequently, models may achieve high performance in typical attack scenarios but remain insensitive to low-rate/slow-rate attacks or sophisticated behavioral patterns that only manifest over longer durations. This void is defined as the \textbf{Contextual Gap}: the Agent lacks the temporal context and system state necessary to make truly rational defense decisions in a POMDP environment.
+
+\subsubsection*{The Enforcement Gap: Abstraction vs. Reality}
+
+Conversely, some studies build detailed simulation environments but stop at the research prototype level, failing to reach the enforcement layer of real systems. The work of \textbf{Feng, Li, and Nguyen \cite{shiravi2012}} on application-layer DDoS defense with RL is a prime example: the authors design a testbed using Open vSwitch and Mininet, observing 12 state features and choosing between actions like delay, drop, or block. However, the entire interaction is implemented within a simulator framework where rewards are calculated based on ground truth information available within the simulation.
+
+The \textbf{Enforcement Gap} arises because the actions in many studies are logical variables or abstract API calls (e.g., "block\_flow") within a simulator framework rather than real-world enforcement commands. Bridging this gap requires an architecture where the AI's high-level reasoning is directly coupled with authentic, low-level network controls.
+
+This thesis addresses the Enforcement Gap by deploying the RL Agent within a \textbf{Mininet-based emulation environment integrated with iptables/tc}. By executing defensive actions through real kernel-level rules and measuring rewards based on actual service metrics (latency, error rates), the system subjects the Agent to the authentic constraints of a Linux-based infrastructure. While Mininet remains an emulation running on a single physical host—limiting the scale and hardware diversity of a true production environment—it serves as a critical intermediary step. This \textbf{high-fidelity emulation} validates the feasibility of a closed-loop RL defense architecture at the kernel level, establishing a robust foundation for future deployment in complex, multi-tenant production networks.
+
+\subsubsection*{Extraction Challenges and Real-Time Constraints}
+
+Current feature extraction tools often face a trade-off between granularity and latency. While frameworks like Scapy \cite{scapy2007} offer deep protocol dissection, their overhead can become a bottleneck in high-speed networks. The challenge lies in engineering a state representation that is "Sufficiently Statistic" (capturing enough information to satisfy the Markov property) while remaining lightweight enough for a 20ms-50ms inference loop.
+
+\section{Summary of the Literature Review and Research Gaps}
+
+The literature review confirms that while Reinforcement Learning (RL) has moved beyond simple detection to adaptive response, the existing body of work suffers from three critical "Research Gaps" that this thesis aims to bridge:
+
+\begin{enumerate}
+    \item \textbf{Observation Gap (The Feedback Void)}: Existing models predominantly operate in an open-loop manner on static datasets, lacking a real-time feedback loop between Agent actions and environmental consequences.
+    \item \textbf{Contextual Gap (Temporal Fragmentation)}: State representations are often limited to instantaneous traffic snapshots, missing the historical behavioral context and internal system health metrics (latency, resources) necessary for rational decision-making in POMDPs.
+    \item \textbf{Enforcement Gap (Abstraction vs. Reality)}: There is a disconnect between high-level AI action selection and low-level kernel enforcement (e.g., \texttt{iptables}, \texttt{tc}), with many studies stopping at abstract simulation variables.
+\end{enumerate}
+
+This project addresses these critical research gaps by proposing an autonomous AI defense Agent operating within a \textbf{closed-loop emulation Environment}. The system integrates Reinforcement Learning with realistic network emulation, low-level enforcement mechanisms, and deception-based defensive strategies. By amalgamating both security and performance metrics into the learning process, the proposed methodology achieves a balanced and pragmatic solution for adaptive network defense.
+
+\subsubsection*{Future Directions in Autonomous Defense}
+
+The evolution of the field suggests that the next generation of autonomous defense will move toward \textbf{Multi-Agent Reinforcement Learning (MARL)}, where multiple specialized Agents collaborate to defend partitioned network segments. Furthermore, the integration of \textbf{Robust RL}—which accounts for adversarial perturbations during training—will likely be necessary to combat attackers who specifically target the AI's decision-making logic. This thesis provides the foundational architecture for such advancements by establishing a reliable, real-world enforcement pipeline.
+
+The subsequent chapter delineates the system architecture and methodology, detailing the design of the simulated Environment, the RL framework, and the implementation of automated response mechanisms.
+
+\section{Contribution of Research}
+
+Based on a comprehensive literature review, this thesis contributes to the field of automated network defense across technical, methodological, and practical dimensions.
+
+Technically, the research develops a \textbf{closed-loop automated defense architecture} specifically designed for \textbf{high-fidelity emulation environments}. This architecture provides a functional bridge between high-level AI decision-making and low-level kernel enforcement. Unlike traditional research limited to offline detection, the proposed system implements an integrated pipeline—spanning automated traffic processing, \textbf{RL inference}, and authentic defensive execution via \texttt{iptables} and \texttt{tc}. By operating within a dynamic emulation framework, the study effectively validates the feasibility of AI-driven defense beyond abstract mathematical models.
+
+Methodologically, the thesis proposes a \textbf{Hybrid State Representation} that resolves the "Information Asymmetry" identified in existing literature. By integrating environmental traffic metrics with agent-centric feedback signals, the proposed state vector encapsulates the consequences of previous actions and the temporal behavior of network entities. This design enables the Agent to better navigate the POMDP nature of the network environment, facilitating causal reasoning and optimizing the critical trade-off between aggressive threat mitigation and the preservation of service availability.
+
+Practically, the study provides empirical evidence that reinforcement learning can surpass static rule-based mechanisms in complex, adversarial scenarios. Through diverse attack vectors within the testbed, the system demonstrates robust adaptability to evolving threats while maintaining acceptable operational standards. This work serves as a proof-of-concept for the deployment of adaptive, learning-based defense agents in modern, software-defined network infrastructures.
+
+
+
+\chapter{RESEARCH METHODOLOGY}
+
+This chapter delineates the methodological framework of the research, designed to systematically address the Information Asymmetry, Contextual Gap, and Enforcement Gap identified in Chapter 2. It details the design, training, and deployment of the Reinforcement Learning defense Agent, formalizing the system architecture from data extraction and state representation to real-time enforcement and emulation-based validation.
+
+\section{Research Design}
+
+\subsection{Threat Model}
+
+To establish a clear scope for our defensive system, we first define a threat model that identifies potential adversaries and their capabilities. We assume an external attacker operating at the network level, targeting public-facing web services.
+
+Attacks are classified based on technical characteristics and impact level:
+\begin{itemize}
+    \item \textbf{Volumetric Attacks:} High-volume traffic (DDoS, SYN Flood) exhausting bandwidth and TCP connection tables.
+    \item \textbf{Reconnaissance:} Port Scan to map active services.
+    \item \textbf{Credential Attacks:} Brute-force attacks to bypass authentication information.
+    \item \textbf{Application Layer Attacks (L7):} Exploiting Web application layer vulnerabilities (Layer 7) through SQL Injection (SQLi) and Cross-Site Scripting (XSS) in HTTP payloads.
+\end{itemize}
+
+\textbf{Adversary constraints:} The attacker possesses no internal privileges (Black-box setup, unaware of defense policies).
+\textbf{Defender capabilities:} The defender maintains comprehensive monitoring at the edge router, TLS decryption capabilities via \texttt{SSLKEYLOGFILE}, and real-time enforcement authority via \texttt{iptables}.
+
+\subsection{Methodological Framework}
+
+The project approaches the network defense problem from the perspective of automatic sequential decision-making. The system not only detects attacks but also selects appropriate response actions according to each context.
+
+The research methodology is executed across two parallel branches:
+\begin{enumerate}
+    \item \textbf{Observation \& Feature Extraction Module:} Captures the network state. This module converts and statistically analyzes raw network traffic into semantic meaningful observation vectors for the Agent.
+    \item \textbf{RL Defense Agent:} Implements the \textbf{Learning Agent} architecture \cite{russell2020artificial} as detailed in the theoretical framework of Chapter 2. In this deployment:
+    \begin{itemize}
+        \item The \textbf{Performance Element} consists of the trained PPO policy network.
+        \item The \textbf{Critic} facilitates training via state-value estimation.
+        \item The \textbf{Learning Element} executes the optimization loop.
+        \item The \textbf{Problem Generator} is implemented via the Gymnasium environment.
+    \end{itemize}
+\end{enumerate}
+
+Building upon the theoretical advantages of PPO discussed in Chapter 2, the research team performed an empirical screening step comparing PPO, DQN, and A2C. The benchmark results, presented in Chapter 4, validate the selection of PPO based on its superior stability and operational safety in stochastic network environments.
+
+\begin{table}[htbp]
+\centering
+\caption{RL Algorithm Comparison and Selection Rationale}
+\label{tab:algorithm_comparison}
+\begin{tabular}{L{2.5cm} L{3.5cm} L{3.5cm} L{4cm}}
+\toprule
+\textbf{Criteria} & \textbf{DQN} & \textbf{A2C} & \textbf{PPO} \\
+\midrule
+Approach & Value-based: Learns the $Q(s, a)$ function. & Actor-Critic: Hybrid approach. & Policy-based: Directly optimizes the policy. \\
+Learning Mode & Off-policy: Reuses historical data. & On-policy: Learns from current experience. & On-policy: Uses clipped updates. \\
+Stability & Moderate (Prone to overestimation). & Low (High variance). & \textbf{Very High} (Clipped objective). \\
+Sample Efficiency & High (Reuses past data). & Low (Requires more interactions). & Moderate (Balanced stability). \\
+Core Mechanism & Experience Replay \& Target Network. & Advantage Function. & Clipped Surrogate Objective. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{System Architecture}
+
+The proposed defensive system is structured according to a three-layer architecture:
+\begin{enumerate}
+    \item \textbf{Observation \& Feature Extraction Layer:} Captures raw network packets to extract \textbf{20 behavioral features} from bidirectional flows. It simultaneously integrates \textbf{14 internal state dimensions} (10D persistent temporal context and 4D delayed environmental feedback) maintained by the system memory to construct the unified \textbf{34D observation vector}.
+    \item \textbf{Decision-Making Layer (RL Defense Agent):} Receives the consolidated 34D vector as a complete snapshot of the system's context. It utilizes the trained PPO policy to map this observation to the optimal defensive action $a_t$. In accordance with the Two-Stage Development Framework established in Chapter 2, the Agent is first trained for 500,000 steps in a Gymnasium simulation before being transitioned to the Mininet emulation environment for validation.
+    \item \textbf{Enforcement Layer:} Deploys defensive actions into the network infrastructure via \texttt{iptables}:
+    \begin{itemize}
+        \item \textbf{Allow (0):} Permits traffic to pass without interference.
+        \item \textbf{Rate Limit (1):} Constrains bandwidth using \texttt{hashlimit} (2 pkt/s).
+        \item \textbf{Redirect (2):} Routes traffic to a honeypot via NAT PREROUTING.
+        \item \textbf{Block (3):} Completely drops traffic via \texttt{iptables} DROP.
+    \end{itemize}
+\end{enumerate}
+
+Each action carries a distinct deployment cost ($C_{action}$), incorporated into the reward function to guide the Agent in equilibrating security and service performance.
+
+\subsection{MDP Formalization}
+
+Building upon the task environment properties analyzed in Chapter 2 (Section 2.1.1), the network defense challenge is formalized for implementation. While the problem is theoretically a \textbf{Partially Observable Markov Decision Process (POMDP)}, the research overcomes the computational intractability of belief-state tracking by engineering a \textbf{34-dimensional observation vector}.
+
+This vector serves as an \textbf{approximate Sufficient Statistic}. By integrating instantaneous traffic metrics with 10D temporal context and 4D feedback signals, the system captures enough environmental history to satisfy the Markov property. This allows the Agent to treat the environment as a standard \textbf{Markov Decision Process (MDP)}, defined by the tuple $(S, A, P, R, \gamma)$, where the policy $\pi$ maps the 34D state directly to the optimal defensive action.
+
+\textbf{State Space ($S$):} The observation space consists of a 34-dimensional vector, normalized to $[0, 1]$.
+
+\begin{table}[htbp]
+\centering
+\caption{34D Observation Space Segmentation}
+\label{tab:obs_segmentation}
+\begin{tabular}{L{3.5cm} C{2.5cm} L{8cm}}
+\toprule
+\textbf{Group} & \textbf{Dimensions} & \textbf{Content} \\
+\midrule
+Traffic Features & 20D (F1–F20) & Instantaneous statistical and payload-based network metrics. \\
+Temporal State & 10D ([20–29]) & Persistent temporal context and internal IP-tracking state. \\
+Closed-Loop Feedback & 4D ([30–33]) & Delayed feedback from the environment ($effect_{t-1}$) from the previous action. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Action Space ($A$):} The Agent selects from a set of four discrete actions ($a_t \in \mathcal{A}$), each associated with an operational cost $c(a)$:
+\begin{itemize}
+    \item \textbf{Allow ($a_0$):} $c_0 = 0$. No interference; default for benign traffic.
+    \item \textbf{Rate Limit ($a_1$):} $c_1 > c_0$. Bandwidth constraint using \texttt{hashlimit}.
+    \item \textbf{Redirect ($a_2$):} $c_2 > c_1$. Honeypot routing for L7 analysis.
+    \item \textbf{Block ($a_3$):} $c_3 > c_2$. Full neutralization via \texttt{iptables} DROP.
+\end{itemize}
+
+The hierarchical cost structure $c_0 < c_1 < c_2 < c_3$ ensures the Agent prioritizes low-intervention actions unless the threat severity justifies a more restrictive response.
+
+\textbf{Reward Function ($R$):} The reward signal $r_t$ is structured to balance security and availability as a two-stage objective. The baseline component defines the instantaneous trade-off:
+\begin{equation}
+R_{base} = B_{action} - C_{action} - 0.12 \cdot service\_damage
+\end{equation}
+
+Where:
+\begin{itemize}
+    \item \textbf{$B(s, a)$:} A contextual bonus for selecting an action appropriate to the detected threat typology.
+    \item \textbf{$c(a)$:} The operational cost of action $a$.
+    \item \textbf{$D(s')$:} The normalized service damage score observed in the subsequent state.
+\end{itemize}
+
+The total reward for the v13 Agent incorporates strategic shaping components:
+\begin{equation}
+R = R_{base} + P_{osc} + B_{stab} + B_{ramp} + B_{persist} + P_{premature}
+\end{equation}
+
+The shaping components are engineered to drive the escalation logic:
+\begin{itemize}
+    \item \textbf{Oscillation Penalty ($P_{osc}$):} Penalizes downgrading defense levels while attack pressure remains elevated.
+    \item \textbf{Stability Bonus ($B_{stab}$):} Rewards sustaining contextually appropriate actions; specifically incentivizes holding Redirect during active L7 sessions.
+    \item \textbf{Ramp Bonus ($B_{ramp}$):} Provides a progressive reward gradient to transition from Redirect to Block as forensic evidence accumulates.
+    \item \textbf{Persistence Bonus ($B_{persist}$):} Heavily rewards the final transition to Block once the block ready flag is triggered.
+    \item \textbf{Premature Penalty ($P_{premature}$):} Penalizes issuing a Block action before sufficient session evidence is gathered.
+\end{itemize}
+
+The two-stage structure ensures a balance between \textbf{instantaneous utility} and \textbf{strategic continuity}. While $R_{base}$ provides the primary gradient for immediate damage mitigation, the aggregate components function as a ``strategic overlay.'' Finally, the reward is clamped within the range $[-1, 1]$.
+
+\textbf{Discount Factor ($\gamma = 0.995$):} Encourages long-term cumulative reward optimization.
+
+\subsection{Experimental Network Topology}
+
+The experimental environment is constructed upon \textbf{Mininet} and \textbf{Docker}:
+\begin{itemize}
+    \item \textbf{Router (10.0.10.254/24):} Central node hosting \texttt{iptables} and Nginx Reverse Proxy.
+    \item \textbf{Webserver (192.168.10.10/24):} Primary attack target.
+    \item \textbf{Honeypot (192.168.30.10/24):} Absorbs Layer 7 attacks.
+    \item \textbf{Attacker (10.0.10.10/24):} Implements scenarios using \texttt{hping3}, \texttt{sqlmap}, and \texttt{nmap}.
+    \item \textbf{Wazuh SIEM (192.168.20.20/24):} Records secondary baseline logs.
+\end{itemize}
+
+\subsection{RL Defense Agent Design}
+
+Unlike traditional signature-based classifiers, the RL Agent learns the causal relationship between interventions and outcomes: given a specific network state, it evaluates whether selecting Action A will yield a healthier future system state than Action B.
+
+\subsubsection{RL Training Environment Implementation}
+
+The training environment is structured as a closed-loop control system. The implementation is based on the Gymnasium standard, integrating dynamic entity management mechanisms to simulate session persistence.
+\textbf{Episode Structure:} Fixed length of 320 steps (8 minutes).
+\textbf{Session Allocation:} Simultaneously simulates 16 heterogeneous IP entities.
+
+\subsubsection{Traffic Generation and Domain Randomization}
+
+The RL environment integrates a \textbf{Stateful Behavioral Simulation Engine}. To prevent overfitting static signals, the system employs \textbf{domain randomization}. Network features are parameterized based on specific mathematical distributions:
+\begin{itemize}
+    \item \textbf{Packet Rate:} Gaussian Normal Distribution.
+    \item \textbf{Port Probing:} Poisson Distribution.
+    \item \textbf{Feature Ratios:} Beta Distribution for $[0, 1]$ domain.
+\end{itemize}
+
+\textbf{Synthetic Attack Vectors:}
+\begin{itemize}
+    \item \textbf{DDoS (SYN Flood):} Massive surge in packet rates ($F_1$) and asymmetric SYN/ACK ratio ($F_2$).
+    \item \textbf{Port Scan:} High number of distinct destination ports ($F_5$) with elevated reset ratios ($F_4$).
+    \item \textbf{Brute Force:} High temporal uniformity ($F_7$) and consistent request sizes ($F_8$).
+    \item \textbf{SQL Injection:} Payloads triggering ModSecurity-based CRS scores ($F_{13}$).
+    \item \textbf{XSS Attack:} JavaScript payloads detected through signature-based features ($F_{18}-F_{20}$).
+\end{itemize}
+
+\subsubsection{Action Space and Defensive Strategy}
+
+The defense system utilizes a discrete action space consisting of 4 levels, designed according to the Action Ladder model.
+
+\begin{table}[htbp]
+\centering
+\caption{MDP Implementation Parameters}
+\label{tab:mdp_params}
+\begin{tabular}{C{1.5cm} L{3.5cm} C{2cm} L{6.5cm}}
+\toprule
+\textbf{Symbol} & \textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+\midrule
+$\omega$ & Damage Weight & 0.12 & Weight for $F_{24}$ (Service Damage). \\
+$c_0$ & Cost (Allow) & 0.00 & Baseline cost for no intervention. \\
+$c_1$ & Cost (RateLimit) & 0.01 & Minimal overhead for bandwidth throttling. \\
+$c_2$ & Cost (Redirect) & 0.04 & Operational cost for Honeypot traffic routing. \\
+$c_3$ & Cost (Block) & 0.15 & Maximum penalty for service unavailability. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The increasing cost encourages the RL agent to prioritize mild interventions. Mistakenly blocking a legitimate user causes significant damage; therefore, $c_3 = 0.15$ acts as a heavy penalty, forcing the agent to accumulate sufficient evidence.
+
+\subsubsection{Temporal Observation Window and Soft Escalation}
+
+To ensure high-precision decision-making, the system integrates a \textbf{Temporal Observation Window ($W_{total}$)} with a \textbf{Soft Escalation} protocol.
+
+\begin{enumerate}
+    \item \textbf{Session Lifecycle ($W_{lifecycle} = 20$ steps):}
+    \begin{itemize}
+        \item \textbf{Phase 1: Observation (Steps 1–11):} Initial assessment. Issuing a Block action here is penalized as ``premature.''
+        \item \textbf{Phase 2: Critical Decision (Steps 12–14):} If threat confidence $\ge 0.60$, the enforcement flag is activated.
+        \item \textbf{Phase 3: Enforcement (Steps 15–20):} Once activated, the Agent must sustain the Block action.
+    \end{itemize}
+    \item \textbf{Evidence-Based Escalation Logic:} The escalation score is a moving accumulation of signal consistency, isolation feedback, and temporal persistence.
+\end{enumerate}
+
+\subsubsection{Reward Function and Persistence-Aware Shaping}
+
+The system employs a \textbf{Persistence-Aware Shaping} architecture:
+\begin{equation}
+R_{total} = (B_{action} - C_{action} - 0.12 \cdot service\_damage) + \sum R_{shaping}
+\end{equation}
+
+The network damage function $D$ comprises 6 components with weights reflecting severity:
+
+\begin{table}[htbp]
+\centering
+\caption{Network Damage Function ($D$) Components}
+\label{tab:damage_components}
+\begin{tabular}{L{4cm} C{1.5cm} L{3cm} L{5.5cm}}
+\toprule
+\textbf{Component} & \textbf{Weight} & \textbf{Feature} & \textbf{Non-linear Function} \\
+\midrule
+PPS Overflow & 0.25 & F1 & Logistic: $1/(1+e^{-5(F1/anchor - 1)})$ \\
+RST Ratio & 0.15 & F4 & Tanh: $\tanh(F4 \times 2)$ \\
+Port Scan Dist. & 0.15 & F5 & Log-sigmoid over raw port count \\
+Payload Anomaly & 0.10 & F9, F4, F5 & Logistic \\
+SYN flood & 0.10 & F2 & Tanh over threshold exceedance \\
+SQLi/XSS & 0.25 & F12–F20 & Normalized weighted combination \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Reward Shaping Components}
+\label{tab:shaping_components}
+\begin{tabular}{L{3.5cm} L{2cm} L{9cm}}
+\toprule
+\textbf{Component} & \textbf{Symbol} & \textbf{Strategic Function} \\
+\midrule
+Stability Bonus & $B_{stab}$ & Rewards sustaining context-appropriate actions. \\
+Ramp Bonus & $B_{ramp}$ & Incentivizes transition from Redirect to Block. \\
+Persistence Bonus & $B_{persist}$ & Rewards sustained Block actions. \\
+Oscillation Penalty & $P_{osc}$ & Penalizes downgrading defense levels during attacks. \\
+Premature Penalty & $P_{premature}$ & Penalizes Block execution before sufficient evidence. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Policy Optimization (PPO)}
+
+The Agent utilizes the \textbf{Clipped Surrogate Objective} of the PPO algorithm \cite{schulmanPPO2017}:
+\begin{equation}
+L^{CLIP}(\theta) = \hat{\mathbb{E}}_t\left[\min\left(r_t(\theta)\hat{A}_t,\; \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t\right)\right]
+\end{equation}
+
+Advantage estimation is facilitated through \textbf{Generalized Advantage Estimation (GAE)}.
+
+\begin{table}[htbp]
+\centering
+\caption{PPO Agent Training Hyperparameters}
+\label{tab:ppo_hyperparams}
+\begin{tabular}{L{3.5cm} L{3cm} L{8cm}}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Design Rationale} \\
+\midrule
+Total Steps & 500,000 & Ensure convergence across all 5 typologies. \\
+Net Arch (pi, vf) & [256, 128] & Capacity to map complex boundaries. \\
+Clip Range ($\epsilon$) & 0.15 & Prevent overshoot and ensure stability. \\
+Discount ($\gamma$) & 0.995 & Extended temporal horizon. \\
+Learning Rate & $3 \times 10^{-4}$ & Standard Adam LR with linear decay. \\
+Entropy Coef & 0.05 & Maintains exploration. \\
+Batch Size & 128 & Enhanced gradient stability. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Adversarial Dynamics and Closed-Loop Feedback}
+
+Every action taken by the Agent actively alters the subsequent state:
+\begin{itemize}
+    \item \textbf{Reactive Behavior:} Adversaries may increase payload intensity if rate-limited.
+    \item \textbf{Deceptive Isolation:} Redirect routing allows safe observation of the full ``Kill Chain.''
+    \item \textbf{Asymmetric Visibility:} Monitoring persists even after a Block action to track continued presence.
+\end{itemize}
+
+\section{Real-Time Inference and Enforcement Pipeline}
+
+The operational system structure comprises three functional layers:
+\begin{enumerate}
+    \item \textbf{Data Acquisition Layer:} Continuous sniffer aggregating packets every second.
+    \item \textbf{Inference Engine:} Performs normalization and policy prediction. \textbf{SafetyNet} guardrails enforce infrastructure constraints.
+    \item \textbf{Enforcement Layer:} Actions are enforced via \texttt{iptables}. The \textbf{IP State Tracker} manages the soft escalation protocol.
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\caption{Action Impact on Observation Space}
+\label{tab:action_impact}
+\begin{tabular}{L{2.5cm} L{12cm}}
+\toprule
+\textbf{Action} & \textbf{Impact on the 34D components} \\
+\midrule
+Rate Limit & PacketRate decreases; RST signals attenuate; service damage decreases. \\
+Redirect & L7 signals diminish as honeypot absorbs them; capture ratio increases. \\
+Block & Attack signals neutralized; traffic severed; escalation score increases. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Data Collection Methodology}
+
+\subsection{Packet Capture and Dissection}
+
+The pipeline processes packets via Scapy and \texttt{tshark}. For HTTPS traffic, \texttt{tshark} utilizes \texttt{SSLKEYLOGFILE} for decryption. At the application layer (L7), the system uses a \textbf{HTTP composite payload per-packet} method, concatenating \texttt{[URI] + [User-Agent] + [Body]}.
+
+\subsection{Connection Session Management}
+
+The flow manager identifies flows using 5-tuples. HTTP payload analysis is performed at the per-request level. For HTTPS traffic, \texttt{tshark} reassembles the TCP stream before outputting fields.
+
+\subsection{1-Second Sliding Window}
+
+A 1-second sliding window ensures the observation reflects the current network state. This design prevents bias and ensures MDP update purity by eliminating old data leakage.
+
+\subsection{Data Sources}
+
+Five distinct data sources are incorporated:
+\begin{itemize}
+    \item \textbf{LSNM2024 Labeled URI Dataset \cite{lsnm2024}:} 3,000 benign and 2,809 pre-labeled SQLi URIs.
+    \item \textbf{Mutated Packets PCAP Dataset \cite{abuAlHaija2025}:} 15 attack typologies from Jordan University of Science and Technology.
+    \item \textbf{Simulated MockIPBehavior:} Custom-built for PPO training with domain randomization.
+    \item \textbf{CIC-IDS2017 \cite{panigrahi2018detailed}:} Native PCAP files for benchmarking.
+    \item \textbf{CSE-CIC-IDS2018:} Large-scale version reflecting enterprise networks.
+\end{itemize}
+
+\section{Sampling \& Data Analysis Techniques}
+
+\subsection{Data Sampling Strategy}
+
+\begin{itemize}
+    \item \textbf{Stratified Proportioning:} 37.5\% secure, 62.5\% attack traffic (50\% L7) to force learning of escalation.
+    \item \textbf{Dynamic Generation:} 34D input combining 20 sensor features and 14 contextual features.
+    \item \textbf{Closed-loop feedback:} Data sampled interactively based on agent actions.
+\end{itemize}
+
+\subsection{Feature Engineering Overview}
+
+\subsubsection{Payload Normalization Pipeline}
+
+An 8-step pipeline executes prior to pattern matching:
+\begin{itemize}
+    \item \textbf{Size Limitation:} 64 KB to prevent ReDoS.
+    \item \textbf{HTML Entity \& Unicode Normalization:} standardizes variants and homoglyphs.
+    \item \textbf{Recursive URL \& Base64 Decoding:} Dismantles multi-level encoding.
+    \item \textbf{Whitespace \& Lowercase:} Standardizes matching logic.
+\end{itemize}
+
+\subsubsection{Multi-dimensional Feature Representation (34D)}
+
+\textbf{A. Traffic \& Payload Features (20D: F1–F20)}
+The agent needs sufficient information to differentiate five attack types and choose actions.
+
+\begin{table}[htbp]
+\centering
+\caption{Inventory of 20 Traffic and Payload Features (F1-F20)}
+\label{tab:f1_f20_inventory}
+\begin{tabular}{L{1cm} L{3.5cm} L{5cm} C{1.5cm} L{3.5cm}}
+\toprule
+\textbf{Code} & \textbf{Feature Name} & \textbf{Concise Description} & \textbf{Scale} & \textbf{Detection Target} \\
+\midrule
+F1 & PacketRate & Volume per second & Log & DDoS / SYN Flood \\
+F2 & SynAckRatio & Handshake ratio & Log & SYN Flood \\
+F4 & RstRatio & RST packet ratio & Pass & Port Scan \\
+F5 & DistinctPorts & Destination port volume & Log & Port Scan \\
+F12 & SqlSpecialChar & SQL char ratio in payload & Pass & SQLi \\
+F13 & CrsSqliScore & OWASP CRS PL2 score & Lin & SQLi \\
+F18 & CrsXssScore & OWASP CRS XSS score & Lin & XSS \\
+F19 & JsFunctionCall & JavaScript alert/eval calls & Bin & XSS \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{B. Temporal Context State (10D: F21–F30)}
+Adds short-term memory per source IP to the observation space.
+
+\begin{table}[htbp]
+\centering
+\caption{10 Temporal State Dimensions (F21-F30)}
+\label{tab:f21_f30}
+\begin{tabular}{L{1.5cm} L{3cm} L{9cm}}
+\toprule
+\textbf{Index} & \textbf{Identifier} & \textbf{Strategic Function} \\
+\midrule
+[20–23] & \texttt{last\_action} & One-hot encoding of preceding action. \\
+[24] & \texttt{action\_hold} & Steps preserving a unified action. \\
+[28] & \texttt{escalation} & Denotes reliability for escalation timing. \\
+[29] & \texttt{miss\_budget} & Frequency an IP escapes Redirect. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{C. Closed-Loop Effect Feedback (4D: F31–F34)}
+Encodes operational results from the previous step.
+
+\subsubsection{Feature Vector Normalization}
+
+Three distinctive clusters:
+\begin{itemize}
+    \item \textbf{Log scale} (F1, F2, F3, F5, F10, F11): Compresses extreme attack outliers.
+    \item \textbf{Linear scale} (F9, F13, F17, F18): Applied to predictable counts.
+    \item \textbf{Pass-through} (F4, F6, F7, F8, F12, F14–F20): Ratios or binary outputs.
+\end{itemize}
+
+\section{Methodological Limitations}
+
+\begin{itemize}
+    \item The Markov assumption is an approximation; insufficient history could lead to sub-optimal policies.
+    \item Training reflects known patterns; sophisticated zero-day variations could exploit thresholds.
+    \item A 1-second window may be insensitive to very slow attacks like slowloris.
+    \item Mininet remains a controlled environment and may not capture full production complexity.
+    \item Effectiveness depends on TLS decryption; L7 analysis degrades if payloads are unobservable.
+\end{itemize}
+
+\bibliographystyle{ieeetr}
 \bibliography{references}
 
+
 \end{document}
+
+
