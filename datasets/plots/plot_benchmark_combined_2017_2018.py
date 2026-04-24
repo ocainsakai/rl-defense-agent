@@ -23,9 +23,10 @@ import matplotlib.patches as mpatches
 from pathlib import Path
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
-BASE = Path(__file__).parent
-IDS2018_JSON  = BASE / "CSE-CIC-IDS2018/pcap_cache/benchmark_results_all_modes.json"
-IDS2017_JSON  = BASE / "CIC-IDS2017/pcap_cache/benchmark_results_all_modes.json"
+BASE = Path(__file__).parent.parent
+IDS2017_JSON  = BASE / "CIC-IDS2017/scripts/pcap_cache/benchmark_results_all_modes.json"
+IDS2018_FRI   = BASE / "CSE-CIC-IDS2018/Friday_23_02_2018/pcap_cache/results_friday_2018/benchmark_results_all_modes.json"
+IDS2018_THU   = BASE / "CSE-CIC-IDS2018/Thursday_22_02_2018/pcap_cache/results_thursday_2018/benchmark_results_all_modes.json"
 IDS2018_FP    = BASE / "CSE-CIC-IDS2018/pcap_cache/benchmark_results_fp_all.json"
 
 ACTION_COLORS = {
@@ -76,7 +77,7 @@ def chart1_ids2018_3layers(data2018, out_dir):
         for bar, v in zip(bars, vals):
             if v >= 5:
                 ax.text(bar.get_x() + bar.get_width()/2, v / 2,
-                        f'{v:.1f}%', ha='center', va='center', fontsize=8,
+                        f'{v:.2f}%', ha='center', va='center', fontsize=8,
                         color='white', fontweight='bold')
 
     l1_pc = day_data.get('raw-ppo', {}).get('per_class', {})
@@ -111,7 +112,7 @@ def chart2_ids2017_thursday(data2017, out_dir):
         for bar, v in zip(bars, vals):
             if v >= 5:
                 ax.text(bar.get_x() + bar.get_width()/2, v / 2,
-                        f'{v:.1f}%', ha='center', va='center', fontsize=8,
+                        f'{v:.2f}%', ha='center', va='center', fontsize=8,
                         color='white', fontweight='bold')
 
     l1_pc = day_data.get('raw-ppo', {}).get('per_class', {})
@@ -175,13 +176,13 @@ def chart3_cross_dataset(data2017, data2018, out_dir):
         (v17_l1, 'IDS2017 L1', colors[2],  0.5),
         (v17_l3, 'IDS2017 L3', colors[3],  1.5),
     ]
-    for vals, label, color, offset in bar_defs:
+    for i, (vals, label, color, offset) in enumerate(bar_defs):
         bars = ax.bar(x + offset*width, vals, width, label=label,
                       color=color, alpha=0.88, zorder=3)
         for bar, v in zip(bars, vals):
             if v >= 1:
                 ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                        f'{v:.0f}%', ha='center', va='bottom', fontsize=7.5,
+                        f'{v:.2f}%', ha='center', va='bottom', fontsize=7.5,
                         color=color, fontweight='bold')
 
     ax.set_xticks(x); ax.set_xticklabels(attack_labels, fontsize=11)
@@ -270,7 +271,7 @@ def chart5_confusion_matrix(data2018, out_dir):
             pct   = matrix_norm[i][j]
             if count == 0: continue
             color = 'white' if pct > 0.55 else 'black'
-            ax.text(j, i, f'{pct*100:.1f}%\n({count:,})',
+            ax.text(j, i, f'{pct*100:.2f}%\n({count:,})',
                     ha='center', va='center', fontsize=9, color=color, fontweight='bold')
 
     plt.colorbar(im, ax=ax, label='Recall fraction')
@@ -295,7 +296,7 @@ def chart6_false_positive(fp_data, out_dir):
     bars = ax.bar(x, accs, color=colors, alpha=0.88, zorder=3, width=0.6)
     for bar, v in zip(bars, accs):
         ax.text(bar.get_x() + bar.get_width()/2, (v - 90) / 2 + 90,
-                f'{v:.1f}%', ha='center', va='center', fontsize=10,
+                f'{v:.2f}%', ha='center', va='center', fontsize=10,
                 fontweight='bold', color='white')
 
     ax.axhline(avg, color='#E53935', linestyle='--', linewidth=1.5,
@@ -312,12 +313,47 @@ def chart6_false_positive(fp_data, out_dir):
     _save(fig, out_dir, 'chart6_false_positive_7hosts.png')
 
 
+# ─── Chart 7: IDS2018 Thursday recall 3 layers (Benchmark) ───────────────────
+def chart7_ids2018_thursday_3layers(data2018, out_dir):
+    day_data = data2018.get('Thursday-22-02-2018', {})
+    labels   = ['benign', 'brute_force', 'xss', 'sqli']
+    display  = [LABEL_DISPLAY[l] for l in labels]
+    x = np.arange(len(labels))
+    width = 0.25
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    for i, (mode_key, _) in enumerate(MODES):
+        pc = day_data.get(mode_key, {}).get('per_class', {})
+        vals = [_acc(pc, l) for l in labels]
+        offset = (i - 1) * width
+        bars = ax.bar(x + offset, vals, width, label=LAYER_LABELS[i],
+                      color=LAYER_COLORS[i], alpha=0.85, zorder=3)
+        for bar, v in zip(bars, vals):
+            if v >= 5:
+                ax.text(bar.get_x() + bar.get_width()/2, v / 2,
+                        f'{v:.2f}%', ha='center', va='center', fontsize=8,
+                        color='white', fontweight='bold')
+
+    l1_pc = day_data.get('raw-ppo', {}).get('per_class', {})
+    for i, lbl in enumerate(labels):
+        ax.text(i, 2, f'n={_n(l1_pc, lbl):,}', ha='center', fontsize=8, color='gray')
+
+    ax.set_xticks(x); ax.set_xticklabels(display, fontsize=11)
+    ax.set_ylim(0, 120)
+    ax.set_ylabel('Accuracy (%)', fontsize=11)
+    ax.set_title('CIC-IDS2018 — Per-class Accuracy Across 3 Layers\n(Thursday 22-02-2018: Benign + Synthetic Benchmark)', fontsize=12, fontweight='bold')
+    ax.yaxis.grid(True, linestyle='--', alpha=0.4, zorder=0); ax.set_axisbelow(True)
+    ax.legend(fontsize=10, loc='lower right')
+    plt.tight_layout()
+    _save(fig, out_dir, 'chart7_ids2018_thursday_3layers.png')
+
+
 # ─── Helper ───────────────────────────────────────────────────────────────────
 def _save(fig, out_dir, name):
     out = os.path.join(out_dir, name)
     fig.savefig(out, dpi=150, bbox_inches='tight')
     plt.close(fig)
-    print(f'  [✓] {out}')
+    print(f'  [OK] {out}')
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -327,13 +363,20 @@ def main():
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
-    data2018 = json.loads(IDS2018_JSON.read_text())
     data2017 = json.loads(IDS2017_JSON.read_text())
+    
+    data2018 = {}
+    if IDS2018_FRI.exists():
+        data2018.update(json.loads(IDS2018_FRI.read_text()))
+    if IDS2018_THU.exists():
+        data2018.update(json.loads(IDS2018_THU.read_text()))
+        
     fp_data  = json.loads(IDS2018_FP.read_text()) if IDS2018_FP.exists() else {}
 
     print(f'\n[*] Output: {args.out}\n')
     chart1_ids2018_3layers(data2018, args.out)
     chart2_ids2017_thursday(data2017, args.out)
+    chart7_ids2018_thursday_3layers(data2018, args.out)
     chart3_cross_dataset(data2017, data2018, args.out)
     chart4_friday_timeline(data2017, args.out)
     chart5_confusion_matrix(data2018, args.out)
