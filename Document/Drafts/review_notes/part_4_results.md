@@ -124,24 +124,18 @@ The benchmark leverages four evaluation modes that separate the session and nois
 | session_20 | 20 | 0.08 | 0.35 | Closed-loop/session evaluation. |
 | session_20_stress | 20 | 0.15 | 0.50 | Stress noise/drift overlaid on the session context. |
 
-**Table 4.4: Benchmark PPO/DQN/A2C — Raw Defensive Performance (round_robin)**
+**Table 4.4: Benchmark PPO/DQN/A2C/Rule-Based — Defensive Performance Summary**
 
-| Algorithm | Mean Reward | Mitigation % | Exact Response % | Service Damage AUC |
-|:---|:---:|:---:|:---:|:---:|
-| PPO | 58.80 | 97.65 | 90.81 | 0.0644 |
-| **DQN** | **60.71** | **99.54** | **92.26** | **0.0583** |
-| A2C | 24.46 | 95.97 | 85.59 | 0.0764 |
+| Algorithm | Mean Reward | Std | CI 95% | Detection Rate | Benign Intervent Rate |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **DQN** | **60.457** | 0.808 | ±0.354 | **99.1%** | 1.29% |
+| PPO-Default | 58.027 | 1.217 | ±0.533 | 97.0% | **0.53%** |
+| A2C | 24.123 | 8.602 | ±3.770 | 95.5% | 22.32% |
+| Rule-Based | 9.803 | 0.734 | — | 85.9% | 76.80% |
 
 > [!NOTE]
-> DQN dominates raw defensive metrics in the round-robin paradigm; PPO follows closely, while A2C exhibits a conspicuous performance deficit.
+> DQN achieves the highest raw defensive metrics, while PPO-Default maintains the superior safety baseline with the lowest Benign Intervent Rate (0.53%). The Rule-Based system exhibits a significant performance gap, particularly in its inability to distinguish benign traffic under complex drift conditions.
 
-**Table 4.5: Benchmark PPO/DQN/A2C — Benign-Safety Trade-off (round_robin)**
-
-| Algorithm | Mitigation % | Benign Intervention Ratio | Benign Harm Score | Mitig/BenignInt | Mitig/BenignHarm |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| **PPO** | 97.65 | **0.65** | **0.79** | **150.2** | **123.3** |
-| DQN | 99.54 | 1.39 | 1.39 | 71.5 | 71.5 |
-| A2C | 95.97 | 22.27 | 22.27 | 4.3 | 4.3 |
 
 > [!TIP]
 > PPO triggers significantly fewer benign interventions compared to DQN while preserving a high mitigation rate, establishing a superior operational trade-off.
