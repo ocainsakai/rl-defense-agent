@@ -19,7 +19,7 @@ These questions are posed in the context of current limitations: most modern def
 Evaluation results derived from the terminal model conclusively demonstrate that the RL agent achieves a superior attack mitigation rate while concurrently sustaining a negligible intervention rate against legitimate traffic:
 
 *   **Static Rules:** 73.5% — A statistically significant deviation of **+3.8 percentage points (pp)**.
-*   During the preflight evaluation across 50 episodes, the agent achieved a **99.7%** mitigation rate against the hostile traffic cohort and a **0.0%** benign intervention ratio.
+*   During the preflight evaluation across 50 episodes, the agent achieved a **99.7%** mitigation rate against the hostile traffic cohort and a **0.0%** Benign Intervention Ratio.
 
 Agents show that detection behavior is differentiated among attack groups:
 *   **Network layer attacks (SYN Flood, Port Scan):** Benefit from clear volume signals (F1, F2, F4, F5), allowing for quick block decisions.
