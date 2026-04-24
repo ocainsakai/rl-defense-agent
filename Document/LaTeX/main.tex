@@ -33,7 +33,7 @@
 \usepackage{tocloft}
 \usepackage{titlesec}
 \usepackage{enumitem}
-\usepackage{microtype}
+\usepackage[expansion=false]{microtype}
 \usepackage{url}
 
 %--- Line spacing ---
@@ -46,6 +46,7 @@
 \titlespacing*{\chapter}{0pt}{-10pt}{20pt}
 
 %--- Header/footer ---
+\setlength{\headheight}{14pt}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[R]{\small\thepage}
@@ -597,7 +598,7 @@ The common denominator of these studies is the lack of comprehensive representat
 
 \subsubsection*{The Enforcement Gap: Abstraction vs. Reality}
 
-Conversely, some studies build detailed simulation environments but stop at the research prototype level, failing to reach the enforcement layer of real systems. The work of \textbf{Feng, Li, and Nguyen \cite{shiravi2012}} on application-layer DDoS defense with RL is a prime example: the authors design a testbed using Open vSwitch and Mininet, observing 12 state features and choosing between actions like delay, drop, or block. However, the entire interaction is implemented within a simulator framework where rewards are calculated based on ground truth information available within the simulation.
+Conversely, some studies build detailed simulation environments but stop at the research prototype level, failing to reach the enforcement layer of real systems. The work of \textbf{Feng, Li, and Nguyen \cite{feng2020application}} on application-layer DDoS defense with RL is a prime example: the authors design a testbed using Open vSwitch and Mininet, observing 12 state features and choosing between actions like delay, drop, or block. However, the entire interaction is implemented within a simulator framework where rewards are calculated based on ground truth information available within the simulation.
 
 The \textbf{Enforcement Gap} arises because the actions in many studies are logical variables or abstract API calls (e.g., "block\_flow") within a simulator framework rather than real-world enforcement commands. Bridging this gap requires an architecture where the AI's high-level reasoning is directly coupled with authentic, low-level network controls.
 
@@ -631,9 +632,9 @@ Based on a comprehensive literature review, this thesis contributes to the field
 
 Technically, the research develops a \textbf{closed-loop automated defense architecture} specifically designed for \textbf{high-fidelity emulation environments}. This architecture provides a functional bridge between high-level AI decision-making and low-level kernel enforcement. Unlike traditional research limited to offline detection, the proposed system implements an integrated pipeline—spanning automated traffic processing, \textbf{RL inference}, and authentic defensive execution via \texttt{iptables} and \texttt{tc}. By operating within a dynamic emulation framework, the study effectively validates the feasibility of AI-driven defense beyond abstract mathematical models.
 
-Methodologically, the thesis proposes a \textbf{Hybrid State Representation} that resolves the "Information Asymmetry" identified in existing literature. By integrating environmental traffic metrics with agent-centric feedback signals, the proposed state vector encapsulates the consequences of previous actions and the temporal behavior of network entities. This design enables the Agent to better navigate the POMDP nature of the network environment, facilitating causal reasoning and optimizing the critical trade-off between aggressive threat mitigation and the preservation of service availability.
+Methodologically, the thesis proposes a \textbf{Hybrid State Representation} that resolves the "Information Asymmetry" identified in existing literature. By integrating environmental traffic metrics with agent-centric feedback signals, the proposed 34-dimensional state vector encapsulates the consequences of previous actions and the temporal behavior of network entities. This design enables the Agent to better navigate the POMDP nature of the network environment, supporting causal reasoning within the constraints of an offline-trained, inference-deployed architecture, and optimizing the critical trade-off between aggressive threat mitigation and the preservation of service availability.
 
-Practically, the study provides empirical evidence that reinforcement learning can surpass static rule-based mechanisms in complex, adversarial scenarios. Through diverse attack vectors within the testbed, the system demonstrates robust adaptability to evolving threats while maintaining acceptable operational standards. This work serves as a proof-of-concept for the deployment of adaptive, learning-based defense agents in modern, software-defined network infrastructures.
+Practically, the experimental evaluation presented in Chapter 4 provides empirical evidence that the proposed RL-based architecture achieves higher mitigation rates than static rule-based baselines across five attack classes while maintaining a lower false positive rate on legitimate traffic. The system demonstrates that a frozen, offline-trained policy can sustain acceptable operational standards when deployed in a high-fidelity emulation environment. This work serves as a proof-of-concept for the deployment of adaptive, learning-based defense agents in modern, software-defined network infrastructures.
 
 
 
@@ -880,15 +881,15 @@ SQLi/XSS & 0.25 & F12–F20 & Normalized weighted combination \\
 \centering
 \caption{Reward Shaping Components}
 \label{tab:shaping_components}
-\begin{tabular}{L{3.5cm} L{2cm} L{9cm}}
+\begin{tabular}{L{3cm} L{1.5cm} L{3cm} L{6.5cm}}
 \toprule
-\textbf{Component} & \textbf{Symbol} & \textbf{Strategic Function} \\
+\textbf{Component} & \textbf{Symbol} & \textbf{Value} & \textbf{Strategic Function} \\
 \midrule
-Stability Bonus & $B_{stab}$ & Rewards sustaining context-appropriate actions. \\
-Ramp Bonus & $B_{ramp}$ & Incentivizes transition from Redirect to Block. \\
-Persistence Bonus & $B_{persist}$ & Rewards sustained Block actions. \\
-Oscillation Penalty & $P_{osc}$ & Penalizes downgrading defense levels during attacks. \\
-Premature Penalty & $P_{premature}$ & Penalizes Block execution before sufficient evidence. \\
+Stability Bonus & $B_{stab}$ & +0.01 (general); +0.05 (L7 Redirect) & Reinforces holding the correct action; provides a stronger incentive to maintain Redirect while honeypot evidence accumulates. \\
+Ramp Bonus & $B_{ramp}$ & +0.08/+0.15 (Block); $-$0.03/$-$0.06 (Redirect) & Progressive gradient driving transition to Block; penalty magnitude increases at step 14 to create urgency at the decision boundary. \\
+Persistence Bonus & $B_{persist}$ & +0.45 (Block); $-$0.35 (Redirect); $-$0.40 (Allow/RL) & Heavily rewards sustained Block once the enforcement flag is latched; symmetric penalties prevent reversion to weaker actions. \\
+Oscillation Penalty & $P_{osc}$ & $-$0.05 (early); $-$0.10/$-$0.15 (in session) & Discourages flickering to weaker actions while attack pressure persists; penalty escalates with session depth. \\
+Premature Penalty & $P_{premature}$ & $-$0.20 & Prevents early blocking before sufficient forensic evidence is gathered, reducing false positives on benign traffic. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -997,7 +998,7 @@ An 8-step pipeline executes prior to pattern matching:
 \begin{itemize}
     \item \textbf{Size Limitation:} 64 KB to prevent ReDoS.
     \item \textbf{HTML Entity \& Unicode Normalization:} standardizes variants and homoglyphs.
-    \item \textbf{Recursive URL \& Base64 Decoding:} Dismantles multi-level encoding.
+    \item \textbf{Recursive URL \& Base64 Decoding:} Resolves multi-level encoding (max 2 iterations each).
     \item \textbf{Whitespace \& Lowercase:} Standardizes matching logic.
 \end{itemize}
 
@@ -1008,41 +1009,54 @@ The agent needs sufficient information to differentiate five attack types and ch
 
 \begin{table}[htbp]
 \centering
-\caption{Inventory of 20 Traffic and Payload Features (F1-F20)}
+\caption{Inventory of Traffic and Payload Features}
 \label{tab:f1_f20_inventory}
-\begin{tabular}{L{1cm} L{3.5cm} L{5cm} C{1.5cm} L{3.5cm}}
+
+\setlength{\tabcolsep}{4pt} % giảm khoảng cách cột
+
+\resizebox{\textwidth}{!}{
+\begin{tabular}{L{1cm} L{3cm} L{4cm} C{1.2cm} L{3cm}}
 \toprule
 \textbf{Code} & \textbf{Feature Name} & \textbf{Concise Description} & \textbf{Scale} & \textbf{Detection Target} \\
 \midrule
-F1 & PacketRate & Volume per second & Log & DDoS / SYN Flood \\
-F2 & SynAckRatio & Handshake ratio & Log & SYN Flood \\
-F4 & RstRatio & RST packet ratio & Pass & Port Scan \\
-F5 & DistinctPorts & Destination port volume & Log & Port Scan \\
-F12 & SqlSpecialChar & SQL char ratio in payload & Pass & SQLi \\
-F13 & CrsSqliScore & OWASP CRS PL2 score & Lin & SQLi \\
-F18 & CrsXssScore & OWASP CRS XSS score & Lin & XSS \\
-F19 & JsFunctionCall & JavaScript alert/eval calls & Bin & XSS \\
+F1  & PacketRate      & Volume per second                     & Log & DDoS / SYN Flood \\
+F2  & SynAckRatio     & Handshake ratio                       & Log & SYN Flood \\
+F4  & RstRatio        & RST packet ratio                      & Pass & Port Scan \\
+F5  & DistinctPorts   & Destination port volume               & Log & Port Scan \\
+F12 & SqlSpecialChar  & SQL char ratio in payload             & Pass & SQLi \\
+F13 & CrsSqliScore    & OWASP CRS PL2 score                   & Lin & SQLi \\
+F18 & CrsXssScore     & OWASP CRS XSS score                   & Lin & XSS \\
+F19 & JsFunctionCall  & JavaScript alert/eval calls           & Bin & XSS \\
 \bottomrule
 \end{tabular}
+}
+
 \end{table}
 
-\textbf{B. Temporal Context State (10D: F21–F30)}
+\textbf{B. Temporal Context State (10D: F21--F30)}  
 Adds short-term memory per source IP to the observation space.
 
-\begin{table}[htbp]
-\centering
-\caption{10 Temporal State Dimensions (F21-F30)}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{table}
+\caption{10 Temporal State Dimensions (F21--F30)}
 \label{tab:f21_f30}
-\begin{tabular}{L{1.5cm} L{3cm} L{9cm}}
+
+\setlength{\tabcolsep}{4pt}
+
+\resizebox{\textwidth}{!}{
+\begin{tabular}{L{1.5cm} L{3cm} L{6cm}}
 \toprule
 \textbf{Index} & \textbf{Identifier} & \textbf{Strategic Function} \\
 \midrule
-[20–23] & \texttt{last\_action} & One-hot encoding of preceding action. \\
-[24] & \texttt{action\_hold} & Steps preserving a unified action. \\
-[28] & \texttt{escalation} & Denotes reliability for escalation timing. \\
-[29] & \texttt{miss\_budget} & Frequency an IP escapes Redirect. \\
+[20-23] & \texttt{last\_action} & One-hot encoding of preceding action \\
+[24] & \texttt{action\_hold} & Steps preserving a unified action \\
+[28] & \texttt{escalation} & Denotes reliability for escalation timing \\
+[29] & \texttt{miss\_budget} & Frequency an IP escapes Redirect \\
 \bottomrule
 \end{tabular}
+}
+
 \end{table}
 
 \textbf{C. Closed-Loop Effect Feedback (4D: F31–F34)}
