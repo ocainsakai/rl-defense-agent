@@ -137,7 +137,7 @@ The benchmark leverages four evaluation modes that separate the session and nois
 
 **Table 4.5: Benchmark PPO/DQN/A2C — Benign-Safety Trade-off (round_robin)**
 
-| Algorithm | Mitigation % | Benign Intervention % | Benign Harm Score | Mitig/BenignInt | Mitig/BenignHarm |
+| Algorithm | Mitigation % | Benign Intervention Ratio | Benign Harm Score | Mitig/BenignInt | Mitig/BenignHarm |
 |:---|:---:|:---:|:---:|:---:|:---:|
 | **PPO** | 97.65 | **0.65** | **0.79** | **150.2** | **123.3** |
 | DQN | 99.54 | 1.39 | 1.39 | 71.5 | 71.5 |
@@ -198,7 +198,7 @@ The table below compares the PPO tuning (v13) configuration with the SB3 default
 *   **Escalation Rate:** 79% for SQLi, 99% for XSS, 82% for Brute Force.
 *   **Overall Escalation Rate:** ~0.85 — confirms soft escalation functions as engineered.
 *   **Premature Block Rate:** ~0.15 — indicates a tendency to await evidence while retaining instant blocking capacity for extreme signatures.
-*   **Benign False Block Rate:** **0** — Zero Block actions against valid traffic.
+*   **Benign Intervention Rate:** **0** — Zero Block actions against valid traffic.
 
 ### 4.2.7.1 PPO Default vs PPO v13 (Tuning Impact)
 
@@ -268,7 +268,7 @@ The policy exhibits:
 3. Proportional interventions (RateLimit) for noisy traffic.
 
 ### 4.3.2 Policy Behavior Analysis
-*   **Normal Traffic:** Benign block rate = 0.0%.
+*   **Normal Traffic:** Benign Intervention Ratio = 0.0%.
 *   **Volumetric Attacks:** Agent directly applies **Block** (Action 3).
 *   **Layer 7 Attacks:** Agent prioritizes **Redirect** (Action 2) with soft escalation upgrading to **Block** after 15 steps of evidence.
 
