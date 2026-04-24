@@ -95,16 +95,32 @@ Overall, reinforcement learning provides a flexible and robust framework for aut
 
 ### 2.1.2 Network Emulation and Simulation Environments
 
-The training and evaluation of reinforcement learning agents in cybersecurity require environments that are controlled, reproducible, and observable. Deploying learning agents directly into production networks is risky, as it may cause service disruption or unintended security issues. To solve this, this research adopts a two-stage development framework: a high-speed custom simulation environment for training, followed by a high-fidelity emulation testbed for validation. This design helps connect theoretical learning models with more realistic deployment conditions.
+The training and evaluation of reinforcement learning agents in cybersecurity require environments that are controlled, reproducible, and observable. Deploying learning agents directly into production networks is risky, as it may cause service disruption or unintended security issues. To solve this, this research adopts a two-stage development framework: a high-speed custom simulation environment for training, followed by a high-fidelity emulation testbed for deployment and validation. This design helps connect theoretical learning models with more realistic deployment conditions.
 
-#### The Two-Stage Approach: Training vs. Validation
+#### The Two-Stage Approach: Training vs. Deployment and Validation
 
 To balance the requirements of sample efficiency and operational realism, the proposed system is developed in two distinct stages:
 
 * **Training Stage (Custom Simulation):** The agent is mainly trained in a specialized closed-loop environment called IDSDefenseEnv. This environment uses probabilistic models, such as Normal, Poisson, and Beta distributions, to simulate network behavior ranging from normal traffic to multi-stage attacks such as SQL injection and XSS. The simulation is based on real-world traffic patterns from well-established datasets such as CIC-IDS2018, so that the learned policies reflect measured network statistics while still allowing the high-speed execution needed for DRL training.
-* **Validation Stage (Network Emulation):** After training, the agent is deployed in a Mininet-based emulation environment. Unlike the training stage, which relies on simulated state transitions, this stage uses the real Linux networking stack. Actions such as blocking and rate-limiting are applied through iptables and tc on virtual hosts. This stage is used to validate the agent’s enforcement capability under realistic network latency, TCP/IP stack behavior, and service-level performance conditions.
+* **Deployment and Validation Stage (Network Emulation):** After training, the frozen policy is deployed in a Mininet-based emulation environment — this constitutes the system’s primary operational environment, not merely a testing step. Unlike the training stage, which relies on simulated state transitions, this stage uses the real Linux networking stack. Actions such as blocking and rate-limiting are applied through iptables and tc on virtual hosts. Performance is then validated against this deployment by measuring enforcement capability under realistic network latency, TCP/IP stack behavior, and service-level performance conditions.
 
 By combining an abstract, closed-loop simulation for learning with a kernel-level execution for verification, this research provides a practical way to develop adaptive agents that are both intelligent and usable in real deployment.
+
+**Clarification of Learning Paradigms.**
+
+A precise understanding of learning paradigms is necessary to correctly characterize the proposed system within the broader RL literature. Three paradigms are commonly conflated but must be distinguished:
+
+| Paradigm | Weight Updates | Data Source | Deployment Behavior |
+|---|---|---|---|
+| **On-policy Learning** (e.g., PPO, A2C) | During training only | Current policy's own experience | Frozen at deployment |
+| **Off-policy Learning** (e.g., DQN, SAC) | During training only | Replay buffer (past experience) | Frozen at deployment |
+| **Continual / Lifelong Learning** | Continuously, including post-deployment | Live production data | Weights evolve during operation |
+
+In both on-policy and off-policy paradigms, weight updates cease once training terminates — the policy is **frozen** and transitions into **inference mode**, mapping observations to actions via a forward pass without gradient computation. The deployed agent therefore executes a fixed decision function, and its adaptivity derives entirely from the policy learned prior to deployment.
+
+**Continual Learning** (also termed Lifelong Learning, or *Online Learning* in the deployment sense) describes a distinct paradigm in which model weights continue to update from live production data after deployment. This paradigm introduces substantial engineering and safety challenges — including catastrophic forgetting of previously learned behaviors, distribution shift from novel attack patterns, and the risk of policy destabilization under adversarial manipulation of the training signal. These challenges render Continual Learning beyond the scope of this thesis and are identified as a future research direction.
+
+The proposed system is therefore classified as an **offline-trained, inference-deployed** architecture. The Two-Stage Framework — simulator-based training followed by frozen-policy deployment on Mininet — represents this paradigm precisely.
 
 #### The Role of Emulation in Cybersecurity Research
 
@@ -116,7 +132,7 @@ Simulation also makes it possible to safely execute destructive attack scenarios
 
 Mininet is a widely used network emulation framework that differs from traditional simulators by creating virtual networks in which each host runs on the real Linux kernel and uses the actual Linux networking stack. Rather than representing packet behavior through abstract mathematical models, Mininet relies on Linux network namespaces to create lightweight but realistic virtual hosts. As a result, these hosts can execute real binaries and interact with standard networking tools such as iptables, tc, and iproute2. This high level of realism makes it possible to evaluate defensive policies in an environment that closely resembles deployment on Linux-based production systems, thereby improving the practical transferability of the results.
 
-In the context of reinforcement learning, Mininet serves as a High-Fidelity Emulation Testbed. It permits the precise modeling of latency, bandwidth, and packet loss as they would occur on physical hardware, while supporting the dynamic reconfiguration of network topologies during runtime. By integrating with iptables and Traffic Control (tc), Mininet enables the Agent to face the same constraints and stochastic perturbations found in operational environments—an essential requirement for narrowing the gap between theoretical research and practical deployment.
+In the context of reinforcement learning, Mininet serves as a High-Fidelity Emulation Testbed. It supports the dynamic reconfiguration of network topologies during runtime and, by integrating with iptables and Traffic Control (tc), enables the Agent to face constraints and stochastic perturbations characteristic of operational environments—an essential requirement for narrowing the gap between theoretical research and practical deployment.
 
 #### Reinforcement Learning Environments with Gymnasium
 
@@ -208,7 +224,7 @@ The common denominator of these studies is the lack of comprehensive representat
 
 #### The Enforcement Gap: Abstraction vs. Reality
 
-Conversely, some studies build detailed simulation environments but stop at the research prototype level, failing to reach the enforcement layer of real systems. The work of **Feng, Li, and Nguyen [7]** on application-layer DDoS defense with RL is a prime example: the authors design a testbed using Open vSwitch and Mininet, observing 12 state features and choosing between actions like delay, drop, or block. However, the entire interaction is implemented within a simulator framework where rewards are calculated based on ground truth information available within the simulation.
+Conversely, some studies build detailed simulation environments but stop at the research prototype level, failing to reach the enforcement layer of real systems. The work of **Feng, Li, and Nguyen [12]** on application-layer DDoS defense with RL is a prime example: the authors design a testbed using Open vSwitch and Mininet, observing 12 state features and choosing between actions like delay, drop, or block. However, the entire interaction is implemented within a simulator framework where rewards are calculated based on ground truth information available within the simulation.
 
 The **Enforcement Gap** arises because the actions in many studies are logical variables or abstract API calls (e.g., "block_flow") within a simulator framework rather than real-world enforcement commands. Bridging this gap requires an architecture where the AI's high-level reasoning is directly coupled with authentic, low-level network controls.
 
@@ -240,9 +256,9 @@ Based on a comprehensive literature review, this thesis contributes to the field
 
 Technically, the research develops a **closed-loop automated defense architecture** specifically designed for **high-fidelity emulation environments**. This architecture provides a functional bridge between high-level AI decision-making and low-level kernel enforcement. Unlike traditional research limited to offline detection, the proposed system implements an integrated pipeline—spanning automated traffic processing, **RL inference**, and authentic defensive execution via `iptables` and `tc`. By operating within a dynamic emulation framework, the study effectively validates the feasibility of AI-driven defense beyond abstract mathematical models.
 
-Methodologically, the thesis proposes a **Hybrid State Representation** that resolves the "Information Asymmetry" identified in existing literature. By integrating environmental traffic metrics with agent-centric feedback signals, the proposed state vector encapsulates the consequences of previous actions and the temporal behavior of network entities. This design enables the Agent to better navigate the POMDP nature of the network environment, facilitating causal reasoning and optimizing the critical trade-off between aggressive threat mitigation and the preservation of service availability.
+Methodologically, the thesis proposes a **Hybrid State Representation** that resolves the "Information Asymmetry" identified in existing literature. By integrating environmental traffic metrics with agent-centric feedback signals, the proposed 34-dimensional state vector encapsulates the consequences of previous actions and the temporal behavior of network entities. This design enables the Agent to better navigate the POMDP nature of the network environment, supporting causal reasoning within the constraints of an offline-trained, inference-deployed architecture, and optimizing the critical trade-off between aggressive threat mitigation and the preservation of service availability.
 
-Practically, the study provides empirical evidence that reinforcement learning can surpass static rule-based mechanisms in complex, adversarial scenarios. Through diverse attack vectors within the testbed, the system demonstrates robust adaptability to evolving threats while maintaining acceptable operational standards. This work serves as a proof-of-concept for the deployment of adaptive, learning-based defense agents in modern, software-defined network infrastructures.
+Practically, the experimental evaluation presented in Chapter 4 provides empirical evidence that the proposed RL-based architecture achieves higher mitigation rates than static rule-based baselines across five attack classes while maintaining a lower false positive rate on legitimate traffic. The system demonstrates that a frozen, offline-trained policy can sustain acceptable operational standards when deployed in a high-fidelity emulation environment. This work serves as a proof-of-concept for the deployment of adaptive, learning-based defense agents in modern, software-defined network infrastructures.
 
 ## References
 
@@ -274,7 +290,7 @@ Practically, the study provides empirical evidence that reinforcement learning c
 
 [14] A. Galashov, et al., "Information asymmetry in KL-regularized RL," *ICLR 2019*.
 
-[15] L. P. Kaelbling, et al., "Informed asymmetric actor-critic," *arXiv preprint arXiv:2509.26000*, 2021.
+[15] L. Pinto, M. Andrychowicz, P. Welinder, W. Zaremba, and P. Abbeel, "Asymmetric actor critic for image-based robot learning," *arXiv preprint arXiv:1710.06542*, 2017.
 
 [16] J. Merel, et al., "Priors, hierarchy, and information asymmetry for skill transfer in hierarchical RL," *arXiv preprint arXiv:2201.08115*, 2022.
 

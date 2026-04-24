@@ -13,10 +13,11 @@
     - [3.1.6.2 Traffic Generation and Domain Randomization](#3162-traffic-generation-and-domain-randomization)
     - [3.1.6.3 Action Space and Defensive Strategy](#3163-action-space-and-defensive-strategy)
     - [3.1.6.4 Temporal Observation Window and Soft Escalation](#3164-temporal-observation-window-and-soft-escalation)
-    - [3.1.6.5 Reward Function and Strategy Optimization](#3165-reward-function-and-strategy-optimization)
-    - [3.1.6.6 Training Configuration and Academic Calibration](#3166-training-configuration-and-academic-calibration)
-    - [3.1.6.7 Adversarial Dynamics and Closed-Loop Feedback](#3167-adversarial-dynamics-and-closed-loop-feedback)
-  - [3.1.7 Real-Time Inference and Enforcement Pipeline](#317-real-time-inference-and-enforcement-pipeline)
+    - [3.1.6.5 Reward Function and Persistence-Aware Shaping](#3165-reward-function-and-persistence-aware-shaping)
+    - [3.1.6.6 Policy Optimization (PPO)](#3166-policy-optimization-ppo)
+    - [3.1.6.7 Training Configuration and Academic Calibration](#3167-training-configuration-and-academic-calibration)
+    - [3.1.6.8 Adversarial Dynamics and Closed-Loop Feedback](#3168-adversarial-dynamics-and-closed-loop-feedback)
+  - [3.1.7 Inference Deployment and Enforcement Pipeline](#317-real-time-inference-and-enforcement-pipeline)
   - [3.1.8 Emulation-Based Validation Protocol](#318-emulation-based-validation-protocol)
 - [3.2 Data Collection Methodology](#32-data-collection-methodology)
   - [3.2.1 Packet Capture and Dissection](#321-packet-capture-and-dissection)
@@ -68,6 +69,17 @@ The research methodology is executed across two parallel branches:
     - The **Learning Element** executes the optimization loop.
     - The **Problem Generator** is implemented via the Gymnasium environment.
 
+**System Classification: Offline-Trained, Inference-Deployed.** As established in Section 2.1.2, the proposed system is an **offline-trained, inference-deployed** architecture — a distinction that governs the entire design of this chapter. The two stages operate under fundamentally different learning modes:
+
+| Stage | Learning Mode | Weight Updates | Data Source |
+|---|---|---|---|
+| **Training** (IDSDefenseEnv simulator) | On-policy (PPO) | Active — gradient descent per rollout | Synthetic simulator (MockIPBehavior + domain randomization) |
+| **Deployment** (Mininet + iptables) | **None — frozen inference** | None | Live network traffic (observation only) |
+
+During the Training Stage, the Learning Element (PPO optimization loop) actively updates the policy weights $\theta$ via gradient descent through interaction with the simulator. Once training converges, $\theta$ is **permanently frozen**. In the Deployment Stage on Mininet, the system executes policy inference $\pi_{\theta^*}(s_t)$ exclusively — a forward pass through the frozen policy network — without any gradient computation or weight update. The agent's adaptivity in production derives entirely from what was learned during training, not from live traffic.
+
+This classification has two direct consequences for the system design described in this chapter: (1) the Training Stage must expose the agent to sufficient diversity of attack scenarios to generalize to unseen variations at deployment time; and (2) the Deployment Stage operates at **near real-time** granularity, which is distinct from the sub-millisecond latency of the iptables enforcement layer that applies rules instantaneously once set.
+
 Building upon the theoretical advantages of PPO discussed in Chapter 2, the research team performed an empirical screening step on the CIC datasets comparing PPO, DQN, and A2C. The benchmark results, presented in Chapter 4, validate the selection of PPO based on its superior stability and operational safety in stochastic network environments.
 
 **Table 3.1: RL Algorithm Comparison and Selection Rationale**
@@ -85,7 +97,7 @@ Building upon the theoretical advantages of PPO discussed in Chapter 2, the rese
 The proposed defensive system is structured according to a three-layer architecture:
 
 1. **Observation & Feature Extraction Layer:** Captures raw network packets to extract **20 behavioral features** from bidirectional flows. It simultaneously integrates **14 internal state dimensions** (10D persistent temporal context and 4D delayed environmental feedback) maintained by the system memory to construct the unified **34D observation vector**.
-2. **Decision-Making Layer (RL Defense Agent):** Receives the consolidated 34D vector as a complete snapshot of the system's context. It utilizes the trained PPO policy to map this observation to the optimal defensive action $a_t$. In accordance with the Two-Stage Development Framework established in Chapter 2, the Agent is first trained for 500,000 steps in a Gymnasium simulation before being transitioned to the Mininet emulation environment for validation.
+2. **Decision-Making Layer (RL Defense Agent):** Receives the consolidated 34D vector as a complete snapshot of the system's context. It utilizes the trained PPO policy to map this observation to the optimal defensive action $a_t$. In accordance with the Two-Stage Development Framework established in Chapter 2, the Agent is first trained for 500,000 steps in a Gymnasium simulation before being transitioned to the Mininet emulation environment for deployment and validation.
 3. **Enforcement Layer:** Deploys defensive actions into the network infrastructure via `iptables`:
     - **Allow (0):** Permits traffic to pass without interference.
     - **Rate Limit (1):** Constrains bandwidth using `hashlimit` (2 pkt/s).
@@ -128,8 +140,6 @@ Where:
 
 - **$B(s, a)$:** A contextual bonus for selecting an action appropriate to the detected threat typology.
 - **$c(a)$:** The operational cost of action $a$.
-- **$D(s')$:** The normalized service damage score observed in the subsequent state.
-- **$\omega$:** A weighting coefficient that adjusts the system's sensitivity to service disruption.
 
 The total reward for the v13 Agent incorporates strategic shaping components:
 $$R = R_{base} + P_{osc} + B_{stab} + B_{ramp} + B_{persist} + P_{premature}$$
@@ -165,7 +175,7 @@ Unlike traditional signature-based classifiers, the RL Agent does not learn to e
 
 #### 3.1.6.1. RL Training Environment Implementation
 
-The training environment is structured as a closed-loop control system, formalized through the Markov Decision Process (MDP) theoretical framework 3.1.4. The implementation is based on the Gymnasium standard, integrating dynamic entity management mechanisms to simulate session persistence.
+The training environment, designated **IDSDefenseEnv**, is structured as a closed-loop control system, formalized through the Markov Decision Process (MDP) theoretical framework outlined in Section 3.1.4. IDSDefenseEnv is implemented as a Gymnasium-compatible environment, integrating dynamic entity management mechanisms to simulate session persistence across heterogeneous IP behavioral profiles.
 
 **Episode Structure:** The temporal dynamics of the simulation are defined by a fixed episode length of 320 steps, corresponding to an operational window of 8 minutes. This duration is calibrated to ensure sufficient time for the Agent to observe the progressive development of L7 attack campaigns and formulate a context-aware defensive response.
 
@@ -173,11 +183,11 @@ The training environment is structured as a closed-loop control system, formaliz
 
 #### 3.1.6.2. Traffic Generation and Domain Randomization
 
-The RL environment integrates a **Stateful Behavioral Simulation Engine** to simulate a comprehensive suite of network attack vectors. This integration ensures that the Agent is exposed to a diverse range of adversarial behaviors, ranging from targeted, high-intensity attacks to stealthy, distributed campaigns.
+IDSDefenseEnv integrates a **Stateful Behavioral Simulation Engine** — designated **MockIPBehavior** — to simulate a comprehensive suite of network attack vectors. Each IP entity within an episode is represented by a dedicated MockIPBehavior instance, which maintains persistent behavioral state across its 20-step session lifecycle and generates feature vectors via statistical distributions calibrated from empirical datasets such as CSE-CIC-IDS2018. This design ensures that the Agent is exposed to a diverse range of adversarial behaviors, ranging from targeted, high-intensity attacks to stealthy, distributed campaigns.
 
 **Traffic Generation and Domain Randomization:**
 
-The simulation logic orchestrates the presence of various IP entities sequentially within an episode. The simulation uses a Stateful Behavioral Simulation Engine calibrated based on empirical distribution analysis from standard datasets such as CSE-CIC-IDS2018.
+The simulation logic orchestrates MockIPBehavior instances sequentially within an episode, with each instance assigned one of six behavioral profiles: benign, SYN Flood, Port Scan, Brute Force, SQL Injection, or XSS.
 
 To enhance the sustainability of the Agent and prevent the phenomenon of "rote learning" (overfitting) static attack signals, the system employs **domain randomization**. This technique prevents the agent from converging on fixed thresholds (local thresholds), forcing the policy to extract abstract and non-linear behavioral patterns from the data. Network features are parameterized based on specific mathematical distributions to reflect the randomness of reality:
 
@@ -189,15 +199,15 @@ To enhance the sustainability of the Agent and prevent the phenomenon of "rote l
 
 **Synthetic Attack Vectors:**
 
-- **DDoS (SYN Flood) (`hping3`):** This module simulates volumetric attacks designed to exhaust network resources. The traffic is characterized by a massive surge in packet rates ($F_1$) and a highly asymmetric SYN/ACK ratio ($F_2$), typical of half-open connection attempts.
+- **DDoS (SYN Flood):** This behavioral profile generates synthetic volumetric traffic characterized by a massive surge in packet rates ($F_1 \approx 350$ pkt/s) and a highly asymmetric SYN/ACK ratio ($F_2 \approx 10$), typical of half-open connection attempts. Feature distributions are sampled statistically within the simulator. In the Mininet emulation stage, equivalent traffic is generated using `hping3` for deployment validation.
 
-- **Port Scan (`nmap`):** This module simulates reconnaissance activity targeting server ports to identify open services. The traffic exhibits a high number of distinct destination ports ($F_5$) within a short observation window, often accompanied by elevated reset ratios ($F_4$).
+- **Port Scan:** This behavioral profile generates synthetic reconnaissance traffic exhibiting a high number of distinct destination ports ($F_5$) and elevated reset ratios ($F_4 \approx 0.60$), reflecting failed connection attempts across multiple services. In the Mininet emulation stage, equivalent traffic is generated using `nmap` for deployment validation.
 
-- **Brute Force (`requests`):** This module generates HTTP traffic characteristic of automated credential stuffing or scraping. Utilizing the `requests` library with keep-alive sessions, the traffic is engineered with high temporal uniformity ($F_7$) and consistent request sizes ($F_8$) to mimic bot-like behavior.
+- **Brute Force:** This behavioral profile generates synthetic HTTP credential-stuffing traffic calibrated from CIC-IDS2018 empirical measurements. Two subtypes are modeled: standard HTTP brute force ($F_7 \approx 0.12$) and a keep-alive bot variant exhibiting high temporal uniformity ($F_7 \approx 0.85$) and request size uniformity ($F_8 \approx 0.88$). All feature distributions are generated via statistical sampling within the simulator without invoking any external tool.
 
-- **SQL Injection (`sqlmap`):** This module simulates attempts to exploit database vulnerabilities through malicious SQL queries. The traffic is characterized by payloads containing common SQLi syntax, such as `' OR '1'='1'`, designed to bypass authentication or extract sensitive data, triggering ModSecurity-based CRS scores ($F_{13}$).
+- **SQL Injection:** This behavioral profile generates synthetic SQLi traffic calibrated from CIC-IDS2018 SQL Injection windows, reflecting low-rate attack behavior ($F_1 \approx 12$ pkt/s), concentrated exploit URLs ($F_6 \approx 0.70$), and elevated CRS 942 scores ($F_{13} \approx 5.5$), UNION SELECT indicators ($F_{14} \approx 0.4$), and SQL comment markers ($F_{15} \approx 0.6$). All feature vectors are generated statistically within the simulator. In the Mininet emulation stage, `sqlmap` is used directly for deployment validation.
 
-- **XSS Attack (`xsser`):** This module simulates Cross-Site Scripting attacks where malicious scripts are injected into web application parameters. The traffic involves JavaScript payloads (e.g., `<script>alert(1)</script>`) designed to compromise client-side security, detected through signature-based features ($F_{18}-F_{20}$).
+- **XSS Attack:** This behavioral profile generates synthetic XSS traffic calibrated from CIC-IDS2018 Brute Force-XSS windows, characterized by high URL concentration ($F_6 \approx 0.95$), elevated CRS 941 scores ($F_{18} \approx 2.2$), and JavaScript function call indicators ($F_{19} \approx 0.9$). All feature vectors are generated statistically within the simulator without invoking any external XSS tool.
 
 #### 3.1.6.3. Action Space and Defensive Strategy
 
@@ -234,7 +244,7 @@ To ensure high-precision decision-making and minimize false positives, the syste
 Each unique IP entity is allocated a total lifecycle of 20 discrete time steps within an episode. Within this lifecycle, the system maintains a 15-step soft monitoring window ($W_{soft} = 15$) specifically for evidence accumulation and escalation scoring. This window provides the "forensic runway" necessary for the Agent to observe behavioral evolution across 3 distinct operational phases:
 
 - **Phase 1: Observation & Monitoring (Steps 1–11):** Initial assessment of traffic features. If L7 signals exceed 0.35, the IP is flagged. During this phase, the Agent is incentivized to use the **Redirect** action to route traffic into the Honeypot. Issuing a **Block** action here is penalized as "premature" since the evidence is not yet statistically significant.
-- **Phase 2: Ramp Zone / Critical Decision Window (Steps 12–14):** This is the core of the Soft Escalation mechanism, accounting for approximately 60–70% of the session's duration. If the accumulated threat confidence score reaches $\ge 0.60$, the latching enforcement flag is activated. The Agent is then encouraged to transition from Redirect to Block via a progressive **Ramp bonus**.
+- **Phase 2: Ramp Zone / Critical Decision Window (Steps 12–14):** This 3-step window (15% of the session lifecycle) constitutes the critical decision point of the Soft Escalation mechanism. If the accumulated threat confidence score reaches $\ge 0.60$, the latching enforcement flag is activated. The Agent is then encouraged to transition from Redirect to Block via a progressive **Ramp bonus**.
 - **Phase 3: Enforcement & Persistence (Steps 15–20):** Once the latching enforcement flag is activated, the system enters the enforcement phase. The Agent must sustain the **Block** action; any reversion to Allow or Redirect is heavily penalized to prevent "evasive flickering" by the attacker.
 
 **2. Evidence-Based Escalation Logic:**
@@ -279,13 +289,13 @@ To govern escalation and prevent erratic behavior, the system integrates five st
 
 **Table 3.5: Reward Shaping Components**
 
-| Component | Symbol | Strategic Function |
-|---|---|---|
-| Stability Bonus | $B_{stab}$ | Grants a minor reward for context-appropriate actions; heavily rewards maintaining Redirect during an active L7 session. |
-| Ramp Bonus | $B_{ramp}$ | Incentivizes a progressive transition from Redirect to Block as evidence accumulates in the terminal steps (windows 12-14). |
-| Persistence Bonus | $B_{persist}$ | Rewards sustained Block actions when the enforcement flag is active, penalizing evasive reversions. |
-| Oscillation Penalty | $P_{osc}$ | Penalizes downgrading defense levels while attack pressure remains elevated (flickering). |
-| Premature Penalty | $P_{premature}$ | Penalizes Block execution before sufficient evidence is gathered, preventing false positives. |
+| Component | Symbol | Value | Trigger Condition | Strategic Function |
+|---|---|---|---|---|
+| Stability Bonus | $B_{stab}$ | +0.01 (general); +0.05 (L7 Redirect) | Action held for at least one consecutive step in a contextually appropriate state; or Redirect is active during an L7 session | Reinforces holding the correct action; provides a stronger incentive to maintain Redirect while honeypot evidence accumulates. |
+| Ramp Bonus | $B_{ramp}$ | +0.08 / +0.15 (Block); −0.03 / −0.06 (Redirect) | Monitoring session active, enforcement flag not yet latched, step ∈ {12–13} or {14}, escalation score ≥ 0.50 | Creates a progressive reward gradient driving the transition from Redirect to Block; penalty magnitude increases at step 14 to create urgency at the final decision boundary. |
+| Persistence Bonus | $B_{persist}$ | +0.45 (Block); −0.35 (Redirect); −0.40 (Allow/RateLimit) | Enforcement flag latched and attacker presence confirmed | Heavily rewards sustained Block once sufficient evidence is accumulated; symmetric penalties prevent reversion to weaker actions. |
+| Oscillation Penalty | $P_{osc}$ | −0.05 (outside session); −0.10 / −0.15 (inside session) | Defense level downgraded while service damage remains elevated; or Allow/RateLimit issued during an active session at step < 12 / ≥ 12 | Discourages flickering back to weaker actions while attack pressure persists; penalty escalates with session depth. |
+| Premature Penalty | $P_{premature}$ | −0.20 | Monitoring session active, enforcement flag not yet latched, Block issued prior to the ramp zone (before step 12) | Prevents aggressive early blocking before sufficient forensic evidence is gathered, reducing false positives on benign traffic. |
 
 This multi-component reward function not only tells the Agent to "block the attack," but also teaches the Agent to "observe carefully, accumulate evidence through the Nginx log, and only block when absolutely certain so as not to disrupt normal users."
 
@@ -340,7 +350,7 @@ In contrast to traditional detection systems that treat network traffic as a sta
 - **Strategic Interaction:** This mechanism prevents the policy from overfitting to static thresholds. The Agent must learn to anticipate the consequences of its actions, fostering a balance between immediate threat suppression and long-term forensic evidence collection.
 - **Asymmetric Visibility:** A unique technical feature of the environment is the preservation of visibility. Even when an IP is **Blocked** (Layer 3 DROP), the monitoring model continues to record raw connection attempts while the application-layer damage metrics drop to zero. This differentiation allows the Agent to distinguish between the continued presence of an attacker and the actual impact on service availability.
 
-### 3.1.7 Real-Time Inference and Enforcement Pipeline
+### 3.1.7 Inference Deployment and Enforcement Pipeline
 
 The operational system transitions the trained policy into a Mininet environment. This pipeline provides the technical implementation of the high-level escalation strategy defined in Section 3.1.6.4, structured into three functional layers:
 
@@ -356,6 +366,37 @@ The operational system transitions the trained policy into a Mininet environment
         - **Permissible Miss Budget Management:** If the IP address remains active but is not captured by the honeypot more than 3 times (miss_count), the score will be reduced and a risk warning will be issued.
         - **Block Ready Flag Activation:** Once sufficient reliable evidence has been accumulated and the minimum number of steps is reached, the system sets the "Block Ready" flag to suggest promotion to the Block action.
         - **Session Termination:** The monitoring session automatically resets when the IP address becomes inactive or the traffic becomes clean, preventing the system from maintaining redundant controls. This mechanism replaces rigid timers with flexible, validated decision-making logic based on the actual behavior of each IP address.
+
+The complete pipeline is formalized in Algorithm 2, which integrates the three functional layers described above into a unified near real-time control loop.
+
+**Algorithm 2: Near Real-Time Inference and Enforcement Pipeline**
+---
+
+**Input:** Live network traffic stream from Mininet Router interface
+
+**Output:** `iptables` enforcement action $a_t$ per source IP per 1-second window
+
+1: **loop** *(continuous, one iteration per 1-second window)*
+2:   Collect all packets within $[t-1, t]$ → compute 20D feature vector $\mathbf{f}_t = [F_1, \ldots, F_{20}]$
+3:   Retrieve per-IP **PerIPTemporalState** → 10D temporal vector $\mathbf{h}_t$
+4:   Retrieve closed-loop feedback from previous step → 4D effect vector $\mathbf{e}_{t-1}$
+5:   Construct $\mathbf{obs}_{34} \leftarrow [\mathbf{f}_t \;\|\; \mathbf{h}_t \;\|\; \mathbf{e}_{t-1}]$ $\quad \triangleright$ normalized to $[0,1]^{34}$
+6:   $a_t \leftarrow \pi_{\theta^*}(\mathbf{obs}_{34})$ $\quad \triangleright$ frozen policy forward pass — no gradient computation
+7:   **if** SafetyNet override condition met **then**
+8:     $a_t \leftarrow \text{SafetyNet}(a_t,\; \mathbf{obs}_{34})$ $\quad \triangleright$ guardrail correction for operational risk
+9:   **end if**
+10:  Enforce $a_t$ via `iptables` rule on source IP
+11:  **if** $a_t = \text{Redirect}$ **and** L7 signal $\geq 0.35$ **then**
+12:    Increment soft escalation window; record evidence metrics
+13:    **if** escalation\_score $\geq 0.60$ **and** step $\geq 12$ **then**
+14:      Activate **block\_ready** flag $\quad \triangleright$ promote to Block at next step
+15:    **end if**
+16:  **end if**
+17:  Update **PerIPTemporalState** with $(a_t, \mathbf{obs}_{34})$
+18:  Update $\mathbf{e}_t$ from network feedback (webserver reachability, honeypot capture ratio)
+19: **end loop**
+
+---
 
 Specifically, each action generates a measurable effect on the 34-dimensional observation space, exerting a direct impact on the 20 traffic feature dimensions and reflecting in the 4 effect state dimensions; the 10 temporal state dimensions are updated based on the IP state:
 
@@ -374,6 +415,15 @@ To validate the Agent in a realistic environment, an emulation-based protocol is
 1. **Mixed Attack Scenarios:** Using `hping3`, `nmap`, and `sqlmap` against a benign background stream generated by legitimate client nodes.
 2. **Real-time Monitoring:** Capturing live traffic from the Router's interface and executing kernel-level `iptables` and `tc` rules.
 3. **Performance Indicators (KPIs):** Measuring Mitigation Rate (packets neutralized), Service Availability (latency/success rate), and Decision Accuracy (Precision/Recall).
+
+**Table 3.8: System Design Summary — From Problem Formulation to Deployment**
+
+| Layer | Component | Role |
+|---|---|---|
+| **Problem Formulation** | POMDP → MDP approximation (34D sufficient statistic) | Defines $\mathcal{S}$ (34D), $\mathcal{A}$ (4 actions), $R_{total}$ |
+| **Optimization Algorithm** | PPO — on-policy, GAE advantage estimation, clipped objective | Solves for optimal frozen policy $\pi_{\theta^*}$ |
+| **Training Output** | Frozen policy $\pi_{\theta^*}$ (IDSDefenseEnv, 500k steps) | Weights fixed after convergence; no further updates |
+| **Deployment** | Inference pipeline on Mininet + `iptables` enforcement | Near real-time defense (~1s granularity), no weight update |
 
 ---
 
@@ -436,13 +486,13 @@ Feature engineering in this research is designed as a tiered architecture that b
 Attackers habitually obfuscate payloads utilizing URL encoding, HTML entities, or Base64 to bypass rudimentary inspection filters. The payload normalization engine deploys an 8-step sequential pipeline executing prior to pattern matching, perfectly cohesive with Section 4.2.1:
 
 **Size Limitation (64 KB):** Actively neutralizes resource exhaustion attacks stemming from excessively monolithic payloads instigating ReDoS against complex CRS regex engines.
-**Bytes $\to$ String Conversion** (UTF-8 with Latin-1 fallback): Guarantees absolute consistency representing every byte, ruthlessly preventing data loss.
-**HTML Entity Decoding:** Uniformly standardizes HTML variants like `&lt;script&gt;` converting them into `<script>`.
-**Unicode NFKC and Smart Quotes Normalization:** Defeats bypass strategies employing fullwidth characters and homoglyphs.
-**Recursive URL Decoding (Max 2 iterations):** Dismantles double-encoding strategies intensely prevalent in evasion.
-**Recursive Base64 Decoding (Max 2 iterations):** Identifies highly destructive payloads maliciously embedded inside Base64 strings.
-**Whitespace Normalization:** Vaporizes whitespace manipulations engineered to shatter pattern matching logic.
-**Lowercase Conversion:** Installs robust, case-insensitive matching logic universally across the pipeline.
+**Bytes $\to$ String Conversion** (UTF-8 with Latin-1 fallback): Ensures uniform byte representation, preventing data loss due to encoding mismatches.
+**HTML Entity Decoding:** Standardizes HTML-encoded variants such as `&lt;script&gt;` to their canonical form `<script>`, countering a prevalent XSS evasion technique.
+**Unicode NFKC and Smart Quotes Normalization:** Resolves bypass attempts utilizing full-width characters and Unicode homoglyphs embedded within attack keywords.
+**Recursive URL Decoding (Max 2 iterations):** Addresses double-encoding schemes (e.g., `%2527` → `%27` → `'`), one of the most common WAF bypass vectors.
+**Recursive Base64 Decoding (Max 2 iterations):** Detects attack payloads encapsulated within Base64 strings, a documented evasion tactic in live CRS deployments.
+**Whitespace Normalization:** Eliminates whitespace manipulations (tabs, multi-spaces, embedded newlines) designed to fragment pattern matching.
+**Lowercase Conversion:** Enforces case-insensitive matching uniformly across the pipeline.
 The pipeline is optimized to complete the entire process in a much shorter time than the 1-second MDP observation window; the normalization results are cached by packet identifier to avoid repeated calculations on the same packet.
 
 #### 3.3.2.2 Multi-dimensional Feature Representation (34D)
@@ -453,7 +503,7 @@ To provide the Agent with comprehensive situational awareness, the observation s
 
 The 20-feature design stems from the question: "What does the RL agent need to know about the network to make the right defensive decisions?" The agent needs enough information to differentiate five types of attacks from normal traffic, and to distinguish them from each other in order to choose the appropriate action — for example, Blocking is effective with SYN Floods but wasteful with SQLi where Redirecting to a Honeypot allows for threat intelligence gathering.
 
-**Table 3.8: Inventory of 20 Traffic and Payload Features (F1-F20)**
+**Table 3.9: Inventory of 20 Traffic and Payload Features (F1-F20)**
 
 | Code | Feature Name | Concise Description | Scaling | Cap | Detection Target |
 |---|---|---|---|---|---|
@@ -483,13 +533,13 @@ The 20-feature design stems from the question: "What does the RL agent need to k
 The 20-dimensional vector of traffic characteristics (F1–F20) only reflects the instantaneous state of traffic within the current 1-second window. However, many defensive decisions require longer-term context: the agent needs to know how long this IP has been blocked, whether the attack signal is escalating or de-escalating, and how much "budget" is left before having to escalate action. The 10-dimensional time-state component adds short-term memory per source IP to the observation space, allowing the agent to make decisions based on history rather than just instantaneous state.
 The 10 temporal dimensions (indices [20]–[29] existing within the 34-dimensional overarching vector) are directly processed utilizing the unique `PerIPTemporalState` object preserved for every individual IP.
 
-**Table 3.9: 10 Temporal State Dimensions (F21-F30)**
+**Table 3.10: 10 Temporal State Dimensions (F21-F30)**
 
 | Index | Identifier | Formula / Derivation Source | Strategic Function |
 |---|---|---|---|
 | [20–23] | `last_action_onehot` | Dedicated one-hot encoding targeting the immediate preceding action `last_action \in \{0,1,2,3\}` | Informs the Agent defining whether the IP currently undergoes Allow / Rate Limit / Redirect / Block |
 | [24] | `action_hold_norm` | `action_hold_steps / 15`, rigidly clipped at 1.0 | Aggregated consecutive steps preserving a unified action — highly effective detecting stalling actions |
-| [25] | `effect_damage_ema` | Dedicated EMA processing `service_damage` sourced from previous steps ($\alpha = 0.3$) | Exposes service damage trends traversing time frames, ruthlessly stripping erratic short-term noise |
+| [25] | `effect_damage_ema` | Dedicated EMA processing `service_damage` sourced from previous steps ($\alpha = 0.3$) | Tracks service damage trends over time while suppressing short-term noise |
 | [26] | `effect_trend` | `sigmoid(EMA(damage_t - damage_{t-1}))` | Highlights damage directional movement: >0.5 = intensifying degradation, <0.5 = active recovery |
 | [27] | `soft_window_fill_norm` | `len(window_flags) / 15` | Measures saturation levels populating the attack evidence buffer (15-step sliding window configuration) |
 | [28] | `escalation_score_norm` | Consolidated evidence score mathematically sourced via `redirect_hits`, `honeypot_hits`, `pressure_mean` | Denotes operational reliability validating an active attack, subsequently guiding the Agent toward escalation timing |
@@ -499,16 +549,16 @@ All 10 temporal dimensions are in [0,1] by design, ensuring consistency with the
 
 #### C. Closed-Loop Effect Feedback (4D: F31–F34)
 
-The final 4 dimensions (indices [18]–[28]) encode the operational results generated by the action executed in the previous step. This provides the closed-loop feedback mechanism for the system:
+The final 4 dimensions (indices [30]–[33]) encode the operational results generated by the action executed in the previous step. This provides the closed-loop feedback mechanism for the system:
 
-**Table 3.10: 4 Closed-Loop Feedback Dimensions (F31-F34)**
+**Table 3.11: 4 Closed-Loop Feedback Dimensions (F31-F34)**
 
 | Index | Identifier | Significance |
 |---|---|---|
-| [18] | `webserver_reachability` | Assesses if the production webserver generated responses (1.0 = normal, 0 = severe congestion) |
-| [21] | `honeypot_capture_ratio` | Calculates the ratio comparing suspected traffic successfully captured by the honeypot against the gross traffic emanating from the IP |
-| [13] | `service_presence` | Determines whether the source IP currently persists transmitting traffic directly toward the webserver |
-| [28] | `service_damage` | Analyzes precise, authentic service damage actively measured post-execution from the preceding action step |
+| [30] | `webserver_reachability` | Assesses if the production webserver generated responses (1.0 = normal, 0 = severe congestion) |
+| [31] | `honeypot_capture_ratio` | Calculates the ratio comparing suspected traffic successfully captured by the honeypot against the gross traffic emanating from the IP |
+| [32] | `service_presence` | Determines whether the source IP currently persists transmitting traffic directly toward the webserver |
+| [33] | `service_damage` | Analyzes precise, authentic service damage actively measured post-execution from the preceding action step |
 
 Unlike the 20 traffic features (instantaneous measurements) and the 10 temporal state dimensions (local history), these 4 effect state dimensions reflect the direct consequences of the Agent's actions on the network Environment, transforming the RL process into a closed-loop system.
 
@@ -529,8 +579,6 @@ Following raw value calculation, the 20 features undergo absolute normalization 
 Normalization converging upon [0,1] dictates a draconian technical necessity commanded by the PPO neural network: gradient descent routinely fails to securely converge whenever inputs showcase radically differing magnitude scales (e.g., raw F1 ~100–500 pkt/s opposing F14 binary {0,1}). The `MlpPolicy` integrated within Stable-Baselines3 [26] executes an auxiliary VecNormalize layer deploying running mean/standard deviation computations — performing optimally exclusively when initial inputs are successfully clipped entering finite ranges, shielding VecNormalize from catastrophic skewing induced by massive extreme outliers.
 
 ## 3.4 Methodological Limitations
-
-Below is a rewritten version in academic style, not using the "phrase: explanation" format:
 
 - The Markov assumption should be viewed with caution, as the 34-dimensional observation vector only serves as an approximate statistical measure. If a 1-second window and a 10-dimensional time state are insufficient to represent significant long-term dependencies, the resulting policy may not be optimal.
 
