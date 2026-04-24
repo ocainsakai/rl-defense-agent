@@ -1,4 +1,21 @@
-# CHAPTER 5: DISCUSSION
+# CHAPTER 5: DISCUSSION & CONCLUSION
+
+## Table of Contents
+- [5.1 Restatement of Research Questions and Objectives](#51-restatement-of-research-questions-and-objectives)
+- [5.2 Summary of Key Findings and Interpretation](#52-summary-of-key-findings-and-interpretation-in-research-context)
+    - [5.2.1 RQ1 — Comparative Efficacy of the RL Agent](#521-rq1--comparative-efficacy-of-the-rl-agent)
+    - [5.2.2 RQ2 — Operational Trade-offs](#522-rq2--operational-trade-offs-defensive-resolution-vs-service-availability)
+    - [5.2.3 RQ3 — Policy Stability across Diverse Attack Vectors](#523-rq3--policy-stability-across-diverse-attack-vectors)
+    - [5.2.4 Detailed Analysis: Dominant Factors and Hyperparameter Selection](#524-detailed-analysis-dominant-factors-and-hyperparameter-selection)
+    - [5.2.5 Limitations and Critical Caveats](#525-limitations-and-critical-caveats)
+- [6.1 Conclusion](#61-conclusion)
+- [6.2 Future Developments](#62-future-developments)
+- [Appendices](#appendices)
+    - [Appendix A — Comprehensive Hyperparameter Profile](#appendix-a--comprehensive-hyperparameter-profile)
+    - [Appendix B — Reward Function: Composition](#appendix-b--reward-function-composition)
+    - [Appendix E — Example Action Logs](#appendix-e--example-action-logs)
+    - [Appendix F — Pseudocode](#appendix-f--pseudocode)
+
 
 ## 5.1 Restatement of Research Questions and Objectives
 

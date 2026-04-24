@@ -1,5 +1,30 @@
 # CHAPTER 4: EXPERIMENTAL RESULTS
 
+## Table of Contents
+- [4.1 Introduction](#41-introduction)
+    - [4.1.1 Definition of Evaluation Metrics](#411-definition-of-evaluation-metrics)
+- [4.2 Data Presentation](#42-data-presentation)
+    - [4.2.1 Payload Normalization Pipeline Results](#421-payload-normalization-pipeline-results)
+    - [4.2.2 CRS Paranoia Level Analysis](#422-crs-paranoia-level-analysis)
+    - [4.2.3 Feature-Level Detection Performance](#423-feature-level-detection-performance)
+    - [4.2.4 Feature Importance and Clustering](#424-feature-importance-and-clustering)
+    - [4.2.5 Benchmark PPO vs DQN vs A2C (Protocol and Data)](#425-benchmark-ppo-vs-dqn-vs-a2c-protocol-and-data)
+    - [4.2.6 PPO Hyperparameter Tuning](#426-ppo-hyperparameter-tuning)
+    - [4.2.7 Convergence and Training Stability Analysis of v13 PPO Model](#427-convergence-and-training-stability-analysis-of-v13-ppo-model)
+    - [4.2.8 Final Evaluation Results](#428-final-evaluation-results)
+    - [4.2.9 Validation of v13 PPO Model on Real-World Datasets](#429-validation-of-v13-ppo-model-on-real-world-datasets)
+- [4.3 Results Analysis](#43-results-analysis)
+    - [4.3.1 Analysis by Traffic Group](#431-analysis-by-traffic-group)
+    - [4.3.2 Policy Behavior Analysis](#432-policy-behavior-analysis)
+    - [4.3.3 Benchmark PPO vs DQN vs A2C Analysis](#433-benchmark-ppo-vs-dqn-vs-a2c-analysis)
+- [4.4 Results Interpretation](#44-results-interpretation)
+    - [4.4.1 Overall Evaluation](#441-overall-evaluation)
+    - [4.4.2 Real-World Scenario Validation](#442-real-world-scenario-validation)
+    - [4.4.3 Three Core Design Decisions](#443-three-core-design-decisions)
+- [4.5 Comparison with Literature](#45-comparison-with-literature)
+- [4.6 Implications of Results](#46-implications-of-results)
+
+
 ## 4.1 Introduction
 
 This chapter focuses on the experimental evaluation of the proposed defense system, including the **Observer Module** and the **Reinforcement Defense Agent (RL)**. The evaluation process is carried out in two key aspects:
