@@ -937,78 +937,25 @@ Kẻ tấn công thường mã hóa payload bằng URL encoding, HTML entities, 
 
 Pipeline được thiết kế để hoàn thành toàn bộ trong thời gian nhỏ hơn nhiều so với cửa sổ quan sát MDP 1 giây; kết quả chuẩn hóa được cache theo định danh gói tin để tránh tính toán lặp lại trên cùng một gói.
 
-### 3.3.6 Ma trận Phủ nhận Tấn công
+### 3.3.6 Kỹ nghệ Không gian Trạng thái (Thời gian và Phản hồi)
 
-Để xác minh 20 đặc trưng cung cấp tín hiệu phân biệt đầy đủ cho tác tử RL, Bảng 3.2 trình bày ma trận phủ nhận: dấu ✓ chỉ ra đặc trưng đó có khả năng phát hiện loại tấn công tương ứng. Mỗi loại tấn công được phủ bởi ít nhất hai đặc trưng độc lập, đảm bảo khả năng phát hiện ngay cả khi một đặc trưng bị nhiễu.
+Mặc dù 20 đặc trưng lưu lượng cung cấp một lát cắt tức thời về hành vi, Tác tử cần ngữ cảnh lịch sử để đưa ra các quyết định mạnh mẽ. Điều này được cung cấp bởi các thành phần 10D Temporal và 4D Phản hồi.
 
-**Bảng 3.2: Ma trận Phủ nhận — Đặc trưng × Loại Tấn công**
+**Trạng thái Thời gian theo IP (10D):**
+Module này duy trì một bộ theo dõi `PerIPTemporalState` cho mỗi IP nguồn, ghi lại sự tiến hóa của phiên:
+- **Hành động Trước đó (4D):** One-hot encoding của hành động được thực hiện ở bước cuối.
+- **Thời gian giữ Hành động (1D):** Thời gian hành động hiện tại được duy trì, chuẩn hóa về $[0,1]$.
+- **EMA & Xu hướng Tổn thất (2D):** Ghi lại liệu tổn thất dịch vụ đang ổn định hay leo thang theo thời gian.
+- **Tích lũy Bằng chứng (3D):** Theo dõi mức độ điền cửa sổ 15 bước, điểm leo thang hiện tại và "ngân sách bỏ lỡ" (tần suất vượt qua honeypot).
 
-| Đặc trưng | SYN Flood | Port Scan | Brute Force | SQLi | XSS |
-|---|---|---|---|---|---|
-| F1 PacketRate | ✓ | ✓ | ✓ | | |
-| F2 SynAckRatio | ✓ | | | | |
-| F3 InterArrivalTime | ✓ | ✓ | ✓ | | |
-| F4 RstRatio | | ✓ | | | |
-| F5 DistinctPorts | | ✓ | | | |
-| F6 URLConcentration | | | ✓ | | |
-| F7 HttpIatUniformity | | | ✓ | | |
-| F8 RequestSizeUniformity | | | ✓ | | |
-| F9 AvgPayloadSize | ✓ | | | | |
-| F11 PacketsPerPort | | ✓ | | | |
-| F12 SqlSpecialChar | | | | ✓ | |
-| F13 CrsSqliScore | | | | ✓ | |
-| F14–F16 SqlBinary | | | | ✓ | |
-| F18 CrsXssScore | | | | | ✓ |
-| F19–F20 XssBinary | | | | | ✓ |
+**Phản hồi Vòng kín (4D):**
+Đo lường trực tiếp tác động vận hành của các hành động của tác tử lên môi trường:
+- **Khả năng Tiếp cận Webserver:** Xác nhận liệu lưu lượng hợp lệ có tiếp cận được mục tiêu hay không.
+- **Tỉ lệ Bắt giữ Honeypot:** Đo lường hiệu quả của hành động Chuyển hướng.
+- **Tín hiệu Hiện diện:** Phát hiện xem IP có còn đang giao tiếp tích cực hay không.
+- **Tổn thất Dịch vụ Đo được:** Tác động thực tế quan sát được sau khi thực thi.
 
-*Nhận xét ngắn:* Mỗi loại tấn công được phủ bởi nhiều đặc trưng độc lập, giúp giảm rủi ro bỏ sót khi một tín hiệu bị nhiễu.
-
-### 3.3.7 Chuẩn hóa Vector Đặc trưng
-
-Sau khi tính giá trị thô, 20 đặc trưng được chuẩn hóa về [0,1] theo phân phối của từng đặc trưng. *(Cơ sở thiết kế phân nhóm chuẩn hóa xem Chương 2, Mục 2.1.4.5; phần này mô tả chi tiết triển khai và lý do kỹ thuật.)* Có ba nhóm:
-
-- **Thang log** (F1, F2, F3, F5, F10, F11): phân phối lệch phải, phạm vi rộng — ví dụ F1 có thể đạt 350 pkt/s khi DDoS nhưng thường < 10 khi bình thường. Công thức: `f_norm = log(1 + min(f_raw, cap)) / log(1 + cap)`, trong đó `cap` là giá trị cắt hiệu chỉnh thực nghiệm (Bảng 3.1). Log scale nén phần đuôi dài (outlier tấn công cực đoan) về vùng [0,8–1,0], tránh gradient vanishing cho các cửa sổ bình thường.
-- **Thang tuyến tính** (F9, F13, F17, F18): phân phối gần tuyến tính, phạm vi nhỏ. Công thức: `f_norm = min(f_raw, cap) / cap`. Áp dụng cho các đặc trưng đếm tần suất (CRS scores, SELECT count) có giá trị thực tế nằm trong biên độ dự đoán được.
-- **Pass-through** (F4, F6, F7, F8, F12, F14–F16, F19, F20): đã nằm trong [0,1] theo định nghĩa (tỷ lệ, hàm 1/(1+CV), hoặc nhị phân). Áp dụng giới hạn về [0,1] để đảm bảo an toàn số học trong trường hợp lỗi tính toán biên.
-
-Chuẩn hóa về [0,1] là yêu cầu kỹ thuật cho mạng neural PPO: gradient descent không hội tụ ổn định khi đầu vào có thang đo khác nhau nhiều bậc độ lớn (ví dụ F1 thô ~100–500 pkt/s vs F14 nhị phân {0,1}). MlpPolicy trong Stable-Baselines3 [3] áp dụng thêm lớp VecNormalize theo trung bình/độ lệch chuẩn chạy — hoạt động tốt chỉ khi đầu vào đã được cắt về phạm vi hữu hạn, tránh VecNormalize bị kéo lệch bởi outlier cực đoan.
-
-### 3.3.8 Trạng thái Thời gian theo IP (10D)
-
-Vector 20 chiều đặc trưng lưu lượng (F1–F20) chỉ phản ánh trạng thái tức thời của lưu lượng trong cửa sổ 1 giây hiện tại. Tuy nhiên, nhiều quyết định phòng thủ đòi hỏi ngữ cảnh dài hạn hơn: agent cần biết IP này đã bị chặn bao lâu, tín hiệu tấn công có đang leo thang hay giảm dần, và còn bao nhiêu "ngân sách" bỏ lỡ trước khi phải thăng cấp hành động. Thành phần 10 chiều trạng thái thời gian bổ sung bộ nhớ ngắn hạn theo từng IP nguồn vào không gian quan sát, cho phép agent ra quyết định có lịch sử thay vì chỉ dựa trên snapshot tức thời.
-
-Mười chiều temporal (chỉ số [20]–[29] trong vector 34 chiều) được tính từ đối tượng `PerIPTemporalState` duy trì riêng cho mỗi IP:
-
-**Bảng 3.2b: Mười chiều trạng thái temporal (chiều thứ 20 đến 29 của vector quan sát)**
-
-| Chỉ số | Tên | Công thức / Nguồn | Vai trò |
-|---|---|---|---|
-| [20–23] | `last_action_onehot` | One-hot encoding của hành động gần nhất `last_action ∈ {0,1,2,3}` | Agent biết IP này đang bị Cho phép / Giới hạn / Chuyển hướng / Chặn |
-| [24] | `action_hold_norm` | `action_hold_steps / 15`, cắt tại 1,0 | Số bước liên tiếp giữ cùng hành động — phát hiện hành động đang kéo dài |
-| [25] | `effect_damage_ema` | EMA của `service_damage` từ các bước trước (α = 0,3) | Xu hướng tổn thất dịch vụ theo thời gian, loại bỏ nhiễu ngắn hạn |
-| [26] | `effect_trend` | `sigmoid(EMA(damage_t − damage_{t-1}))` | Hướng thay đổi tổn thất: >0,5 = đang xấu hơn, <0,5 = đang cải thiện |
-| [27] | `soft_window_fill_norm` | `len(window_flags) / 15` | Mức độ điền đầy buffer bằng chứng tấn công (cửa sổ trượt 15 bước) |
-| [28] | `escalation_score_norm` | Điểm bằng chứng tổng hợp từ `redirect_hits`, `honeypot_hits`, `pressure_mean` | Mức độ tin cậy tấn công đang diễn ra, từ đó agent biết khi nào nên thăng cấp |
-| [29] | `miss_budget_used_norm` | `miss_count / 3` | Số lần IP "trốn thoát" khỏi Chuyển hướng — khi đạt 3, block_ready được kích hoạt |
-
-*Nhận xét ngắn:* Nhóm temporal giúp agent giữ ngữ cảnh phiên, hỗ trợ quyết định leo thang thay vì phản ứng theo từng snapshot đơn lẻ.
-
-**Cơ chế Soft Escalation Session:** Khi agent chọn hành động Chuyển hướng với tín hiệu L7 đủ mạnh, một phiên leo thang mềm (phiên leo thang mềm) được khởi tạo. Phiên tích lũy bằng chứng qua cửa sổ trượt 15 bước: mỗi bước ghi nhận trạng thái chuyển hướng (`is_redirect`) (agent vẫn chọn Chuyển hướng), trạng thái hiện diện (`has_presence`) (IP còn hoạt động), trạng thái vào bẫy (`has_honeypot`) (honeypot đã bắt lưu lượng), trạng thái bỏ lỡ (`is_miss`) (IP hoạt động nhưng không bị bắt). Khi `miss_budget_used_norm` đạt 1,0 (tức miss_count = 3), cờ cờ trạng thái sẵn sàng chặn (`block_ready_latched`) được bật — agent nhận tín hiệu gián tiếp rằng Chuyển hướng đã thất bại và cần leo thang lên Chặn.
-
-**Thiết kế quan trọng:** Toàn bộ 10 chiều temporal đều nằm trong [0,1] theo thiết kế, đảm bảo tính nhất quán với 20 chiều đặc trưng lưu lượng và 4 chiều trạng thái hiệu ứng khi ghép nối. Trạng thái được reset về giá trị khởi tạo khi bắt đầu mỗi episode mới, ngăn thông tin từ episode trước ảnh hưởng đến huấn luyện.
-
-### 3.3.9 Phản hồi Vòng kín (Trạng thái hiệu ứng từ bước trước)
-
-Bốn chiều cuối (chỉ số [30]–[33]) mã hóa kết quả đo được của hành động tại bước trước — thành phần "vòng lặp kín" duy nhất trong hệ thống:
-
-| Chỉ số | Tên | Ý nghĩa |
-|---|---|---|
-| [30] | `webserver_reachability` | Webserver sản xuất có phản hồi không? (1,0 = bình thường, 0 = tắc nghẽn) |
-| [31] | `honeypot_capture_ratio` | Tỉ lệ lưu lượng nghi ngờ đã vào honeypot / tổng lưu lượng từ IP |
-| [32] | `service_presence` | IP nguồn còn đang gửi lưu lượng đến webserver không? |
-| [33] | `service_damage` | Mức tổn thất dịch vụ thực đo được sau hành động bước trước |
-
-Khác với 20 chiều đặc trưng lưu lượng (đo tức thời) và 10 chiều trạng thái thời gian (lịch sử nội bộ), 4 chiều trạng thái hiệu ứng phản ánh hậu quả thực tế của hành động agent lên môi trường mạng — biến RL thành vòng lặp khép kín thực sự.
+Kiến trúc 34 chiều này cho phép **suy luận nhân quả**: tác tử không chỉ học cách phân loại lưu lượng, mà còn hiểu được hệ quả của các can thiệp của mình theo thời gian.
 
 ---
 
