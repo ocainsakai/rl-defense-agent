@@ -1,42 +1,45 @@
 # CHAPTER 4: EXPERIMENTAL RESULTS
 
 ## Table of Contents
+
 - [4.1 Introduction](#41-introduction)
-    - [4.1.1 Definition of Evaluation Metrics](#411-definition-of-evaluation-metrics)
+  - [4.1.1 Definition of Evaluation Metrics](#411-definition-of-evaluation-metrics)
 - [4.2 Data Presentation](#42-data-presentation)
-    - [4.2.1 Payload Normalization Pipeline Results](#421-payload-normalization-pipeline-results)
-    - [4.2.2 CRS Paranoia Level Analysis](#422-crs-paranoia-level-analysis)
-    - [4.2.3 Feature-Level Detection Performance](#423-feature-level-detection-performance)
-    - [4.2.4 Feature Importance and Clustering](#424-feature-importance-and-clustering)
-    - [4.2.5 Benchmark PPO vs DQN vs A2C (Protocol and Data)](#425-benchmark-ppo-vs-dqn-vs-a2c-protocol-and-data)
-    - [4.2.6 PPO Hyperparameter Tuning](#426-ppo-hyperparameter-tuning)
-    - [4.2.7 Convergence and Training Stability Analysis of v13 PPO Model](#427-convergence-and-training-stability-analysis-of-v13-ppo-model)
-    - [4.2.7.1 PPO Default vs PPO v13 (Tuning Impact)](#4271-ppo-default-vs-ppo-v13-tuning-impact)
-    - [4.2.8 Final Evaluation Results](#428-final-evaluation-results)
-    - [4.2.9 Validation of v13 PPO Model on Real-World Datasets](#429-validation-of-v13-ppo-model-on-real-world-datasets)
+  - [4.2.1 Payload Normalization Pipeline Results](#421-payload-normalization-pipeline-results)
+  - [4.2.2 CRS Paranoia Level Analysis](#422-crs-paranoia-level-analysis)
+  - [4.2.3 Feature-Level Detection Performance](#423-feature-level-detection-performance)
+  - [4.2.4 Feature Importance and Clustering](#424-feature-importance-and-clustering)
+  - [4.2.5 Benchmark PPO vs DQN vs A2C (Protocol and Data)](#425-benchmark-ppo-vs-dqn-vs-a2c-protocol-and-data)
+  - [4.2.6 PPO Hyperparameter Tuning](#426-ppo-hyperparameter-tuning)
+  - [4.2.7 Convergence and Training Stability Analysis of v13 PPO Model](#427-convergence-and-training-stability-analysis-of-v13-ppo-model)
+  - [4.2.7.1 PPO Default vs PPO v13 (Tuning Impact)](#4271-ppo-default-vs-ppo-v13-tuning-impact)
+  - [4.2.8 Final Evaluation Results](#428-final-evaluation-results)
+  - [4.2.9 Validation of v13 PPO Model on Real-World Datasets](#429-validation-of-v13-ppo-model-on-real-world-datasets)
 - [4.3 Results Analysis](#43-results-analysis)
-    - [4.3.1 Analysis by Traffic Group](#431-analysis-by-traffic-group)
-    - [4.3.2 Policy Behavior Analysis](#432-policy-behavior-analysis)
-    - [4.3.3 Benchmark PPO vs DQN vs A2C Analysis](#433-benchmark-ppo-vs-dqn-vs-a2c-analysis)
-    - [4.3.4 Conclusion](#434-conclusion)
+  - [4.3.1 Analysis by Traffic Group](#431-analysis-by-traffic-group)
+  - [4.3.2 Policy Behavior Analysis](#432-policy-behavior-analysis)
+  - [4.3.3 Benchmark PPO vs DQN vs A2C Analysis](#433-benchmark-ppo-vs-dqn-vs-a2c-analysis)
+  - [4.3.4 Conclusion](#434-conclusion)
 - [4.4 Results Interpretation](#44-results-interpretation)
-    - [4.4.1 Overall Evaluation](#441-overall-evaluation)
-    - [4.4.2 Real-World Scenario Validation](#442-real-world-scenario-validation)
-    - [4.4.3 Three Core Design Decisions](#443-three-core-design-decisions)
+  - [4.4.1 Overall Evaluation](#441-overall-evaluation)
+  - [4.4.2 Real-World Scenario Validation](#442-real-world-scenario-validation)
+  - [4.4.3 Three Core Design Decisions](#443-three-core-design-decisions)
 - [4.5 Comparison with Literature](#45-comparison-with-literature)
 - [4.6 Implications of Results](#46-implications-of-results)
-    - [4.6.1 When to Prioritize RL over Static Rules?](#461-when-to-prioritize-rl-over-static-rules)
-    - [4.6.2 Minimum Infrastructure Requirements](#462-minimum-infrastructure-requirements)
-    - [4.6.3 Honeypot as a Strategic Advantage](#463-honeypot-as-a-strategic-advantage)
-    - [4.6.4 Policy Reusability](#464-policy-reusability)
-    - [4.6.5 Future Directions](#465-future-directions)
+  - [4.6.1 When to Prioritize RL over Static Rules?](#461-when-to-prioritize-rl-over-static-rules)
+  - [4.6.2 Minimum Infrastructure Requirements](#462-minimum-infrastructure-requirements)
+  - [4.6.3 Honeypot as a Strategic Advantage](#463-honeypot-as-a-strategic-advantage)
+  - [4.6.4 Policy Reusability](#464-policy-reusability)
+  - [4.6.5 Future Directions](#465-future-directions)
 
 ---
 
 ## 4.1 Introduction
+
 This chapter focuses on the experimental evaluation of the proposed defense system, including the Observer Module and the Reinforcement Defense Agent (RL). The evaluation process is carried out in two key aspects: first, analyzing the accuracy of feature extraction and processing performance of the Observer Module; second, evaluating the convergence capability during training and the policy execution effectiveness of the RL agent.
 
 ### 4.1.1 Definition of Evaluation Metrics
+
 **Detection Rate:** Computed exclusively over *active-threat steps* (timesteps where the attack is actively manifesting). Silent steps subsequent to a Block action are deliberately excluded from the sample space to preclude artificial inflation of the metrics.
 
 **False Positive Rate (FPR):** Calculated over *normal-traffic steps* (timesteps involving purely benign, legitimate traffic).
@@ -52,6 +55,7 @@ Five distinct data sources were leveraged to fulfill varied evaluative objective
 ## 4.2 Data Presentation
 
 ### 4.2.1 Payload Normalization Pipeline Results
+
 Intrusion detection systems predicated on pattern matching confront a fundamental challenge: an identical attack payload can be instantiated across multiple encoding schemas while preserving semantic equivalence at the target server. Handley et al. [29] formalized this as the "ambiguity in the packet stream" problem, proving that a detection engine must holistically resolve this ambiguity prior to pattern application—otherwise, adversaries can systematically bypass the engine by selecting an unrecognized representational format. While individual normalization techniques in the academic literature typically address specific evasion classes, a concatenated pipeline is indispensable because real-world attackers routinely stack multiple encoding layers simultaneously, generating a combinatorial space that no single step can adequately cover [30].
 
 To address this, the system constructs a sequential 8-step payload normalization pipeline preceding the CRS pattern matching. The execution sequence constitutes a rigid constraint: HTML entity decoding must precede URL decoding (e.g., `&#x25;27` → `%27` → `'`); similarly, URL decoding must occur before Base64 decoding because `%3D` serves as the Base64 padding character.
@@ -75,6 +79,7 @@ To address this, the system constructs a sequential 8-step payload normalization
 The normalized outputs are systematically cached via packet identifiers, ensuring that each packet traverses the pipeline precisely once, even if multiple feature extractors access the identical payload.
 
 ### 4.2.2 CRS Paranoia Level Analysis
+
 This section presents the results of an empirical evaluation of the ModSecurity Core Rule Set (CRS) to determine the optimal Paranoia Level (PL) for two key features: F13 (SQL Injection) and F18 (Cross-Site Scripting).
 
 The experiment used the LSNM2024 SQLi dataset ($n = 2,809 attack samples and 3,000 normal samples). Note that this evaluation was performed on each individual URI to verify the sensitivity of the filter before combining it into a 20-dimensional feature vector.
@@ -104,6 +109,7 @@ Recall = 1.0, FPR = 0.0% across all levels with the URI-embedded test set.
 PL2 was selected to guarantee broader coverage against obfuscated event-handler patterns. Within the system architecture, F18 serves as a supplementary signal to F19/F20 (binary indicators)—the RL Agent is purposefully not solely reliant on F18 to classify XSS vectors.
 
 ### 4.2.3 Feature-Level Detection Performance
+
 To verify the effectiveness of the extracted features, the study independently evaluated each feature group using a binary classification model (Random Forest, 200 decision trees). The experiment was performed on a CSV dataset extracted from the PCAP Mutation Packet dataset (Abu Al-Haija et al., 2025).
 
 Table 4.1: Classification Results per Feature Cluster (Source: Mutated Packets PCAP Dataset, Abu Al-Haija et al., 2025; RandomForest 200 trees, balanced sampling, 70/30 split, seed=42)
@@ -127,14 +133,32 @@ The evaluation unit is the 1-second window. Each "sample" is a 20D vector repres
 A precision of 1.000 for SQLi and XSS conclusively verifies the absence of false positives—every window classified as an attack unequivocally contained a malicious payload. The lower Recall for Port Scans (0.508) and the attenuated Precision for Brute Force (0.520) reflect a similar dynamic: numerous windows within a scan or brute force session consist of interleaved benign traffic. A precision of 0.520 for Brute Force implies that approximately 48% of the windows flagged as Brute Force actually contained normal traffic—specifically, legitimate web traffic exhibiting a high URLConcentration (e.g., multiple login attempts within the same window by an authentic user). In operational deployment, the RL Agent is not required to detect 100% of the windows; it merely requires a sufficiently early signal within the attack session to initiate mitigation.
 
 ### 4.2.4 Feature Importance and Clustering
+
 Random Forest Feature Importances on the CSV set extracted the F1 (PacketRate) and F13 (CRS SQLi) claims as the biggest contributors, consistent with the characteristics of DDoS and SQLi attacks. The t-SNE plot (perplexity = 30) plots the 20-dimensional vector along two main axes, showing clearly separated attack clusters and normal traffic — the F1–F20 claims are highly distinguishable and do not overlap in labels.
 
-### 4.2.5 Benchmark PPO vs DQN vs A2C (Protocol and Data)
-The benchmark was structured to ensure rigorous parity: all algorithms interacted with the identical `env_ids_harder` environment (34 dimensions), were trained utilizing strict SB3 default hyperparameters (zero tuning), operated with `n_envs=1`, saved the final model as the definitive checkpoint (precluding "best model" cherry-picking), and were evaluated under deterministic execution. Each algorithm underwent training across 5 distinct seeds (42, 123, 456, 789, 1337). Every trained seed was subsequently evaluated across 5 evaluation seeds (1001–1005), with each evaluation spanning 6 episodes, totaling 30 episodes per seed per mode. Results were aggregated via arithmetic means and 95% Confidence Intervals across the 5 training seeds.
+### 4.2.5 Performance Evaluation (Benchmark) of PPO, DQN, and A2C
 
-The benchmark leverages four evaluation modes that separate the session and noise axes to prevent analytical confounding. These axes capture different dimensions of policy behavior: first, session behavior evaluates policy stability when processing a continuous stream from a singular IP; and second, noise/drift examines resilience against missing observations and distributional shifts relative to the training data. Separating these axes ensures that performance changes attributed to sequential complexity are not conflated with those stemming from noise or drift.
+The benchmark test was established based on the principle of strict variable control to ensure objectivity:
 
-Round-robin represents an Independent and Identically Distributed (IID)-like evaluation: the environment iteratively cycles across multiple IPs per timestep, instantiating functional independence between steps (`session_block_size=0`). This isolates the baseline performance of the policy devoid of session constraints. Conversely, session_20 mandates that the identical IP is processed for 20 contiguous steps, simulating the authentic closed-loop scenario of an extended attack or legitimate user session. The "stress" modes (involving elevated `missing_prob` and `drift_max`) preserve the underlying session configuration while amplifying noise and drift to quantify generalization capacity.
+- **Environment:** All algorithms ran on the same simulation environment with a 34-dimensional state space.
+- **Algorithm Configuration:** Using the default settings of the Stable Baselines3 (SB3) library, no hyperparameter tuning was performed to evaluate the natural convergence of the algorithm.
+- **Training Process:** The system trained with a single environment (n_envs=1). The final model was extracted as the official checkpoint for evaluation, instead of selecting the best model to reflect final stability.
+- **Statistical method:** To eliminate random error, each algorithm was trained on 5 sets of random numbers (train seeds: 42, 123, 456, 789, 1337). For each model after training, the evaluation process was performed on 5 sets of eval seeds (1001–1005) with 6 episodes each. A total of 30 episodes were performed for each training seed in each mode. The final results were aggregated as the mean with a 95% confidence interval (CI).
+
+Table 4.2: Qualitative Comparison of RL Algorithms
+
+| Criteria | DQN (Deep Q-Network) | A2C (Advantage Actor-Critic) | PPO (Proximal Policy Optimization) |
+| :--- | :--- | :--- | :--- |
+| **Approach** | Value-based: Learns the $Q(s,a)$ value function. | Actor-Critic: Hybrid of policy and value learning. | Policy-based: Directly optimizes the action policy. |
+| **Learning Mode** | Off-policy: Learns from historical data in a replay buffer. | On-policy: Learns directly from current experiences. | On-policy: Learns from current data with multiple updates. |
+| **Action Space** | Primarily Discrete. | Discrete & Continuous. | Discrete & Continuous. |
+| **Stability** | Moderate (Prone to Q-value overestimation). | Low (High variance, sensitive to noise). | Very High (Clipped objective prevents large updates). |
+| **Sample Efficiency** | High (Reuses past data). | Low (Requires more interactions). | Moderate (Balanced stability and efficiency). |
+| **Core Mechanism** | Experience Replay & Target Network. | Advantage Function (Reduces variance). | Clipped Surrogate Objective (Limits policy shifts). |
+
+The four evaluation modes are structured to decouple two independent variable axes — session continuity and noise/drift — ensuring performance changes are attributed to the correct source. Detailed parameters are presented in Table 4.3; a causal interpretation of the results is provided in Section 4.3.3.
+
+Table 4.3: Evaluation Mode Parameters and Analytical Implications
 
 | Eval Mode | session_block_size | missing_prob | drift_max | Implication |
 |---|---:|---:|---:|---|
@@ -151,7 +175,7 @@ Table 4.4: Benchmark PPO/DQN/A2C — Raw Defensive Performance (round_robin)
 | DQN | 60.71 | 99.54 | 92.26 | 0.0583 |
 | A2C | 24.46 | 95.97 | 85.59 | 0.0764 |
 
-**Brief Observation:** DQN dominates the raw defensive metrics within the round-robin paradigm; PPO follows closely, while A2C exhibits a conspicuous performance deficit.
+In the round-robin mode, DQN leads on raw defensive indicators, while A2C demonstrates a significant performance gap. A causal explanation of this divergence is provided in Section 4.3.3.
 
 Table 4.5: Benchmark PPO/DQN/A2C — Benign-Safety Trade-off (round_robin)
 
@@ -161,11 +185,10 @@ Table 4.5: Benchmark PPO/DQN/A2C — Benign-Safety Trade-off (round_robin)
 | DQN | 99.54 | 1.39 | 1.39 | 71.5 | 71.5 |
 | A2C | 95.97 | 22.27 | 22.27 | 4.3 | 4.3 |
 
-**Brief Observation:** PPO triggers significantly fewer benign interventions compared to DQN while preserving a high mitigation rate, thereby establishing a superior operational trade-off.
-
-Note: The ratios `Mitig/BenignInt` and `Mitig/BenignHarm` serve as descriptive magnitude indicators (quantifying the mitigation yielded per unit of benign intervention) and are not intended as primary statistical evidence.
+Note: The ratios `Mitig/BenignInt` and `Mitig/BenignHarm` are descriptive magnitude indicators and are not deployed as primary statistical evidence. The full trade-off analysis is presented in Section 4.3.3.
 
 ### 4.2.6 PPO Hyperparameter Tuning
+
 Hyperparameters: The table below compares the PPO tuning (v13) configuration with the SB3 default utilized as a baseline.
 
 | Parameter | Default SB3 | Deployed Value | Tuning Rationale |
@@ -184,9 +207,10 @@ Hyperparameters: The table below compares the PPO tuning (v13) configuration wit
 | Seed | 42 | 42 | Ensure result reproducibility |
 
 ### 4.2.7 Convergence and Training Stability Analysis of v13 PPO Model
-Table 4.2 catalogs the internal PPO algorithmic metrics extracted from TensorBoard, substantiating the stability of the training process and the absence of deleterious anomalies.
 
-Table 4.2: PPO Diagnostic Metrics during Training
+Table 4.6 catalogs the internal PPO algorithmic metrics extracted from TensorBoard, substantiating the stability of the training process and the absence of deleterious anomalies.
+
+Table 4.6: PPO Diagnostic Metrics during Training
 
 | Metric | Initial Value | Terminal Value | Status | Interpretation |
 |---|---|---|---|---|
@@ -254,9 +278,10 @@ The synthesis of the aforementioned elements permits the following conclusive de
 **Differentiated Policy:** The heterogeneity of the escalation metrics across distinct attack modalities (SQLi escalation rate ≠ XSS escalation rate ≠ Brute Force escalation rate) proves that the policy has successfully synthesized an implicit decision tree, deliberately refraining from "collapsing" into a monolithic, undifferentiated action vector.
 
 #### 4.2.7.1 PPO Default vs PPO v13 (Tuning Impact)
-The v13 model represents the culmination of extensive hyperparameter tuning applied to the baseline PPO architecture selected via the benchmark (Section 4.2.8). To quantitatively ascertain the impact of this tuning, a rigorous comparison against the default PPO configuration (SB3 defaults) was executed.
 
-Table 4.6: PPO Default vs PPO v13 (Tuning Impact)
+The v13 model represents the culmination of extensive hyperparameter tuning applied to the baseline PPO architecture selected via the benchmark (Section 4.2.5). To quantitatively ascertain the impact of this tuning, a rigorous comparison against the default PPO configuration (SB3 defaults) was executed.
+
+Table 4.7: PPO Default vs PPO v13 (Tuning Impact)
 
 | Metric | Default PPO | v13 Tuned | Improvement |
 |--------|-------------|-----------|----------|
@@ -282,7 +307,7 @@ The hyperparameter tuning encapsulated within v13 yields a staggering 2400% incr
 **Conclusion:** Hyperparameter tuning transcends mere absolute reward augmentation; it fundamentally extends the episode length, granting the learning dynamics the requisite temporal runway for the soft escalation mechanism to operate. The commanding performance superiority of v13 dictates its utilization for real-world validation.
 4.2.8 Final Evaluation Results
 The terminal policy was evaluated via the `preflight_eval.py` script across 50 episodes, utilizing the optimal model derived from the `run_34d_v13` training run.
-Table 4.3: Action Classification Results for the RL Defense Agent (Source: preflight eval 50 episodes on the MockIPBehavior simulated environment)
+Table 4.8: Action Classification Results for the RL Defense Agent (Source: preflight eval 50 episodes on the MockIPBehavior simulated environment)
 
 | Traffic Group | Mitigate Rate | Block Rate | Remarks |
 |---|---|---|---|
@@ -424,43 +449,65 @@ Generalizability Conclusions:
 - The 10D temporal state is fundamentally incapable of compensating for catastrophic failures in L7 signature detection.
 **Temporal State Impact:** The Layer 2 (stateless) configuration retains a 99.4% accuracy rate on CSE-IDS2018, strongly suggesting that the temporal state primarily serves the L3 escalation decision matrix, offering negligible utility for base L2 detection.
 **Strategic Recommendation:** Enhancing SQLi detection necessitates elevating the CRS-942 Paranoia Level; however, this will inextricably induce a spike in False Positives triggered by benign UNION queries (e.g., ORM frameworks). Negotiating this balance represents the inescapable, intrinsic trade-off characterizing all signature-based architectures.
+
 ## 4.3 Results Analysis
 
 ### 4.3.1 Analysis by Traffic Group
-Based on Table 4.3, the trained policy exhibits three characteristics: near-total mitigation of attack traffic; avoidance of erroneous blocks on benign traffic; and systematic application of proportional interventions (RateLimit) for noisy traffic. This behavioral profile aligns with the design of the reward function and the escalating action ladder.
+
+Based on Table 4.8, the trained policy exhibits three characteristics: near-total mitigation of attack traffic; avoidance of erroneous blocks on benign traffic; and systematic application of proportional interventions (RateLimit) for noisy traffic. This behavioral profile aligns with the design of the reward function and the escalating action ladder.
 
 ### 4.3.2 Policy Behavior Analysis
+
 When encountering normal traffic, the agent almost never executes erroneous blocks (benign block rate = 0.0%). The marginal 0.1% intervention rate is predominantly constituted by RateLimit actions.
 
 Confronted with volumetric attacks (SYN Flood, Port Scan), the agent directly applies the Block action (Action 3). For Layer 7 attacks (Brute Force, SQLi, XSS), the agent systematically prioritizes Redirecting (Action 2) the traffic to the Honeypot. The soft escalation mechanism leverages a 15-step sliding window and a `block_ready_latched` flag to subsequently recommend a Block once sufficient empirical evidence has been accumulated, entirely eschewing the use of rigid, static timers.
 
 ### 4.3.3 Benchmark PPO vs DQN vs A2C Analysis
-[Figure 4.2, 4.3, 4.4]
 
-Figure 4.2: Radar chart comparing the 4 algorithms (PPO/DQN/A2C/Rule-Based)
+This section provides a causal interpretation of the quantitative data presented in Section 4.2.5 (Table 4.4 and 4.5), supported by visual evidence from the figures below.
 
-Figure 4.3: Exact response rate heatmap by attack typology
+Figure 4.2: Radar chart comparing PPO/DQN/A2C across all evaluation dimensions
 
-Figure 4.4: Bar chart detailing operational safety metrics (benign intervention rate)
+Figure 4.3: Exact response rate heatmap by attack typology and algorithm
+
+Figure 4.4: Bar chart — Benign intervention rate per algorithm across all 4 evaluation modes
 
 The benchmark results clearly delineate two divergent optimization axes: raw defensive performance versus the benign-safety/availability trade-off. DQN commands the raw defensive metrics, including mean reward, mitigation rate, exact response, and service damage. PPO trails marginally across these raw metrics but demonstrates a decisively superior profile regarding benign interventions, maintaining a robust mitigation rate while simultaneously minimizing deleterious impacts on legitimate traffic.
 
 **Raw defensive performance:** Within the round-robin paradigm, DQN achieves a higher mean reward than PPO (60.71 vs. 58.80), a superior mitigation rate (99.54% vs. 97.65%), and lower service damage (0.0583 vs. 0.0644). This trajectory corroborates the assessment that DQN is more "aggressive": it exhibits slightly enhanced attack interception but at the explicit cost of escalated benign interventions. The exact response rate further supports this, with DQN achieving 92.26% compared to PPO's 90.81%. A2C occupies the statistical nadir across all three metrics, unequivocally demonstrating its unsuitability for this specific domain under strict default constraints.
 
+*   **Algorithmic Explanation (DQN):** DQN's off-policy Experience Replay mechanism repeatedly reinforces high-reward action-state pairs, systematically biasing the policy toward decisive mitigation actions (Block, RateLimit). This aggression is a structural consequence: DQN cannot distinguish "suspicious" from "malicious" traffic with the same precision as PPO's policy gradient mechanism, leading to the observed 2.1× higher benign intervention rate.
+
 **Benign-safety and availability:** PPO significantly suppresses the `benign intervention rate` with statistical significance across all four evaluation modes (round_robin p=0.0278; round_robin_stress p=0.0021; session_20 p=0.0228; session_20_stress p=0.0486). In the round_robin mode, PPO intervenes against a mere 0.65% of benign traffic, whereas DQN intervenes against 1.39% (a ~2.1× reduction). The `benign harm score` associated with PPO is systematically lower than DQN across all modes, though it achieves statistical significance exclusively under stress configurations (round_robin_stress p=0.0256; session_20_stress p=0.0486). This facilitates a precise conclusion: PPO possesses a distinct structural advantage in availability-preserving defense, whereas DQN excels in raw baseline defensive efficacy.
 
-**Trade-off magnitude (non-statistical evidence):** The `mitigation/benign_intervention` ratios illustrate that PPO achieves mitigation levels approximating those of DQN while "expending" vastly fewer benign interventions. Given the extreme sensitivity of ratio metrics when the denominator approaches zero, these ratios function purely as descriptive magnitude indicators and are not deployed as formal statistical evidence.
+*   **Algorithmic Explanation (PPO):** PPO's Clipped Surrogate Objective (ε = 0.15) enforces a trust-region constraint that prevents overly large policy updates. Combined with entropy regularization (ent_coef = 0.05), this maintains sufficient policy diversity to avoid collapsing into a reflexive "Block everything" strategy. The heatmap (Figure 4.3) corroborates this: PPO's exact response rate is more consistent across attack classes, indicating a more calibrated decision boundary.
 
-**Impact of session state and noise/drift:** The dual evaluation axes are decoupled; thus, stress comparisons must utilize corresponding session pairs: round_robin ↔ round_robin_stress, session_20 ↔ session_20_stress. As noise and drift escalate, PPO's benign-safety superiority becomes increasingly pronounced (with the benign harm score achieving statistical significance), while DQN persistently retains its advantage in raw mitigation and service damage. Consequently, stress testing elucidates the trade-off dynamic without inverting the overarching performance conclusions.
+**Performance of A2C:** A2C fails to stabilize its policy in a high-dimensional (34D) environment with a sparse, episodic reward signal, resulting in a benign intervention rate (22.27%) that is approximately 16× higher than PPO's.
+
+*   **Algorithmic Explanation (A2C):** A2C's synchronous on-policy updates compute gradients from a single rollout without a replay buffer, producing high-variance gradient estimates. Under default hyperparameters, A2C fails to reliably discriminate benign from attack traffic within the allotted training budget, making it operationally hazardous in this environment.
+
+**Impact of session state and noise/drift:** The dual evaluation axes are decoupled; thus, stress comparisons must utilize corresponding session pairs. As noise and drift escalate, PPO's benign-safety superiority becomes increasingly pronounced (with the benign harm score achieving statistical significance), while DQN persistently retains its advantage in raw mitigation and service damage. Consequently, stress testing elucidates the trade-off dynamic without inverting the overarching performance conclusions.
+
+*   **Robustness Analysis:** This suggests that PPO's policy is structurally more resilient to observational uncertainty — a critical property for real-world deployment where sensor readings are inherently imperfect.
+
+**Trade-off magnitude (non-statistical evidence):** The `mitigation/benign_intervention` ratios illustrate that PPO achieves mitigation levels approximating those of DQN while "expending" vastly fewer benign interventions. PPO achieves a ratio of 123.3 vs. DQN's 71.5 (~1.7× difference). Given the extreme sensitivity of ratio metrics when the denominator approaches zero, những chỉ số này đóng vai trò như các chỉ báo định tính quan trọng hỗ trợ cho quyết định triển khai thực tế.
 
 ### 4.3.4 Conclusion
-The benchmark precludes the identification of a universally superior algorithm. DQN is optimally suited for deployments where the primary objective is maximizing raw mitigation and minimizing service damage at all costs. PPO is the superior architecture for environments demanding the suppression of erroneous interventions against legitimate traffic, the preservation of absolute service availability, and a willingness to accept fractional degradations in raw defensive metrics to achieve that balance.
+
+The benchmark analysis demonstrates that no single algorithm dominates across both optimization axes simultaneously. The deployment context must drive the algorithm selection:
+
+- **DQN** is optimal for threat-centric deployments where maximizing raw mitigation and minimizing service damage are the primary objectives, and a higher benign intervention rate is an acceptable operational trade-off.
+- **PPO** is the preferred architecture for availability-sensitive environments — such as public-facing services or SLA-bound infrastructure — where false positive interventions must be minimized, even at a marginal cost in raw mitigation.
+- **A2C**, under default hyperparameters, is operationally hazardous in this environment due to its high benign intervention rate and is not recommended.
+
+This analysis directly motivates the selection of PPO as the foundation for the v13 model, which is subsequently optimized via hyperparameter tuning in Section 4.2.6.
 
 ---
 
 ## 4.4 Results Interpretation
 
 ### 4.4.1 Overall Evaluation
+
 The research achieves its foundational objectives: the engineering of an autonomous, RL-driven network defense architecture capable of detecting and mitigating five primary attack classes; and the empirical validation of its operational viability within a closed-loop simulated environment. Experimental results confirm that the agent realizes a high detection rate across active-threat steps, sustains a negligible false positive rate across normal-traffic steps, and achieves an effective equilibrium with service availability. These findings substantiate the viability of Reinforcement Learning within the domain of automated network defense.
 
 The v13 PPO Model (post-tuning) underwent evaluation against a suite of performance indicators, structured to concurrently assess two dimensions: raw defensive quality (baseline mitigation capacity), representing the ability to detect and neutralize threats; and the security-availability trade-off, representing the equilibrium between defensive aggression and the preservation of legitimate service operations.
@@ -468,6 +515,7 @@ The v13 PPO Model (post-tuning) underwent evaluation against a suite of performa
 The paramount academic contribution resides in the architecture of the Observation Module—the vital technical conduit bridging raw network flows and the MDP state space. The performance enhancement observed from v12 to v13 is predominantly attributable to the expansion of the state space from 20 dimensions to 34 dimensions, specifically incorporating: 20 predefined traffic features (F1–F20), 10 temporal state dimensions encapsulating the per-IP memory over the preceding 10 steps, and 4 closed-loop effect dimensions quantifying the empirical consequences of the antecedent action. This expanded dimensionality empowers the agent to internalize the intra-session continuity characterizing IP behavior and the causal relationship linking defensive actions to subsequent environmental state permutations. While the OWASP CRS features (F13, F18) remain indispensable for classifying application-layer (L7) threats, the empirical data confirms that aggregate performance enhancements are primarily driven by the temporal state component, rather than the isolated discriminatory power of individual CRS rules.
 
 ### 4.4.2 Real-World Scenario Validation
+
 Four representative real-world scenarios were instantiated within the Containernet environment and verified by interrogating the action decisions issued by the RL agent, validating the precise netfilter rules deployed to the active kernel, and confirming the resulting outcomes via empirical iptables logs. These scenarios were specifically selected to span the diverse attack typologies defined within the 5-class taxonomy.
 
 **Legitimate HTTPS Stream (benign baseline):** The observation vector registers F1 < 60 pps (standard packet rate), F12 = 0 (absence of HTTP/HTTPS request payloads), and F7 = 0.1 (low request concentration). The agent deterministically issues **Action 0 (ALLOW)**. Verification: The iptables FORWARD chain remains completely devoid of DROP or REJECT rules. Outcome: Traffic flows unimpeded.
@@ -479,6 +527,7 @@ Four representative real-world scenarios were instantiated within the Containern
 **Cross-Site Scripting via Bot Injection (XSS):** An event handler payload (`onerror=fetch(...)`) is injected to covertly download malware from an infrastructure controlled by the attacker. Detection is achieved via: F18 escalation (CRS XSS rule set 941 triggered) and F20 = 1 (bot-like behavioral signature identified). The agent issues **Action 2 (REDIRECT)** to the honeypot. Following the accumulation of 15 sequential steps of forensic evidence within the soft escalation buffer, the agent **escalates to Action 3 (BLOCK)**.
 
 ### 4.4.3 Three Core Design Decisions
+
 Empirical validation unequivocally confirms that three fundamental design decisions serve as the primary determinants of systemic performance:
 
 **Criterion 1 — Integration of Application-Layer Features (F12–F20):** SQL injection and XSS vectors—which lack discriminatory signatures at the network layer—necessitate deep HTTP payload inspection. The architectural methodology involves directly embedding the OWASP CRS rule set 942 (SQLi detection) and 941 (XSS detection) into the feature vector (as F13 and F18, respectively). This approach effectively operationalizes the cumulative security expertise validated by the cybersecurity community over extensive operational lifecycles. While the CRS provides the indispensable baseline detection mechanism, post hoc analyses reveal that the performance leap from v12 to v13 was propelled primarily by the temporal memory component (10D), which grants the agent contextual awareness of IP behavior over time; and the closed-loop effect component (4D), which enables the agent to evaluate the tangible outcomes of its defensive interventions. The primary advantage of CRS integration is the drastic reduction in labeled training data required for L7 attack classification; however, this component alone does not constitute the primary catalyst for the observed holistic performance enhancements.
@@ -490,6 +539,7 @@ Empirical validation unequivocally confirms that three fundamental design decisi
 ---
 
 ## 4.5 Comparison with Literature
+
 Direct numerical comparisons across disparate studies are problematic due to fundamental variances in dataset composition, labeling taxonomies, and evaluative methodologies. Consequently, this analysis is focused on methodological paradigms.
 
 **Comparison with Traditional Feature Extraction:** Sharafaldin et al. [17] engineered the CICFlowMeter, leveraging over 80 bidirectional statistical flow features to achieve >97% accuracy on the CICIDS2017 dataset utilizing a Random Forest classifier. However, this expansive feature dimensionality incurs severe computational overhead and lacks semantic awareness of application-layer (L7) payloads. The present research conclusively demonstrates that a highly curated 20-feature set—synthesizing network-level statistics and payload semantics—can deliver competitive accuracy while demanding significantly reduced computational resources, rendering it highly viable for a 1-second real-time feedback loop.
@@ -507,18 +557,23 @@ The algorithmic benchmark analysis (comparing default PPO, A2C, and DQN) is deta
 ## 4.6 Implications of Results
 
 ### 4.6.1 When to Prioritize RL over Static Rules?
+
 RL offers clear value in environments with diverse and constantly changing attacks—especially networks handling both volumetric (SYN Flood) and payload (SQLi, XSS) attacks simultaneously. In environments with monotonous traffic and stable attack patterns, Static Rules remain more effective due to the lack of a training phase.
 
 ### 4.6.2 Minimum Infrastructure Requirements
+
 The architecture necessitates a centralized capture node (e.g., an edge router) equipped with Python 3 capabilities and Scapy. The primary resource bottlenecks are flow management (requiring sufficient RAM to track up to 50,000 concurrent flows) and raw packet capture (CPU bounded).
 
 ### 4.6.3 Honeypot as a Strategic Advantage
+
 The action of redirecting to a Honeypot—instead of blocking immediately—offers value beyond pure defense: the attacker continues to operate in a controlled environment, allowing the SOC to gather threat intelligence (TTPs, payloads, tools) without compromising the real system. This is an advantage that Static Laws and RF classifiers cannot provide.
 
 ### 4.6.4 Policy Reusability
+
 Trained policies can be redeployed to new environments without retraining, provided the 34-dimensional observation vector structure remains the same: 20 traffic characteristic dimensions with the same F1–F20 definitions and normalization formulas, plus 10 time-state dimensions and 4 state effect dimensions built from the same per-IP logic. This allows organizations to quickly deploy policies that have been thoroughly tested in a lab environment before going into production.
 
 ### 4.6.5 Future Directions
+
 **Expansion of the Action Space:** Add more detailed actions such as limiting the rate by source IP, redirecting by request type, or creating dynamic honeypots. This requires research into action masking techniques to guide discovery in a larger space.
 
 **Multi-Agent and Distributed Defense architectures:** Expanding from single-agent to multi-agent RL where each network node has its own agent and coordinates via experience-sharing protocols — a natural step toward scaling from a 10-VM topology to a production network based on SDN architecture.

@@ -1,31 +1,32 @@
 # CHAPTER 5: DISCUSSION
 
 ## Table of Contents
+
 - [5.1 Restatement of Research Questions and Objectives](#51-restatement-of-research-questions-and-objectives)
 - [5.2 Summary of Key Findings and Interpretation in Research Context](#52-summary-of-key-findings-and-interpretation-in-research-context)
-    - [5.2.1 RQ1 — Comparative Efficacy of the RL Agent](#521-rq1--comparative-efficacy-of-the-rl-agent)
-    - [5.2.2 RQ2 — Operational Trade-offs: Defensive Resolution vs. Service Availability](#522-rq2--operational-trade-offs-defensive-resolution-vs-service-availability)
-    - [5.2.3 RQ3 — Policy Stability across Diverse Attack Vectors](#523-rq3--policy-stability-across-diverse-attack-vectors)
-        - [5.2.3.1 Per-Window vs. Per-Session: Interpreting Weak Signals and Strategic Patience](#5231-per-window-vs-per-session-interpreting-weak-signals-and-strategic-patience)
-    - [5.2.4 Detailed Analysis: Dominant Factors and Hyperparameter Selection](#524-detailed-analysis-dominant-factors-and-hyperparameter-selection)
-        - [5.2.4.1 34D Observation Space Decomposition](#5241-34d-observation-space-decomposition)
-        - [5.2.4.2 Hyperparameter Tuning: Step Efficiency vs. Wall-clock Efficiency](#5242-hyperparameter-tuning-step-efficiency-vs-wall-clock-efficiency)
-    - [5.2.5 Limitations and Critical Caveats](#525-limitations-and-critical-caveats)
-        - [5.2.5.1 Simulation Gap](#5251-simulation-gap)
-        - [5.2.5.2 Reward Function Dependency](#5252-reward-function-dependency)
-        - [5.2.5.3 Operational Sampling Dynamics and Contextual Analysis](#5253-operational-sampling-dynamics-and-contextual-analysis)
-        - [5.2.5.4 HTTPS Constraint](#5254-https-constraint)
-        - [5.2.5.5 Horizontal Scalability](#5255-horizontal-scalability)
+  - [5.2.1 RQ1 — Comparative Efficacy of the RL Agent](#521-rq1--comparative-efficacy-of-the-rl-agent)
+  - [5.2.2 RQ2 — Operational Trade-offs: Defensive Resolution vs. Service Availability](#522-rq2--operational-trade-offs-defensive-resolution-vs-service-availability)
+  - [5.2.3 RQ3 — Policy Stability across Diverse Attack Vectors](#523-rq3--policy-stability-across-diverse-attack-vectors)
+    - [5.2.3.1 Per-Window vs. Per-Session: Interpreting Weak Signals and Strategic Patience](#5231-per-window-vs-per-session-interpreting-weak-signals-and-strategic-patience)
+  - [5.2.4 Detailed Analysis: Dominant Factors and Hyperparameter Selection](#524-detailed-analysis-dominant-factors-and-hyperparameter-selection)
+    - [5.2.4.1 34D Observation Space Decomposition](#5241-34d-observation-space-decomposition)
+    - [5.2.4.2 Hyperparameter Tuning: Step Efficiency vs. Wall-clock Efficiency](#5242-hyperparameter-tuning-step-efficiency-vs-wall-clock-efficiency)
+  - [5.2.5 Limitations and Critical Caveats](#525-limitations-and-critical-caveats)
+    - [5.2.5.1 Simulation Gap](#5251-simulation-gap)
+    - [5.2.5.2 Reward Function Dependency](#5252-reward-function-dependency)
+    - [5.2.5.3 Operational Sampling Dynamics and Contextual Analysis](#5253-operational-sampling-dynamics-and-contextual-analysis)
+    - [5.2.5.4 HTTPS Constraint](#5254-https-constraint)
+    - [5.2.5.5 Horizontal Scalability](#5255-horizontal-scalability)
 - [CHAPTER 6: CONCLUSION AND FUTURE DEVELOPMENTS](#chapter-6-conclusion-and-future-developments)
-    - [6.1 Conclusion](#61-conclusion)
-    - [6.2 Future Developments: Towards an Autonomous & Transparent Defense System](#62-future-developments-towards-an-autonomous--transparent-defense-system)
-        - [6.2.1 Expansion of the Action Space](#621-expansion-of-the-action-space)
-        - [6.2.2 Multi-Agent Collaboration](#622-multi-agent-collaboration)
-        - [6.2.3 Robustness Against Evasion Attacks](#623-robustness-against-evasion-attacks)
-        - [6.2.4 Online Training and Concept Drift Management](#624-online-training-and-concept-drift-management)
-        - [6.2.5 Explainable AI (XAI)](#625-explainable-ai-xai)
-        - [6.2.6 Sim2Real Gap Validation](#626-sim2real-gap-validation)
-        - [6.2.7 Multi-step Reward](#627-multi-step-reward)
+  - [6.1 Conclusion](#61-conclusion)
+  - [6.2 Future Developments: Towards an Autonomous & Transparent Defense System](#62-future-developments-towards-an-autonomous--transparent-defense-system)
+    - [6.2.1 Expansion of the Action Space](#621-expansion-of-the-action-space)
+    - [6.2.2 Multi-Agent Collaboration](#622-multi-agent-collaboration)
+    - [6.2.3 Robustness Against Evasion Attacks](#623-robustness-against-evasion-attacks)
+    - [6.2.4 Online Training and Concept Drift Management](#624-online-training-and-concept-drift-management)
+    - [6.2.5 Explainable AI (XAI)](#625-explainable-ai-xai)
+    - [6.2.6 Sim2Real Gap Validation](#626-sim2real-gap-validation)
+    - [6.2.7 Multi-step Reward](#627-multi-step-reward)
 - [REFERENCES](#references)
 - [APPENDICES](#appendices)
 
@@ -56,22 +57,25 @@ Agents show that detection behavior is differentiated among attack groups. Netwo
 **Why RL Excels:**
 The operational superiority of the RL agent is rooted in three distinct mechanisms fundamentally absent in Static Rules:
 
-1. **Online Adaptation:** RL is not bound by predefined signatures. It continuously observes the network state, adjusting its behavior based on rewards. When attack patterns change (port changes, payload encryption, speed), the agent learns how to react without developing new rules.
+1. **Adaptation:** Unlike static rules that require manual updates for every new attack variant, RL continuously observes the network state and adjusts its response dynamically. This eliminates the "rule-development lag" and ensures the defense remains effective as attack parameters—such as ports, timing, or encryption—shift without needing manual reconfiguration.
 
 2. **Integration of Semantic Features (L7):** The F12–F20 feature set (SQL/XSS scoring calculated via CRS combined with data normalization) allows the agent to detect complex variations with superior accuracy (e.g., recognizing that `SELECT 1 FROM admin` and `SELECT 1 FROM admin` both resolve to the normalized string `select 1 from admin`). Static rules are limited to matching exact strings or basic wildcards.
 
 3. **Learned Trade-offs:** The RL policy internalizes a highly non-trivial equilibrium between precision and recall. For instance, the agent autonomously deduces that an elevated F6 (URLConcentration) signifies:
     - A Brute-Force attack, provided it is corroborated by low Inter-Arrival Time (IAT) and uniform request sizing.
     - A legitimate web scanner, provided the User-Agent profile remains benign.
+
 The policy eschews the necessity for Byzantine static rules governing every conceivable permutation; it organically learns the relative weighting of these signals.
 
 **Limitations and Necessary Conditions for RQ1:**
 Crucially, this documented advantage is contingent upon the simulated environment constraints. Containernet was configured with:
+
 - A rigid, static topology (10 VMs, 2 switches).
 - Domain randomization adhering to specific statistical distributions (Normal/LogNormal/Beta/Poisson) for individual features.
 - A bounded set of known attack vectors (SYN Flood, Port Scan, Brute-Force, SQLi, XSS).
 
 Transitioning to a live production network introduces profound complexities:
+
 - Dynamic, multi-tier topologies experiencing continuous VM churn.
 - Extracurricular attack vectors entirely absent from the training manifold (zero-days, novel DDoS botnets).
 - A vastly more heterogeneous spectrum of legitimate traffic (high-bandwidth streaming, peer-to-peer file transfers, blockchain synchronization).
@@ -87,6 +91,7 @@ In addition, statistical testing (Cohen's d = −1.290, large practical effect) 
 Cyber defense is an inherent trade-off. We want to block all attacks but not compromise legitimate users. Table 4.3 provides key measures to quantify this balance.
 
 **Service Availability:** The agent maintains a balance between defense and availability: the majority of valid traffic is allowed, while the false-positive rate is kept low. This is acceptable in a production environment if:
+
 - Suspicious requests are redirected to a honeypot (leveraging the 15-step soft escalation window for forensic verification) — not blocked immediately.
 - Service Level Agreements (SLAs) possess sufficient tolerance for this transient, targeted redirection.
 
@@ -95,7 +100,7 @@ Cyber defense is an inherent trade-off. We want to block all attacks but not com
 At the session level: if at least one 1-second window in an attack session is detected, the agent can react promptly. Analysis confirms 100% of SQLi sessions have at least one window exceeding the detection threshold.
 
 **Honeypot Strategy and Threat Intelligence:**
-The policy learns to select the "Redirect to Honeypot" action through a 15-step soft window before a permanent block. The benefits are not only defensive but also:
+The policy learns to select the "Redirect to Honeypot" action as Strategic Patience through a 15-step soft window before a permanent block. The benefits are not only defensive but also:
 
 1. **Threat Intelligence Acquisition:** The attacker continues to operate in a controlled environment, allowing the SOC to record payloads, tools, and TTPs.
 2. **Availability Preservation:** Valid users have the opportunity to complete the session in the soft window before being permanently denied access.
@@ -104,6 +109,7 @@ Static rules don't have this capability; they only block or allow, they don't es
 
 **Tiered Defense Architecture (Hybrid Strategy):**
 While the RL agent provides sophisticated strategic decision-making, it operates within a discrete temporal framework (1-second windows). To achieve optimal resilience in production scenarios, this research champions a tiered defense architecture:
+
 - **Layer 1:** Deploy an ultra-minimalist static rate limiter directly at the edge router (e.g., utilizing the Linux iptables `limit` module) to instantaneously blunt the initial spike of massive volumetric floods.
 - **Layer 2:** Dedicate the RL agent exclusively to L7 inspection and higher-order behavioral analysis (e.g., SQL injection behaviors that manifest across multiple windows).
 Understanding this structural synergy is key to practical implementation: RL learns the optimal policy for a hybrid (static + learning) system, maximizing both speed and intelligence.
@@ -116,16 +122,19 @@ A natural concern: When the agent learns over 5 different attack types (SYN Floo
 The training data extrapolated from Figure 4.1 and Table 4.2 confirms that the policy achieves stability.
 
 **Stable Training Trajectory:**
+
 - The average reward (`eval/mean_reward`) increased from ~0 to 58.68 (over 500K timesteps) and stabilized in the ±1.0 band from step 350,000 onwards — indicating convergence has been reached.
 - Zero evidence of policy oscillation or catastrophic forgetting.
 - `entropy_loss` decreased from −1.10 to −0.344, indicating that the agent is more confident but not overfit (entropy remains > 0, no policy fix).
 
 **Stability Metrics from Table 4.2 (Corroborated by Appendix C):**
+
 - **Approximate KL Divergence (`approx_kl`):** ≈0.0008 (terminal phase) — residing comfortably below the strict 0.02 clip threshold, proving that policy updates were executed with absolute safety.
 - **Explained Variance (`explained_variance`):** ≈0.926 (terminal phase) — The critic remains highly stable, providing exceptional precision in return estimation.
 
 **Learning Heterogeneous Responses:**
 Section 4.3.3 details how the agent learns differentiated strategy for each attack:
+
 - High F1 (PacketRate) + High F2 (SynAckRatio) → triggers "Block".
 - High F6 (URLConcentration) + F7 (HttpIatUniformity) < 0.3 (indicative of automated bot-timing) → triggers "RateLimit".
 - High F13 (CRS SQLi) → triggers "Redirect-to-Honeypot".
@@ -137,16 +146,19 @@ One important aspect to clarify: Why are detection rates low at the per-window l
 
 **The Imperative for Clarification:**
 The report shows Recall = 0.263 with SQLi at the per-window level. Without clear explanation, the committee could misunderstand that:
+
 - The model succeeded in detecting merely 26.3% of the SQLi attack vectors (Factually incorrect).
 - The systemic architecture is fundamentally flawed and unreliable (Factually incorrect).
 
 The network traffic reality dictates that 75.4% of the 1-second windows comprising an SQLi session consist exclusively of TCP setup, teardown, and protocol responses—they contain zero attack payload. The model's refusal to classify these windows as "attacks" is technically appropriate and demonstrates high precision.
 
 **Mathematical Interpretation:**
+
 - **Recall = 0.263 per-window** specifically denotes: "26.3% of 1-second windows containing SQLi payloads were correctly classified."
 - It does **not** imply: "26.3% of the attack sessions successfully evaded detection."
 
 At the session level (Per-Session analysis):
+
 - If a **single constituent window** within the session is correctly classified → the entire session is successfully flagged and mitigated.
 - Exhaustive analysis of the test corpus confirms: **Every single SQLi session subjected to testing contained a minimum of 1 window that successfully breached the detection threshold.**
 - The operational outcome: **100% of SQLi sessions were detected and mitigated** (session-level efficacy).
@@ -155,21 +167,31 @@ At the session level (Per-Session analysis):
 The agent does not "oscillate" between Block and Allow because it learns how to accumulate evidence. This "Strategic Patience" is a deliberate design choice to maximize availability:
 
 - **At the Per-Window Granularity:**
-    - Window 1 may be devoid of payload → F12–F20 = 0 → Zero signal generated.
-    - The agent exhibits learned caution, refusing to issue a Block based on an absence of signal.
+  - Window 1 may be devoid of payload → F12–F20 = 0 → Zero signal generated.
+  - The agent exhibits learned caution, refusing to issue a Block based on an absence of signal.
 
 - **As Evidence Accumulates (Per-Session):**
-    - Windows 2, 3, and 4 contain the fragmented payload → F12–F20 exceed the detection threshold → The signal is activated.
-    - The 10-dimensional temporal memory matrix (indices 20–29) records the EMA of damage coupled with the escalation score.
-    - When the `evidence_score` breaches the terminal threshold → the policy decisively triggers the Redirect or Block action.
+  - Windows 2, 3, and 4 contain the fragmented payload → F12–F20 exceed the detection threshold → The signal is activated.
+  - The 10-dimensional temporal memory matrix (indices 20–29) records the EMA of damage coupled with the escalation score.
+  - When the `evidence_score` breaches the terminal threshold → the policy decisively triggers the Redirect or Block action.
 
 **Architectural Advantages of this Paradigm:**
+
 - Eradicates false positives triggered by transient noise within isolated windows.
 - Preempts systemic oscillation (the debilitating "Block-Allow-Block" loop).
 - Guarantees high-velocity reaction times the instant authentic signal manifests.
 - Maximizes false positive suppression (guaranteeing peak service availability).
 
 This mechanism ensures the system is robust against noisy environments where a single anomalous packet should not lead to a total service denial for a legitimate user.
+
+#### 5.2.3.2 Conceptual Distinction: Autonomous vs. Adaptive Defense
+
+To contextualize the stability of the RL policy, it is important to distinguish between the **Autonomous** and **Adaptive** characteristics of the system:
+
+- **Autonomous Nature:** This refers to the system’s ability to execute the entire defense lifecycle from observation (34D features) to enforcement (iptables/tc) without human intervention. By bridging the "Enforcement Gap," the agent acts as an independent defender, significantly reducing manual response latency.
+- **Adaptive Nature:** This is rooted in the **PPO algorithm’s internal mechanics** and the **contextual state space**. The "clipping" mechanism in PPO ensures that policy updates stay within a trust region, preventing the agent from overfitting to static signatures and instead favoring the learning of **underlying behavioral rules**. This ensures the agent remains effective even when attacks undergo minor mutations in intensity or payload, as it identifies the malicious intent rather than just matching rigid patterns. Operationally, the agent demonstrates this adaptation by dynamically shifting its defensive posture (e.g., escalating from Redirect to Block) as the attack context evolves within the 10D temporal memory.
+
+**Conclusion on Stability:** The synergy between these two traits ensures that the agent is not just a "self-running" script, but an "intelligent" defender capable of maintaining policy stability even when attack patterns mutate.
 
 ---
 
@@ -235,8 +257,11 @@ Section 3.1.6 delineated the hyperparameter tuning protocol. The resultant trade
 2. The Tuned model exhibits decelerated convergence regarding steps (220k vs. 80k) because aggressive parallelization (`n_envs=4`) structurally inflates sample complexity.
 3. The Tuned model achieves a 4× acceleration in wall-clock time because deploying 4 parallel environments over 197 seconds yields a staggering 880k total timesteps (4 × 220k), decisively eclipsing the 80k timesteps (1 × 80k) generated over 786 seconds by the Default configuration.
 
+Optimizing the hyperparameter not only helps the system converge faster (Wall-clock) but also ensures the highest stability of the resulting Policy, directly addressing the sustainability requirement of RQ3.
+
 **Operational Interpretation:**
 In cybersecurity, wall-clock time and final policy quality are two crucial factors:
+
 - **Laboratory Deployment:** If the training epoch demands 786 seconds utilizing the Default configuration versus a mere 197 seconds utilizing the Tuned configuration, the Tuned model becomes the imperative choice (enabling a 4× acceleration in the experimentation and iteration cycle).
 - **Final Policy Integrity:** Given that both architectures achieve parity at a reward of ~2.3 → they provide equivalent defensive capability.
 
@@ -249,12 +274,15 @@ This trade-off answers RQ2 operationally: Tuning hyperparameters is not only man
 Despite the promising results, this project must recognize several major limitations that affect the transition from lab success to production success:
 
 #### 5.2.5.1 Simulation Gap
-The entire experiment took place within Containernet, a virtualized container of a Linux-based network. The operational reality of this constraint signifies:
-- **Static Topology:** Restricted to 10 VMs and 2 switches, maintaining a perfectly contiguous topology.
+
+The entire experiment took place within Mininet, a virtualized container of a Linux-based network. The operational reality of this constraint signifies:
+
+- **Static Topology:** Restricted to 4 VMs and 1 router, maintaining a perfectly contiguous topology.
 - **Distributional Domain Randomization:** IAT, packet sizes, and feature ratios fluctuate precisely according to clean, mathematical distributions.
 - **Absence of Zero-Day Vectors:** The policy was rigidly trained against a closed set of 5 pre-defined attack typologies.
 
 Transitioning to a live production network introduces chaotic variables:
+
 - Multi-tier topologies (edges, cores, disparate DCs) experiencing constant flux.
 - Real-world attack variants: entirely novel DDoS botnets, hyper-advanced evasion schemas, zero-day exploits.
 - Vastly more heterogeneous legitimate traffic: 4K streaming, blockchain synchronization, asynchronous IoT device telemetry.
@@ -262,7 +290,9 @@ Transitioning to a live production network introduces chaotic variables:
 **Mitigation:** Section 4.3.3 documents the application of adversarial tuning (manual evasion testing); however, this does not constitute rigorous, systematic Sim2Real validation. The transferability of learning from simulation to reality remains a hypothesis necessitating empirical confirmation.
 
 #### 5.2.5.2 Reward Function Dependency
+
 The reward function in the system is composite, combining action bonus, action cost, and service damage, along with shaping terms to reduce variability. With different weights, the policy will learn different biases. If the weights change:
+
 - **Prioritizing accuracy (*α* increase):** The policy will execute blocks far more aggressively, significantly reducing the FPR but actively sacrificing legitimate service availability.
 - **Prioritizing availability (*β* increase):** The policy will become significantly more lenient, permitting attack bleed-through.
 
@@ -272,9 +302,10 @@ The detection metrics achieved represent the optimal output under one specific, 
 
 #### 5.2.5.3 Operational Sampling Dynamics and Contextual Analysis
 
-As discussed in Section 5.2.3.1, the distinction between per-window and per-session analysis is critical. The system is designed around a 1-second sliding window and a 15-step soft escalation buffer (~12 seconds total accumulation).
+As discussed in Section 5.2.3.1, the distinction between per-window and per-session analysis is critical. The system is designed around a 1-second sliding window and a 15-step soft escalation buffer.
 
 **Strategic Mechanics:**
+
 1. **The 1-Second Sliding Window:** The agent evaluates traffic in discrete temporal chunks. This allows for statistical stability and efficient feature extraction via the CRS pipeline.
 2. **The Soft Escalation Buffer:** By utilizing a 15-step accumulation window, the agent deliberately selects Redirect over Block during the early stages of a suspicious session. This buffer allows for forensic evidence to be gathered while protecting legitimate users from immediate service denial.
 
@@ -294,15 +325,19 @@ Rather than asserting a "perfect" block rate, the academically rigorous statemen
 This architecture prioritizes system reliability and service uptime, which are paramount in enterprise environments.
 
 #### 5.2.5.4 HTTPS Constraint
+
 The 9 payload features (F12–F20) rely on plaintext inspection of the HTTP content. When the data is encrypted (TLS 1.3), F12–F20 cannot be computed unless a SSLKEYLOGFILE (session key file) is present; in this case, the observation narrows down to 11 network features (F1–F11) plus the temporal and effect components, losing the ability to detect L7.
 Real-world production servers do not export an SSLKEYLOGFILE due to security policies, as it compromises symmetric session keys.
 
 **Mitigations:**
+
 - Deploy the architecture upon a transparent proxy (assuming a Man-In-The-Middle position) where the agent is granted access to plaintext prior to cryptographic encapsulation.
 - Alternatively, accept the L7 blind spot as an operational reality and rely exclusively upon L3–L4 volumetric features (F1–F11) when processing encrypted HTTPS traffic.
 
 #### 5.2.5.5 Horizontal Scalability
+
 This project trains a single agent for the entire network. When a production network has hundreds of components (edge routers, DCs, NAC devices), several questions arise:
+
 - Can a singular agent realistically process all concurrent flows? (The state explosion problem).
 - Or is a multi-agent architecture mandated for individual network segments?
 This project does not currently furnish a definitive answer to this scaling challenge. Section 6.2 outlines proposed future research trajectories focusing specifically on multi-agent coordination.
@@ -314,10 +349,12 @@ This project does not currently furnish a definitive answer to this scaling chal
 ## 6.1 Conclusion
 
 ### The Identified Research Problem
+
 Chapter 1 clearly defines a need: modern network defense systems are reactive, static, and overloaded by alert fatigue. Traditional solutions (firewall rules, signature-based IDS, rule-based ML) are not adaptable to automated attacks and development at production speeds.
 The central question: **Can RL create an autonomous defense agent that can learn the optimal defense policy and maintain it over time without manual intervention?**
 
 ### The Project Has Demonstrated Feasibility
+
 The empirical results deliver a definitive affirmative response, substantiated by concrete evidence:
 
 1. **Comparative Efficacy (RQ1): RL Surpasses Static Rules**
@@ -336,10 +373,11 @@ The empirical results deliver a definitive affirmative response, substantiated b
     - **Secure Convergence:** `approx_kl` converges safely (≈0.0008), ensuring that all RL policy updates remain mathematically safe and stable.
     - **Differentiated Response:** The agent successfully learns to execute highly specific, differentiated actions customized to distinct attack typologies.
     - **Deployment Implication:** The RL policy possesses extreme durability; it requires zero manual recalibration when attack patterns mutate within the boundaries of its training.
+    - **Temporal Memory:** In particular, the session escalation mechanism with its evidence accumulation points directly through 10D temporal state enables the agent to maintain policy stability through various types of attacks. These memory and effect states act as a context vector that accumulates the agent's perception of the evolving threat situation, allowing it to make adaptive decisions over time.
 
 ### The Three Principal Contributions of the Project
 
-1. **Technical Contribution:** The integration of end-to-end RL agents with the traffic feature extraction pipeline includes advanced application layer techniques (CRS integration and payload normalization). Design analysis revealed that the HTTP payload feature group (F12–F20) is the main contributor, a significant finding for future research.
+1. **Technical Contribution:** The design of a 34-dimensional observation space that bridges high-fidelity sensors (CRS and payload normalization) with temporal memory and closed-loop feedback. While the HTTP payload features (F12–F20) provide the essential baseline signals for L7 detection, analysis confirms that the **10D temporal state and 4D closed-loop effect state are the primary catalysts** for the performance, enabling the agent to perform contextual reasoning and autonomous strategy adjustment.
 
 2. **Methodological Contribution:** A rigorous evaluation framework includes ablation with percentage-point precision delta and FPR/detection rate trade-off analysis, useful for future NIDS-RL studies.
 
@@ -350,23 +388,26 @@ The empirical results deliver a definitive affirmative response, substantiated b
     - Immediate operational readiness for integration with existing SIEM infrastructures (e.g., Wazuh integration).
 
 ### The Gaps Remaining to be Bridged
-To be implemented in practice, the following issues need to be addressed:
-- **Sim2Real Validation:** switching the policy from Containernet to real network traffic.
-- **The HTTPS Imperative:** utilizing a transparent proxy or accepting L7 detection limitations.
-- **Multi-Agent Coordination:** scaling up beyond a single agent.
-- **Adversarial Evasion Robustness:** testing against attackers aware of the feature definitions.
+
+Despite its promise, this project has only been validated in a controlled simulation environment. To be implemented in practice, the following issues need to be addressed:
+Sim2Real Validation: switch the policy from Mininet to real network traffic.
+The HTTPS Imperative: or a transparent proxy or accept the L7 level detection blind spot.
+Multi-Agent Coordination: scaling up beyond a single agent
+Adversarial Evasion Robustness: Check if the attacker knows the feature definition and policy.
+These future research vectors are detailed in Section 6.2.
 
 ## 6.2 Future Developments: Towards an Autonomous & Transparent Defense System
 
-The roadmap is oriented towards three main pillars:
-1. **Explainable AI (XAI):** Integrating SHAP and Attention to transform the model into a "Glass Box."
-2. **Multi-Agent Collaboration:** Distributing agents across multiple subnets for context sharing.
-3. **Multi-step Reward Architectures:** Implementing reward systems based on extended temporal horizons.
-
-Advanced enhancements formally proposed:
+While this project demonstrates basic feasibility, the future Model Architecture Upgrade roadmap is oriented towards three main pillars to achieve an autonomous and transparent defense system:
+Explainable AI (XAI): Integrating SHAP and Attention into a 34-dimensional vector space transforms the model into a "Glass Box," providing clear blocking reasons for the SOC team.
+Multi-Agent Collaboration: Distributing agents across multiple subnets allows for sharing the attack context, effectively preventing lateral movement.
+Multi-step Reward Architectures: Implement a reward system based on a 100-step process rather than a single action to optimize your long-term strategy.
+Complementing these three central pillars, the following advanced enhancements are formally proposed:
 
 ### 6.2.1 Expansion of the Action Space
+
 **Proposed Enhancement:**
+
 - Source-IP Specific Rate Limiting.
 - Request-Type Discriminatory Routing (POST vs GET).
 - Dynamic Honeypot Instantiation tailored to attack typology.
@@ -375,46 +416,88 @@ Advanced enhancements formally proposed:
 **Strategic Importance:** Enterprise environments require more sophisticated hierarchical structures than simple binary blocks.
 
 ### 6.2.2 Multi-Agent Collaboration
+
 **Proposed Feature:**
 Distribute agents across subnets to share threat contexts.
+
 - **Distributed Policy Coordination:** Agents share experiences via high-speed protocols.
 - **Alert Protocoling:** AMQP-style event bus for real-time communication.
 
-**Key Benefit:** Prevention of lateral movement and decentralization of decision-making for massive enterprise scale.
+**Key Benefit:**
+A probing or exploitation attack on Subnet A will immediately alert Subnet B, allowing the entire network to raise its defenses before the attacker can expand its reach.
+
+A multi-agent architecture decentralizes decision-making, positioning the agent immediately adjacent to the threat at massive enterprise scale.
 
 ### 6.2.3 Robustness Against Evasion Attacks
+
 **Proposed Enhancement:**
+
 - **Adversarial Threat Modeling:** Assuming the adversary possesses knowledge of features and rewards.
 - **Evasion Tactics Testing:** Penetrating normalization pipelines and temporal modulation (low-and-slow attacks).
-- **Defensive Countermeasures:** Implementing min-max game theoretic approaches for training.
+- **Defensive Countermeasures:** Implementing aggressive adversarial policy training against a highly adaptive, constantly mutating attacker.
+
+Strategic Importance: Real-world adversaries are neither naive nor cooperative. Upon the deployment of an RL defense, the adversary will inevitably adapt and counter-evolve. The evaluative framework must stress-test this certainty.
 
 ### 6.2.4 Online Training and Concept Drift Management
+
 **Proposed Enhancement:**
-- **Drift Detection Mechanics:** Statistical monitoring to trigger retraining flags.
-- **Incremental Retraining:** Refining the policy without catastrophic forgetting.
-- **A/B Testing Protocols:** Parallel evaluation of old and new policies.
+
+- **Drift Detection Mechanics:** Relentless statistical monitoring of recent traffic patterns against the established policy baseline, if the FPR spikes anomalously or a novel attack signature emerges the retrain flag is instantly triggered.
+- **Incremental Retraining:**  The policy is meticulously refined using recent traffic data, designed to avoid catastrophic forgetting of past knowledge, leveraging elastic weighting merging or intelligent playback buffer sampling.
+- **A/B Testing Protocols:** Run the old and new policies in parallel on the live traffic to confirm before switching.
 
 ### 6.2.5 Explainable AI (XAI)
-**Proposed Feature:**
-- **SHAP / Attention Mechanisms:** Identifying dominant features for each decision.
-- **Automated Audit Trails:** Log reports explaining the rationale for interventions.
 
-**Key Benefit:** Building operator trust and ensuring legal compliance (GDPR, PCI-DSS).
+**Current State:** The policy functions as an impenetrable "Black Box"; human operators are provided with a "Predicted Action," entirely devoid of underlying rationale.
+
+**Proposed Feature:**
+
+- **SHAP / Attention Mechanisms:**Accurately identify which of the 34 characteristic dimensions (statistical characteristics, time, effects) has the greatest influence on the final decision.
+- **Automated Audit Trails:** The log report output explains each blocking decision, for example: "Blocked IP X due to F13 (SQLi) characteristic exceeding threshold combined with increasing loss trend".
+
+**Key Benefit:**
+
+- **The Transition to "Glass Box" AI:** Transforming the system into a transparent model provides clear and understandable decision-making bases and blocking rationales for the SOC team. This addresses the biggest barriers to AI adoption in production: operator trust and legal compliance (GDPR, PCI-DSS).
+- **Rapid Debugging:** In the event of a false positive, operators can instantly answer the critical question: "Which 3 specific features erroneously triggered this action?"
 
 ### 6.2.6 Sim2Real Gap Validation
+
+**Current State:** The policy was trained exclusively within Mininet; its capacity to generalize to live, chaotic production environments remains a theoretical unknown.
+
 **Proposed Three-Phase Methodology:**
-1. **Distributional Shift Analysis:** Comparing live traffic traces with simulated baselines.
-2. **Policy Transfer:** Shadow mode evaluation against authentic live attack vectors.
-3. **Fine-Tuning:** Recalibrating the policy using live traffic data.
+
+**Phase 1: Distributional Shift Analysis**
+
+- The acquisition of authentic network packet traces (e.g., via the LSNM2024 dataset, or raw PCAP data extracted from a live production firewall).
+- A rigorous comparative analysis of feature distributions: calculating the precise statistical bounds of F1–F20 (mean, variance, percentiles) for live traffic versus the simulated baseline.
+- The identification of the **most extreme distributional shifts** (e.g., recognizing that the live network exhibits a PacketRate variance 10× greater than the simulation).
+
+**Phase 2: Policy Transfer and Evaluation**
+
+- The deployment of the pre-trained Mininet policy against the live traffic corpus (operating in shadow mode, executing zero actual blocks).
+- Rigorous Evaluation: Measuring the precise detection rate against authentic, live attack vectors.
+- Expected Outcome: A quantifiable degradation in performance on live data, directly attributable to the identified distributional shifts.
+
+**Phase 3: Sim2Real Fine-Tuning**
+
+- Utilizing the live traffic corpus to surgically fine-tune the policy (resuming training directly on the live data, employing a highly attenuated learning rate to preclude catastrophic forgetting).
+- Objective: The total restoration of the detection rate to its optimal training baseline (perfectly recalibrating the policy to the chaotic diversity of live network attacks).
+- Deployment: The finalized deployment of the fine-tuned policy.
 
 ### 6.2.7 Multi-step Reward
-**Proposed Feature:**
-- **100-step sequence reward architecture:** Expanding the temporal horizon to evaluate the entire attack trajectory.
 
-**Key Benefit:** Optimization of long-term strategic planning, allowing for complex "baiting" or stealthy tracking before terminal actions.
+**Current State:** The agent calculates its reward almost entirely based upon the instantaneous consequences of the action executed at step $t$ and the subsequent environmental delta observed at step $t+1$.
+
+**Proposed Feature:**
+100-step sequence reward architecture: Massively expanding the temporal horizon of the reward function, compelling the agent to evaluate the entire, overarching trajectory of an attack session rather than myopically focusing on isolated, single-step interventions. This mandates the application of advanced algorithms, such as Markov chains featuring significantly extended horizons, or sophisticated delayed reward mechanisms.
+
+**Key Benefit:**
+The Optimization of Long-Term Strategic Planning: Propels the system far beyond the limitations of short-sighted (single-step) decision-making. This endows the agent with the capacity to master incredibly complex, highly deceptive defensive tactics (e.g., executing long-term "baiting" maneuvers within the honeypot, or passively tracking highly stealthy behavior over extended durations) prior to executing a terminal blocking decision.
 
 ### Summary and Future Vision
+
 This project has incontrovertibly proven that RL constitutes a highly viable, practical foundation for the architecture of autonomous network defense systems. The three foundational research inquiries have been resolved:
+
 - **RQ1:** RL vastly outperforms static rule-based paradigms in optimizing the critical detection-to-false-positive equilibrium.
 - **RQ2:** RL successfully harmonizes absolute security with service availability (permitting 93.2% of legitimate traffic while achieving >96% attack mitigation).
 - **RQ3:** RL organically synthesizes and sustains a highly stable, durable policy spanning a wildly diverse array of attack typologies.
@@ -512,6 +595,7 @@ The combination of academic rigor (ablation studies, distributed learning theory
 | `n_envs` | 1 | **4** | Accelerates training via parallelization. |
 
 ### Appendix B — Reward Function Composition
+
 $R_t = -(D_{\text{after}} + C_{\text{action}}) + B_{\text{reduction}} + B_{\text{action}}$
 
 ### Appendix C — Terminal PPO Diagnostic Metrics
@@ -525,10 +609,12 @@ $R_t = -(D_{\text{after}} + C_{\text{action}}) + B_{\text{reduction}} + B_{\text
 | `value_loss` | ~1.44 | Monotonic decay; no overfitting. |
 
 ### Appendix E — Example Action Logs
+
 - `[t=120.0s] src_ip=10.0.10.10 action=2 (Redirect) reason=L7 signal`
 - `[t=135.0s] src_ip=10.0.10.10 action=3 (Block) block_ready_latched`
 
 ### Appendix F — Inference Pipeline Pseudocode
+
 ```python
 while True:
   row = read_next_jsonl()
