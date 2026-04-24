@@ -305,6 +305,97 @@ def compute_metrics(records: list, episode_rewards: list, eval_mode: str = "roun
     weighted_mitigation_efficiency = (mitigation_rate / benign_harm_score
                                       if benign_harm_score > 0 else float('inf'))
 
+    # ── 17. Security Score (SS) ───────────────────────────────────────────────
+    #
+    # Severity-distance weighted threat response across all active attack steps.
+    # Score = f(|action - OPTIMAL_ACTION|) so the same credit scale applies to every
+    # ip_type — flood steps and L7 steps are comparable.
+    #
+    # Distance table (d = |action − optimal|):
+    #   d=0  → 1.00  exact match
+    #   d=1  → 0.50  one level off (over- or under-mitigation)
+    #   d=2  → 0.25  two levels off
+    #   d≥3  → 0.00  maximum distance
+    #
+    # Special rule: action=0 (Allow) on any attack → 0.00, overriding the distance
+    # formula. This creates an intentional discontinuity for L7 types (optimal=2):
+    # Allow sits at d=2, which the formula would score 0.25, but we floor it to 0.0.
+    # Rationale: doing nothing is a qualitatively different failure from acting at
+    # the wrong severity level. This design choice must be stated explicitly in the
+    # thesis: "for L7 threats, Allow scores 0.0 while RateLimit scores 0.5, even
+    # though both are one or two severity levels from optimal."
+    #
+    # Examples:
+    #   scan/syn_flood (optimal=3): Allow→0.0, RL→0.25, Redirect→0.50, Block→1.0
+    #   sqli/xss (optimal=2):       Allow→0.0, RL→0.50, Redirect→1.0,  Block→0.50
+    #
+    # Known design limitation: the action space is treated as ordinal with equal
+    # gaps — d=1(Allow→RL) and d=1(Redirect→Block) both score 0.50, even though
+    # operationally "Redirect→Block" is a more significant escalation. This is a
+    # metric simplification; the thesis should acknowledge it alongside the choice
+    # to prioritise uniform scoring over operational gap calibration.
+    # All steps are equally weighted; damage-proportional weighting (step_damage)
+    # would capture flood-vs-L7 severity difference at the cost of reward coupling.
+    #
+    # Returns None (not 0.0) when no attack steps are present — downstream tables
+    # show N/A rather than misleading 0.0.
+    _SS_DIST_SCORE = {0: 1.0, 1: 0.5, 2: 0.25}   # distance → score; ≥3 → 0.0
+
+    ss_scores = []
+    for r in atk_act:
+        opt = OPTIMAL_ACTION.get(r['ip_type'], -1)
+        if opt == -1:
+            continue
+        if r['action'] == 0:
+            ss_scores.append(0.0)
+        else:
+            ss_scores.append(_SS_DIST_SCORE.get(abs(r['action'] - opt), 0.0))
+    security_score = float(np.mean(ss_scores) * 100) if ss_scores else None
+
+    # ── 18. Availability Score (AS) ──────────────────────────────────────────
+    #
+    # Severity-weighted service continuity for benign users.
+    #
+    #   1.0000  Allow      — full service
+    #   0.6667  RateLimit  — throttled but real service accessible (HTTP 429)
+    #   0.3333  Redirect   — redirected to honeypot; real service inaccessible
+    #   0.0     Block      — complete outage
+    #
+    # Weights use uniform Δ = 1/3 per action level. This is itself an assumption —
+    # that each severity step causes equal loss of availability. It is not "no
+    # assumption"; it is a neutral choice that avoids relying on honeypot response
+    # content (which is implementation-specific). The thesis should state: "we adopt
+    # uniform spacing as a conservative, defensible baseline; the actual availability
+    # loss per action level may differ in deployment."
+    # The same ordinal-gap limitation noted for SS applies here: Allow→RateLimit and
+    # RateLimit→Redirect are treated as equal steps, even though the latter
+    # transitions users from real service to a honeypot (qualitatively more severe).
+    #
+    # Known limitations (by design, not fixable at metric level):
+    #   - Temporal: RateLimit for 1 step then Allow scores identically to RateLimit
+    #     for 100 steps. Duration of disruption is not captured.
+    #   - NAT: each IP counts as one "user." A corporate NAT gateway behind one IP
+    #     and a residential user behind another IP are weighted equally.
+    #
+    # Returns None (not 100.0) when no benign steps — avoids inflating SAB.
+    _AVAIL_WEIGHT = {0: 1.0, 1: round(2/3, 4), 2: round(1/3, 4), 3: 0.0}
+    avail_scores = [_AVAIL_WEIGHT[r['action']] for r in ben_act]
+    availability_score = float(np.mean(avail_scores) * 100) if avail_scores else None
+
+    # ── 19. Security-Availability Balance (SAB) ───────────────────────────────
+    #
+    # Harmonic mean of SS and AS (both normalised to [0,1]).
+    # Analogous to F1: rewards agents that are strong on BOTH axes simultaneously;
+    # a near-zero score on either axis collapses the composite.
+    # None if either SS or AS is None (no data on that axis).
+    if security_score is None or availability_score is None:
+        sab = None
+    else:
+        ss_n = security_score / 100.0
+        as_n = availability_score / 100.0
+        sab = float(2 * ss_n * as_n / (ss_n + as_n) * 100) if (ss_n + as_n) > 0 else 0.0
+
+
     return {
         # ── Core ──────────────────────────────────────────────────────────────
         "eval_mode":                 eval_mode,
@@ -363,6 +454,10 @@ def compute_metrics(records: list, episode_rewards: list, eval_mode: str = "roun
         "mitigation_efficiency":          mitigation_efficiency,
         "benign_harm_score":              benign_harm_score,
         "weighted_mitigation_efficiency": weighted_mitigation_efficiency,
+        # ── Security / Availability composite scores ──────────────────────────
+        "security_score":                 security_score,
+        "availability_score":             availability_score,
+        "security_availability_balance":  sab,
 
         # ── Step counts ───────────────────────────────────────────────────────
         "n_total_steps":             total_steps,
@@ -402,6 +497,10 @@ _SCALAR_METRICS = [
     "benign_harm_score",
     "mitigation_efficiency",
     "weighted_mitigation_efficiency",
+    # security / availability composite (SAB recomputed from agg SS+AS in aggregate_seeds)
+    "security_score",
+    "availability_score",
+    "security_availability_balance",
 ]
 
 
@@ -420,7 +519,7 @@ def aggregate_seeds(seed_results: dict) -> dict:
                 and seed_results[k][metric] is not None
                 and seed_results[k][metric] != float('inf')]
         if not vals:
-            return 0.0, 0.0, 0.0
+            return None, 0.0, 0.0
         arr = np.array(vals, dtype=float)
         m   = float(np.mean(arr))
         s   = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
@@ -466,16 +565,28 @@ def aggregate_seeds(seed_results: dict) -> dict:
 
     # Ratio metrics recomputed from aggregate rates — more stable than mean(per-seed ratios)
     # because per-seed denominators can be near-zero causing high variance.
-    agg_mit  = out.get("mitigation_rate", 0)
-    agg_ben  = out.get("benign_intervention_rate", 0)
-    agg_rl   = out.get("benign_ratelimit_rate", 0)
-    agg_red  = out.get("benign_redirect_rate", 0)
-    agg_blk  = out.get("benign_block_rate", 0)
+    # Use `or 0` so that None (key present, no valid seeds) collapses to 0 safely.
+    agg_mit  = out.get("mitigation_rate") or 0
+    agg_ben  = out.get("benign_intervention_rate") or 0
+    agg_rl   = out.get("benign_ratelimit_rate") or 0
+    agg_red  = out.get("benign_redirect_rate") or 0
+    agg_blk  = out.get("benign_block_rate") or 0
 
     out["mitigation_efficiency"] = (agg_mit / agg_ben if agg_ben > 0 else float("inf"))
 
     agg_harm = 1.0 * agg_rl + 2.0 * agg_red + 3.0 * agg_blk
     out["benign_harm_score"] = agg_harm
     out["weighted_mitigation_efficiency"] = (agg_mit / agg_harm if agg_harm > 0 else float("inf"))
+
+    # SAB recomputed from aggregate SS and AS — avoids inflated CI from per-seed harmonic means.
+    # out.get() without default: returns None when key exists but value is None.
+    agg_ss = out.get("security_score")
+    agg_as = out.get("availability_score")
+    if agg_ss is None or agg_as is None:
+        out["security_availability_balance"] = None
+    else:
+        out["security_availability_balance"] = (
+            2 * agg_ss * agg_as / (agg_ss + agg_as) if (agg_ss + agg_as) > 0 else 0.0
+        )
 
     return out

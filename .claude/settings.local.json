@@ -33,7 +33,16 @@
       "Bash(tshark -r ~/Downloads/Friday-trimmed.pcap -Y \"ip.addr == 172.16.0.1\" -T fields -e frame.time_epoch -e ip.src -e ip.dst -e tcp.flags -c 5)",
       "Bash(tshark -r ~/Downloads/Friday-trimmed.pcap -Y \"ip.src == 172.16.0.1 or ip.dst == 172.16.0.1\" -T fields -e frame.time -e ip.src -e ip.dst -c 5)",
       "Bash(tshark -r ~/Downloads/Friday-trimmed.pcap -T fields -e frame.time_epoch -c 1)",
-      "Bash(tshark -r ~/Downloads/Friday-trimmed.pcap -T fields -e frame.time_epoch)"
+      "Bash(tshark -r ~/Downloads/Friday-trimmed.pcap -T fields -e frame.time_epoch)",
+      "Bash(python3 -c \"from metrics import compute_metrics, aggregate_seeds; print\\('OK'\\)\")",
+      "Bash(python3 evaluate_all.py)",
+      "Bash(pip install *)",
+      "Bash(python3 -c \"import gymnasium\")",
+      "Bash(python3.9 -c \"import gymnasium; print\\(gymnasium.__version__\\)\")",
+      "Bash(python3.10 -c \"import gymnasium; print\\(gymnasium.__version__\\)\")",
+      "Bash(python3.10 -c \"import stable_baselines3; print\\('sb3 ok'\\)\")",
+      "Bash(pip3.10 install *)",
+      "Bash(python3.10 evaluate_all.py)"
     ],
     "additionalDirectories": [
       "/tmp"
