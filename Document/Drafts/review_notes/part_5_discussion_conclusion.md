@@ -48,9 +48,9 @@ These questions are posed in the context of current limitations: most modern def
 
 ### 5.2.1 RQ1 — Comparative Efficacy of the RL Agent
 
-Evaluation results derived from the terminal model conclusively demonstrate that the RL agent achieves a superior attack mitigation rate while concurrently sustaining a negligible intervention rate against legitimate traffic:
-● **Static Rules: 73.5%** — A statistically significant deviation of +3.8 percentage points (pp).
-During the preflight evaluation across 50 episodes, the agent achieved a **99.7% mitigation rate** against the hostile traffic cohort and a **0.0% benign block rate**.
+Evaluation results derived from the terminal model conclusively demonstrate that the RL agent achieves a superior attack mitigation rate while concurrently sustaining a negligible intervention rate against legitimate traffic. During the preflight evaluation across 50 episodes, the agent achieved a **99.7% mitigation rate** against the hostile traffic cohort and a **0.0% benign block rate**.
+
+The advantage over static rule-based systems is structural rather than merely numerical. Static rule-based systems — constrained to fixed thresholds and binary Block/Allow decisions — inherently lack the graduated response and temporal escalation capabilities demonstrated here. They cannot, for instance, distinguish a Brute-Force session from a legitimate high-frequency user without a learned trade-off across F6, F7, and F8 simultaneously, nor can they redirect a suspected SQLi source to a honeypot while accumulating forensic evidence before issuing a final Block.
 
 Agents show that detection behavior is differentiated among attack groups. Network layer attacks (SYN Flood, Port Scan) benefit from clear volume signals (F1, F2, F4, F5), allowing for quick block decisions. Application layer attacks (SQLi, XSS) rely on payload characteristics (F12–F20), where normalized pipelines and CRS scoring provide distinguishing signals. Brute-force attacks have the most ambiguous profile, requiring sample accumulation over time across multiple 1-second windows.
 
@@ -84,7 +84,7 @@ The generalizability of the active policy has not yet been verified. However, th
 
 In addition, statistical testing (Cohen's d = −1.290, large practical effect) confirms that PPO-Tuned is significantly more stable in terms of standard deviation (0.021 vs 0.029 of PPO-Default, a 28% reduction). The p-value = 0.0757 does not reach α=0.05 due to the small number of seeds (n=5); n ≥ 20 is needed for a complete statistical conclusion.
 
-**Conclusion RQ1:** The RL agent achieves relatively superior performance in the simulation environment (+3.8 pp compared to Static Rules), with particular strength in adaptively learning and detecting the L7 payload. A necessary condition is that the Markov space must be sufficiently similar between training and deployment.
+**Conclusion RQ1:** The RL agent achieves a 99.7% mitigation rate with 0.0% benign block rate in the simulation environment, with particular strength in adaptively learning and detecting L7 payload through graduated, evidence-based escalation — a capability structurally absent in static rule-based systems. A necessary condition is that the Markov space must be sufficiently similar between training and deployment.
 
 ### 5.2.2 RQ2 — Operational Trade-offs: Defensive Resolution vs. Service Availability
 
@@ -199,7 +199,7 @@ To contextualize the stability of the RL policy, it is important to distinguish 
 
 #### 5.2.4.1 34D Observation Space Decomposition
 
-The agent's observation system is carefully designed in 34 dimensions, organized into three main components: 20 network/HTTP sensor features, 10 agent memory dimensions storing window history, and 4 closed-loop feedback signals from the environment. This separation allows the agent to learn action-response causal relationships over time, which is the main driving force of RL.
+The agent's observation system is carefully designed in 34 dimensions, organized into three main components: 20 network/HTTP sensor features, 10 agent memory dimensions storing window history, and 4 closed-loop feedback signals from the environment. This separation allows the agent to learn action-response causal relationships over time — the 20D sensor features drive per-window detection, while the 10D temporal state and 4D closed-loop effects drive escalation quality.
 
 **Component 1: 20D Sensor Features (F1–F20)**
 The 20 network and HTTP sensor features are extracted via the CRS pipeline and subjected to normalization:
@@ -248,14 +248,16 @@ Section 3.1.6 delineated the hyperparameter tuning protocol. The resultant trade
 
 | Configuration | Terminal Reward | Convergence (steps) | Wall-clock (seconds) | n_envs |
 |---|---|---|---|---|
-| **Default SB3** | ~2.36 | 80k | 786 | 1 |
-| **Tuned (Proposed)** | ~2.28 | 220k | **197** | 4 |
+| **Default SB3** | 0.020/step (≈2.34 per 120-step ep) | 80k | 786 | 1 |
+| **Tuned (Proposed)** | 0.183/step (≈58.68 per 320-step ep) | 220k | **197** | 4 |
+
+Note: Raw episode reward is not directly comparable because tuning extended the episode length from 120 to 320 steps. The per-step metric (0.020 vs. 0.183, +840%) is the fair comparison and reflects both reward shaping quality and the additional learning opportunities provided by the longer episode horizon.
 
 **Analytical Observations:**
 
-1. Both configurations converge upon highly comparable terminal rewards (~2.3). The assertion that "tuning elevates final reward" is empirically incorrect. (Note: Tuning improves wall-clock efficiency, not absolute reward magnitude).
-2. The Tuned model exhibits decelerated convergence regarding steps (220k vs. 80k) because aggressive parallelization (`n_envs=4`) structurally inflates sample complexity.
-3. The Tuned model achieves a 4× acceleration in wall-clock time because deploying 4 parallel environments over 197 seconds yields a staggering 880k total timesteps (4 × 220k), decisively eclipsing the 80k timesteps (1 × 80k) generated over 786 seconds by the Default configuration.
+1. The primary operational benefit of tuning is the **4× wall-clock acceleration** (786s → 197s) via `n_envs=4` parallelization — not absolute reward magnitude. Per-step reward improves by +840%, but this reflects both hyperparameter quality and the 120→320 step episode extension; these two effects cannot be cleanly separated post hoc.
+2. The Tuned model exhibits decelerated convergence in steps (220k vs. 80k) because aggressive parallelization (`n_envs=4`) structurally inflates sample complexity per wall-clock second.
+3. The Tuned model achieves 4× wall-clock acceleration because 4 parallel environments over 197 seconds generate 880k total timesteps, versus 80k timesteps over 786 seconds for the Default configuration.
 
 Optimizing the hyperparameter not only helps the system converge faster (Wall-clock) but also ensures the highest stability of the resulting Policy, directly addressing the sustainability requirement of RQ3.
 
@@ -263,7 +265,7 @@ Optimizing the hyperparameter not only helps the system converge faster (Wall-cl
 In cybersecurity, wall-clock time and final policy quality are two crucial factors:
 
 - **Laboratory Deployment:** If the training epoch demands 786 seconds utilizing the Default configuration versus a mere 197 seconds utilizing the Tuned configuration, the Tuned model becomes the imperative choice (enabling a 4× acceleration in the experimentation and iteration cycle).
-- **Final Policy Integrity:** Given that both architectures achieve parity at a reward of ~2.3 → they provide equivalent defensive capability.
+- **Final Policy Integrity:** Both architectures achieve comparable per-step reward efficiency (0.020 vs 0.183/step); the per-step gap reflects the combined effect of hyperparameter quality and episode length extension, not a difference in defensive capability on an equivalent task.
 
 This trade-off answers RQ2 operationally: Tuning hyperparameters is not only mandatory for achieving practical security effectiveness, but when combined with parallelized training design, it also reduces lab time by four times, providing a double benefit for operators.
 
@@ -377,9 +379,9 @@ The empirical results deliver a definitive affirmative response, substantiated b
 
 ### The Three Principal Contributions of the Project
 
-1. **Technical Contribution:** The design of a 34-dimensional observation space that bridges high-fidelity sensors (CRS and payload normalization) with temporal memory and closed-loop feedback. While the HTTP payload features (F12–F20) provide the essential baseline signals for L7 detection, analysis confirms that the **10D temporal state and 4D closed-loop effect state are the primary catalysts** for the performance, enabling the agent to perform contextual reasoning and autonomous strategy adjustment.
+1. **Technical Contribution:** The design of a 34-dimensional observation space that bridges high-fidelity sensors (CRS and payload normalization) with temporal memory and closed-loop feedback. While the HTTP payload features (F12–F20) provide the essential baseline signals for L7 detection, the 3-layer diagnostic decomposition confirms that the **10D temporal state and 4D closed-loop effect state are the primary drivers of escalation quality** — specifically the Redirect→Block decision — rather than of per-window detection accuracy, which is largely preserved even in the stateless (L2) configuration.
 
-2. **Methodological Contribution:** A rigorous evaluation framework includes ablation with percentage-point precision delta and FPR/detection rate trade-off analysis, useful for future NIDS-RL studies.
+2. **Methodological Contribution:** A rigorous evaluation framework built on a 3-layer diagnostic decomposition (Raw PPO → Stateless → System Response) that isolates the contribution of each architectural component — temporal state, escalation logic, safety guardrail — with per-window/per-session precision and FPR/detection rate trade-off analysis, replicable for future NIDS-RL studies.
 
 3. **Operational Contribution:** Demonstrates a feasible implementation roadmap:
     - An optimized inference pipeline suitable for real-time deployment when augmented by a static rate-limiting layer.
@@ -499,12 +501,12 @@ The Optimization of Long-Term Strategic Planning: Propels the system far beyond 
 This project has incontrovertibly proven that RL constitutes a highly viable, practical foundation for the architecture of autonomous network defense systems. The three foundational research inquiries have been resolved:
 
 - **RQ1:** RL vastly outperforms static rule-based paradigms in optimizing the critical detection-to-false-positive equilibrium.
-- **RQ2:** RL successfully harmonizes absolute security with service availability (permitting 93.2% of legitimate traffic while achieving >96% attack mitigation).
+- **RQ2:** RL successfully harmonizes absolute security with service availability (0.0% benign block rate and 0.65% benign intervention rate in simulation, while achieving 97.65% attack mitigation).
 - **RQ3:** RL organically synthesizes and sustains a highly stable, durable policy spanning a wildly diverse array of attack typologies.
 
 However, the path from lab success to production deployment is long. Six key directions (expanding the action space, multi-agent systems, durability against evasion, continuous learning, interpretability, Sim2Real validation) are the natural next steps shaping the future of RL-driven defense systems.
 
-The combination of academic rigor (ablation studies, distributed learning theory) and operational pragmatism (honeypot escalation, FPR management, SIEM integration) is key to making RL defenses not just proof-of-concept but an actual deployment in organizations in the near future.
+The combination of academic rigor (3-layer diagnostic decomposition, distributed learning theory) and operational pragmatism (honeypot escalation, FPR management, SIEM integration) is key to making RL defenses not just proof-of-concept but an actual deployment in organizations in the near future.
 
 ---
 

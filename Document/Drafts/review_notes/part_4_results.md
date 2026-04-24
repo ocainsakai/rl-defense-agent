@@ -94,7 +94,7 @@ n = 2,809 SQLi URIs + 3,000 benign URIs from LSNM2024 (Lashkari et al., 2024).
 
 Note: This evaluation is performed on isolated URIs (not 1-second windows); hence, the TP/FP/FPR metrics reflect the isolated efficacy of F13 prior to its integration into the 20D vector.
 
-PL2 was selected: With $F1-Score = 0.925$ and $Recall = 1.0$, PL2 ensures that no SQLi variants are missed in the test set. Although the false positive rate ($FPR = 15.3%$) is higher than PL1, in the proposed system architecture, these false positive signals will be further filtered and processed by the RL agent in a later stage.
+PL2 was selected: With $F1-Score = 0.925$ and $Recall = 1.0$, PL2 ensures that no SQLi variants are missed in the test set. PL1 achieves zero false positives but misses 40% of attacks, making it unsuitable as a detection signal. PL3 offers no improvement over PL2 while increasing false positives. The URI-level FPR of 15.3% reflects isolated CRS scoring; within the full 20D feature vector, F13 is one signal among many and is weighted accordingly by the RL agent's learned policy.
 
 **CRS XSS (F18) Analysis:** The CRS-941 benchmark against The experiment used the LSNM2024 XSS dataset with 123 GET attack samples (including script-tag and event-handler injections) and 3,000 normal samples. POST body attack samples were excluded due to limitations in the source file's data structure.
 
@@ -214,7 +214,7 @@ Table 4.6: PPO Diagnostic Metrics during Training
 
 | Metric | Initial Value | Terminal Value | Status | Interpretation |
 |---|---|---|---|---|
-| eval/mean_reward | — | 58.68 | Optimal | Reward ascends and stabilizes at terminal training phase. |
+| eval/mean_reward | — | 58.68 | Optimal | Reward ascends and stabilizes at terminal training phase. (Per-episode cumulative reward, n_envs=4, episode_length=320 steps; per-step equivalent ≈ 0.183.) |
 | approx_kl | — | 0.0008 | Optimal | Sub-threshold (<0.02) — guarantees safe policy updates. |
 | clip_fraction | — | 0.013 | Optimal | Gradient clipping is rarely invoked near convergence. |
 | clip_range | — | 0.15 | Fixed | ε = 0.15 as per architectural design. |
@@ -266,7 +266,7 @@ These metrics were architecturally tailored to monitor the policy's soft escalat
 
 **Premature Block Rate:** ~0.15 — The frequency at which a Block is issued prior to the complete fulfillment of the soft escalation window. A value exceeding 0 yet remaining well below 0.5 indicates that the Agent possesses a learned tendency to await corroborating evidence prior to Blocking, while retaining the capacity to execute instantaneous Blocks when confronted with overwhelming attack signatures (e.g., a SYN Flood fully saturating the window).
 
-**Benign False Block Rate:** 0 — Zero Block actions were executed against valid traffic, confirming that the policy is devoid of an aggressive bias that defaults to blocking anomalous but benign occurrences.
+**Benign False Block Rate:** 0 — Zero Block actions were executed against valid traffic in the preflight simulation environment (MockIPBehavior, 50 episodes). Note: this metric is measured on the training-distribution simulator where benign traffic has F13=0 by design. On the out-of-distribution Thursday benchmark (Section 4.2.9), Raw PPO registers a 3% redirect FPR on real benign traffic — a distinct metric reflecting distributional shift, not a contradiction.
 
 **Global Stability Assessment:**
 The synthesis of the aforementioned elements permits the following conclusive deductions:
@@ -285,16 +285,18 @@ Table 4.7: PPO Default vs PPO v13 (Tuning Impact)
 
 | Metric | Default PPO | v13 Tuned | Improvement |
 |--------|-------------|-----------|----------|
-| Final Reward (500K steps) | 2.34 | 58.38 | +2400% |
+| Final Reward (500K steps) | 2.34 | 58.68 | +2400% (see note) |
+| **Reward per Step** | **0.0195** | **0.1834** | **+840% (fair comparison)** |
 | Average Reward | 2.06 | 46.29 | +2150% |
 | Episode Length | 120 steps | 320 steps | +167% |
 | Stability (CV) | 0.9719 | 0.9932 | Comparable |
+| Wall-clock (500K steps) | 786s | 197s | **4× faster** |
 | Convergence Status | Sluggish | Accelerated | (Pass) |
 
-Note: Data derived from 25 evaluation checkpoints, with each checkpoint assessed across 6 episodes. CV = Coefficient of Variation (std/mean).
+Note: Data derived from 25 evaluation checkpoints, with each checkpoint assessed across 6 episodes. CV = Coefficient of Variation (std/mean). The +2400% raw reward difference reflects both tuning quality and the episode length extension (120 → 320 steps) and is therefore not directly comparable on an absolute basis. The per-step metric (+840%) provides the fair comparison.
 
 **Interpretation of Results:**
-The hyperparameter tuning encapsulated within v13 yields a staggering 2400% increase in reward relative to the PPO default. This radical improvement is principally attributable to:
+The 2400% raw reward difference primarily reflects the episode length extension (120→320 steps); on a per-step basis, v13 achieves a reward rate of 0.183/step versus 0.020/step for Default PPO (+840%). The primary operational benefit of tuning is the **4× wall-clock acceleration** (786s → 197s) via n_envs=4 parallelization. This improvement is principally attributable to:
 
 **Policy Learning Rate Optimization:** v13 deploys a calibrated learning rate schedule, empowering the policy to learn rapidly during the initial exploration phase, followed by precise decelerations in update velocity as convergence is approached.
 
@@ -357,21 +359,6 @@ To disentangle error sources and pinpoint the exact locus of analytical failure,
   - L2 = "Redirect" (policy estimation).
   - L3 = "Block" (post 15-window soft escalation, the policy has amassed conclusive evidence).
   - The superiority of L3 over L2 confirms that the escalation logic improves decision-making.
-Relationship Architecture Across the Three Layers (Layered Diagnosis):
-34D Input --> Layer 1 (Raw) --> Is the action output correct or incorrect?
-               |
-          Excision of 10D+4D
-               |
-20D Input --> Layer 2 (Stateless) --> Does the temporal state exert influence?
-               |
-          Integration of escalation + safety
-               |
-          Layer 3 (System) --> Does systemic intervention improve outcomes?
-Diagnostic pathway for final L3 failure:
-**L1 Failure:** Root cause lies in policy training → mandates retraining.
-**L1 Success, L2 Failure:** Root cause is temporal state dependency → requires feature selection optimization.
-**L1 = L2 Success, L3 Failure:** Root cause resides in escalation/safety logic → necessitates systemic fine-tuning.
-**L1 = L2 = L3 Success, Ground Truth Failure:** Root cause is exogenous to the system (deployment architecture, network environment idiosyncrasies).
 Results on CIC-IDS2017 Friday DDoS (SYN Flood):
 | Metric | Layer 1 (Raw PPO) | Layer 2 (Stateless) | Layer 3 (System) | Interpretation |
 |--------|---|---|---|---|
@@ -443,10 +430,7 @@ Comparative Synthesis: CIC-IDS2017 vs. CSE-CIC-IDS2018:
 Generalizability Conclusions:
 **Volumetric Attacks (SYN Flood):** The policy exhibits flawless generalization on CIC-IDS2017 (99.9% Accuracy), proving that the network features (F1–F3) are **stable across diverse datasets**.
 **Layer 7 Attacks (XSS, Brute Force):** Achieving 100% Accuracy on CSE-CIC-IDS2018 incontrovertibly establishes that the CRS-941 (XSS) ruleset and the behavioral features (F6–F8) possess sufficient robustness for universal generalization.
-**SQL Injection as the Primary Vulnerability:** The 71.6% Accuracy on CSE-IDS2018 SQLi exposes the **severe coverage limitations** inherent in the CRS-942 ruleset. Causative factors:
-- The sophisticated SQLi variants embedded within the 2018 dataset transcend the defensive perimeter of CRS-942 Paranoia Level 2.
-- Double-encoding, UNION-based, and time-based SQLi vectors evade current pattern matching paradigms.
-- The 10D temporal state is fundamentally incapable of compensating for catastrophic failures in L7 signature detection.
+**SQL Injection as the Primary Vulnerability:** The 71.6% Accuracy on CSE-IDS2018 SQLi is the system's primary limitation. The parity between L1 and L2 accuracy (both 71.6%) confirms that the temporal state adds no detection value for this attack class, isolating the bottleneck to the F13 signal. The 2018 dataset contains sophisticated SQLi variants (double-encoding, UNION-based, time-based) that are not covered by CRS-942 PL2 pattern matching.
 **Temporal State Impact:** The Layer 2 (stateless) configuration retains a 99.4% accuracy rate on CSE-IDS2018, strongly suggesting that the temporal state primarily serves the L3 escalation decision matrix, offering negligible utility for base L2 detection.
 **Strategic Recommendation:** Enhancing SQLi detection necessitates elevating the CRS-942 Paranoia Level; however, this will inextricably induce a spike in False Positives triggered by benign UNION queries (e.g., ORM frameworks). Negotiating this balance represents the inescapable, intrinsic trade-off characterizing all signature-based architectures.
 
@@ -512,7 +496,7 @@ The research achieves its foundational objectives: the engineering of an autonom
 
 The v13 PPO Model (post-tuning) underwent evaluation against a suite of performance indicators, structured to concurrently assess two dimensions: raw defensive quality (baseline mitigation capacity), representing the ability to detect and neutralize threats; and the security-availability trade-off, representing the equilibrium between defensive aggression and the preservation of legitimate service operations.
 
-The paramount academic contribution resides in the architecture of the Observation Module—the vital technical conduit bridging raw network flows and the MDP state space. The performance enhancement observed from v12 to v13 is predominantly attributable to the expansion of the state space from 20 dimensions to 34 dimensions, specifically incorporating: 20 predefined traffic features (F1–F20), 10 temporal state dimensions encapsulating the per-IP memory over the preceding 10 steps, and 4 closed-loop effect dimensions quantifying the empirical consequences of the antecedent action. This expanded dimensionality empowers the agent to internalize the intra-session continuity characterizing IP behavior and the causal relationship linking defensive actions to subsequent environmental state permutations. While the OWASP CRS features (F13, F18) remain indispensable for classifying application-layer (L7) threats, the empirical data confirms that aggregate performance enhancements are primarily driven by the temporal state component, rather than the isolated discriminatory power of individual CRS rules.
+The paramount academic contribution resides in the architecture of the Observation Module—the vital technical conduit bridging raw network flows and the MDP state space. The performance enhancement observed from v12 to v13 is predominantly attributable to the expansion of the state space from 20 dimensions to 34 dimensions, specifically incorporating: 20 predefined traffic features (F1–F20), 10 temporal state dimensions encapsulating the per-IP memory over the preceding 10 steps, and 4 closed-loop effect dimensions quantifying the empirical consequences of the antecedent action. This expanded dimensionality empowers the agent to internalize the intra-session continuity characterizing IP behavior and the causal relationship linking defensive actions to subsequent environmental state permutations. While the OWASP CRS features (F13, F18) remain indispensable for classifying application-layer (L7) threats, the empirical data confirms that the temporal state component is the primary driver of escalation quality and session-level decision-making — not of base detection accuracy. The 3-layer diagnostic decomposition (Section 4.2.9) shows that L2 (stateless, no temporal state) retains 99.4% accuracy on CSE-CIC-IDS2018, confirming that the 10D temporal state adds marginal value to per-window detection but is essential for the soft escalation logic that drives the Redirect→Block transition.
 
 ### 4.4.2 Real-World Scenario Validation
 
@@ -530,7 +514,7 @@ Four representative real-world scenarios were instantiated within the Containern
 
 Empirical validation unequivocally confirms that three fundamental design decisions serve as the primary determinants of systemic performance:
 
-**Criterion 1 — Integration of Application-Layer Features (F12–F20):** SQL injection and XSS vectors—which lack discriminatory signatures at the network layer—necessitate deep HTTP payload inspection. The architectural methodology involves directly embedding the OWASP CRS rule set 942 (SQLi detection) and 941 (XSS detection) into the feature vector (as F13 and F18, respectively). This approach effectively operationalizes the cumulative security expertise validated by the cybersecurity community over extensive operational lifecycles. While the CRS provides the indispensable baseline detection mechanism, post hoc analyses reveal that the performance leap from v12 to v13 was propelled primarily by the temporal memory component (10D), which grants the agent contextual awareness of IP behavior over time; and the closed-loop effect component (4D), which enables the agent to evaluate the tangible outcomes of its defensive interventions. The primary advantage of CRS integration is the drastic reduction in labeled training data required for L7 attack classification; however, this component alone does not constitute the primary catalyst for the observed holistic performance enhancements.
+**Criterion 1 — Integration of Application-Layer Features (F12–F20):** SQL injection and XSS vectors—which lack discriminatory signatures at the network layer—necessitate deep HTTP payload inspection. The architectural methodology involves directly embedding the OWASP CRS rule set 942 (SQLi detection) and 941 (XSS detection) into the feature vector (as F13 and F18, respectively). This approach effectively operationalizes the cumulative security expertise validated by the cybersecurity community over extensive operational lifecycles. While the CRS provides the indispensable baseline detection mechanism, the 3-layer diagnostic decomposition reveals that the performance leap from v12 to v13 is primarily attributable to the temporal memory component (10D) and the closed-loop effect component (4D) — specifically their role in driving escalation decisions (Redirect→Block), not base detection accuracy. The L2 (stateless) configuration retains 99.4% accuracy on CSE-CIC-IDS2018, demonstrating that the temporal state is largely redundant for per-window classification but essential for the 15-step soft escalation mechanism. The primary advantage of CRS integration is the drastic reduction in labeled training data required for L7 attack classification.
 
 **Criterion 2 — Payload Normalization Pipeline:** Evasion techniques, such as double-URL-encoding (`%2527` → `%27` → `'`) or HTML entity obfuscation (`&lt;script&gt;` → `<script>`), represent the most pervasive vectors for WAF bypasses. The 8-step normalization pipeline was engineered with rigid sequential dependencies: HTML entity decoding precedes URL decoding (given that `&#x25;` encodes the `%` character), and URL decoding precedes Base64 decoding (as Base64 padding utilizes the `=` character). Crucially, the recursive URL decoding is capped at a depth of 2 (recursive depth ≤ 2), effectively neutralizing double-encoding tactics without precipitating infinite loops or resource exhaustion vulnerabilities. In the absence of this normalization layer, obfuscated payloads entirely circumvent CRS pattern matching, resulting in catastrophic attack obfuscation.
 
@@ -542,13 +526,13 @@ Empirical validation unequivocally confirms that three fundamental design decisi
 
 Direct numerical comparisons across disparate studies are problematic due to fundamental variances in dataset composition, labeling taxonomies, and evaluative methodologies. Consequently, this analysis is focused on methodological paradigms.
 
-**Comparison with Traditional Feature Extraction:** Sharafaldin et al. [17] engineered the CICFlowMeter, leveraging over 80 bidirectional statistical flow features to achieve >97% accuracy on the CICIDS2017 dataset utilizing a Random Forest classifier. However, this expansive feature dimensionality incurs severe computational overhead and lacks semantic awareness of application-layer (L7) payloads. The present research conclusively demonstrates that a highly curated 20-feature set—synthesizing network-level statistics and payload semantics—can deliver competitive accuracy while demanding significantly reduced computational resources, rendering it highly viable for a 1-second real-time feedback loop.
+**Comparison with Traditional Feature Extraction:** Sharafaldin et al. [17] engineered CICFlowMeter with over 80 bidirectional statistical flow features, achieving >97% accuracy on CICIDS2017 via Random Forest. The present system demonstrates that a curated 20-feature set—synthesizing network-level statistics with application-layer payload semantics (F12–F20)—delivers competitive accuracy on the same dataset (99.9% DDoS, 97.8% Port Scan) while maintaining the sub-second inference latency required for a real-time 1-second feedback loop. The key distinction is semantic depth: CICFlowMeter operates exclusively on flow metadata, whereas F12–F20 directly encode HTTP payload intent via CRS scoring.
 
-**Comparison with NIDS on UNSW-NB15:** Moustafa & Slay [32] deployed a Random Forest classifier achieving 85.6% accuracy and a 0.89% FPR on the UNSW-NB15 dataset within a binary classification paradigm. These metrics are not directly comparable, as UNSW-NB15 exhibits a divergent label distribution and is restricted to binary classification. In contrast, the present research addresses a fundamentally more complex challenge: the simultaneous multi-class categorization of 5 distinct attack vectors coupled with the autonomous selection of appropriate mitigation actions.
+**Binary Classification vs. Multi-Class Action Selection:** Moustafa & Slay [32] deployed a Random Forest classifier achieving 85.6% accuracy and a 0.89% FPR on the UNSW-NB15 dataset within a binary classification paradigm. These metrics are not directly comparable, as UNSW-NB15 exhibits a divergent label distribution and is restricted to binary classification. In contrast, the present research addresses a fundamentally more complex challenge: the simultaneous multi-class categorization of 5 distinct attack vectors coupled with the autonomous selection of appropriate mitigation actions.
 
-**Comparison of RL Methodologies:** As highlighted in the comprehensive survey by Ring et al. [33], the overwhelming majority of contemporary NIDS research is anchored in supervised learning paradigms executing on static datasets. The application of Reinforcement Learning to network defense via a closed-loop architecture—wherein defensive actions actively mutate the environmental state—represents a substantial departure from mainstream methodologies and perfectly aligns with the strategic imperative of autonomous network defense [6].
+**Supervised Static Detection vs. Closed-Loop RL**: As surveyed by Ring et al. [33], the dominant NIDS paradigm trains classifiers on static, labeled datasets without a feedback mechanism between defensive actions and subsequent network state. The present system departs from this paradigm by embedding the agent within a closed-loop environment where actions mutate observable state—a design validated by explained_variance = 0.926, confirming the critic learns action-consequence causality rather than snapshot classification.
 
-**Crucial Differentiation:** The direct integration of OWASP CRS scoring into the feature vector (F13, F18) constitutes a novel architectural design not observed in the surveyed literature. Rather than attempting to synthesize a novel detection ruleset from first principles, the system pragmatically inherits the validated expertise of the security community. This significantly mitigates the dependency on massive volumes of labeled training data for complex L7 attacks [28].
+**CRS Integration:** The direct integration of OWASP CRS scoring into the feature vector (F13, F18) constitutes a novel architectural design not observed in the surveyed literature. Rather than attempting to synthesize a novel detection ruleset from first principles, the system pragmatically inherits the validated expertise of the security community. This significantly mitigates the dependency on massive volumes of labeled training data for complex L7 attacks [28].
 
 The algorithmic benchmark analysis (comparing default PPO, A2C, and DQN) is detailed in Sections 4.2.8 and 4.3.4. The conclusions emphasize the operational trade-offs (baseline defensive performance vs. benign-safety) rather than attempting to declare an absolute algorithmic victor.
 
