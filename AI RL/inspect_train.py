@@ -319,9 +319,9 @@ class DashboardRenderer:
         gs = rec["global_step"]
         title = (f"[bold cyan]inspect_train[/]  |  mode={self.mode}  |  source={self.source}")
         body = Text.assemble(
-            ("Episode ", "bold"), (f"{ep+1}", "bright_white"),
-            ("  |  Step ", "bold"), (f"{sie+1}", "bright_white"),
-            ("  |  global=", "dim"), (f"{gs+1}/{total_steps}", "bright_white"),
+            ("Episode ", "bold"), (f"{ep}", "bright_white"),
+            ("  |  Step ", "bold"), (f"{sie}/{total_steps-1}", "bright_white"),
+            ("  |  global=", "dim"), (f"{gs}", "bright_white"),
             ("  |  IP: ", "bold"), (f"{ip}", "bright_yellow"),
             (f"  ({ip_type})", "dim italic"),
         )
@@ -654,6 +654,26 @@ header .meta{color:#888;font-size:13px;margin-top:4px}
 .tag.rate{background:#ffcc66;color:#000}
 .tag.redir{background:#5ccfe6;color:#000}
 .tag.block{background:#ff6b6b;color:#fff}
+.tag.escal{background:#d4a3ff;color:#000}
+.step-card.escalation{border-left-width:8px;background:linear-gradient(90deg,#2d1f3a 0%,#1d242f 60%)}
+.step-card.escalation .head::after{content:" ⚡ ESCALATION";color:#d4a3ff;font-weight:700;font-size:11px;margin-left:8px}
+.filters{background:#1d242f;margin:0 24px 14px;padding:14px 16px;border-radius:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters .label{color:#7fdbca;font-size:12px;font-weight:600;margin-right:8px}
+.filter-btn{background:#2a3340;border:1px solid #3a4350;color:#bbb;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.15s}
+select.filter-btn{appearance:auto;color:#ddd}
+select.filter-btn option{background:#1d242f;color:#ddd;padding:4px}
+select.filter-btn optgroup{background:#0f1419;color:#ffcc66;font-weight:600;font-style:normal}
+.filter-btn:hover{background:#3a4350;color:#fff}
+.filter-btn.active{background:#5ccfe6;color:#000;border-color:#5ccfe6;font-weight:600}
+.filter-btn.escal-btn.active{background:#d4a3ff;border-color:#d4a3ff}
+.filter-btn .count{background:rgba(0,0,0,0.2);padding:1px 6px;border-radius:8px;margin-left:6px;font-size:10px}
+.filter-btn.active .count{background:rgba(0,0,0,0.3)}
+.pagination{display:flex;justify-content:center;align-items:center;gap:8px;padding:18px;color:#888;font-size:12px}
+.pagination button{background:#2a3340;border:1px solid #3a4350;color:#ddd;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.pagination button:hover:not(:disabled){background:#3a4350}
+.pagination button:disabled{opacity:0.4;cursor:not-allowed}
+.pagination .info{margin:0 12px}
+.empty-msg{text-align:center;padding:40px;color:#666;font-style:italic}
 </style></head><body>
 <header>
 <h1>inspect_train.py — Step-by-step training visualization</h1>
@@ -668,7 +688,32 @@ header .meta{color:#888;font-size:13px;margin-top:4px}
   <h3>Action trajectory (timeline)</h3>
   <div style="height:60px"><canvas id="trajectory_chart"></canvas></div>
 </div>
-<div class="steps"><h3 style="color:#ffcc66;font-size:14px;margin:0 0 12px">Per-step detail (first 200 steps)</h3>__STEPS__</div>
+<div class="filters">
+  <span class="label">ACTION:</span>
+  <button class="filter-btn active" data-filter="all">All <span class="count" id="cnt-all">__CNT_ALL__</span></button>
+  <button class="filter-btn" data-filter="0">Allow <span class="count" id="cnt-0">__CNT_0__</span></button>
+  <button class="filter-btn" data-filter="1">RateLimit <span class="count" id="cnt-1">__CNT_1__</span></button>
+  <button class="filter-btn" data-filter="2">Redirect <span class="count" id="cnt-2">__CNT_2__</span></button>
+  <button class="filter-btn" data-filter="3">Block <span class="count" id="cnt-3">__CNT_3__</span></button>
+  <button class="filter-btn escal-btn" data-filter="escal">⚡ Escalation Redirect→Block <span class="count" id="cnt-escal">__CNT_ESCAL__</span></button>
+  <button class="filter-btn" data-filter="block_ready">block_ready=True <span class="count" id="cnt-br">__CNT_BR__</span></button>
+</div>
+<div class="filters">
+  <span class="label">IP:</span>
+  <select id="ip-filter" class="filter-btn" style="min-width:280px;cursor:pointer">__IP_OPTIONS__</select>
+  <button class="filter-btn" id="reset-ip" style="margin-left:6px">Clear IP filter</button>
+  <span class="label" style="margin-left:auto">PER PAGE:</span>
+  <button class="filter-btn page-size" data-size="50">50</button>
+  <button class="filter-btn page-size active" data-size="100">100</button>
+  <button class="filter-btn page-size" data-size="200">200</button>
+  <button class="filter-btn page-size" data-size="9999">All</button>
+</div>
+<div class="steps"><h3 style="color:#ffcc66;font-size:14px;margin:0 0 12px">Per-step detail (<span id="visible-count">__TOTAL__</span> matching)</h3>__STEPS__<div id="empty-msg" class="empty-msg" style="display:none">No steps match this filter.</div></div>
+<div class="pagination">
+  <button id="prev-btn" disabled>← Prev</button>
+  <span class="info">Page <span id="page-num">1</span> / <span id="page-total">1</span></span>
+  <button id="next-btn">Next →</button>
+</div>
 <script>
 const ACTION_NAMES = ["Allow","RateLimit","Redirect","Block"];
 const ACTION_COLORS = ["#bae67e","#ffcc66","#5ccfe6","#ff6b6b"];
@@ -702,6 +747,104 @@ new Chart(document.getElementById('trajectory_chart'),{type:'bar',
               label:c=>`Step ${c.label}: ${ACTION_NAMES[data[c.dataIndex].action]} (r=${data[c.dataIndex].reward.toFixed(3)})`}}},
            maintainAspectRatio:false,
            scales:{x:{display:false},y:{display:false}}}});
+
+// ── Filter + pagination ─────────────────────────────────────────────────────
+const allCards = Array.from(document.querySelectorAll('.step-card'));
+let currentActionFilter = 'all';
+let currentIpFilter = '';     // empty = all IPs
+let pageSize = 100;
+let currentPage = 0;
+
+// ── Recompute filter counts from ACTUAL rendered cards (no Python/JS mismatch) ──
+function recomputeCounts() {
+  const counts = {all: allCards.length, 0: 0, 1: 0, 2: 0, 3: 0, escal: 0, br: 0};
+  allCards.forEach(c => {
+    counts[c.dataset.action] = (counts[c.dataset.action] || 0) + 1;
+    if (c.dataset.escalation === '1') counts.escal++;
+    if (c.dataset.blockReady === '1') counts.br++;
+  });
+  document.getElementById('cnt-all').textContent = counts.all;
+  document.getElementById('cnt-0').textContent = counts[0] || 0;
+  document.getElementById('cnt-1').textContent = counts[1] || 0;
+  document.getElementById('cnt-2').textContent = counts[2] || 0;
+  document.getElementById('cnt-3').textContent = counts[3] || 0;
+  document.getElementById('cnt-escal').textContent = counts.escal;
+  document.getElementById('cnt-br').textContent = counts.br;
+  // Sanity badge in title if mismatch with summary "Total steps"
+  const summaryTotal = parseInt(document.querySelector('.summary .card .value').textContent, 10);
+  if (summaryTotal !== counts.all) {
+    document.querySelector('.steps h3').insertAdjacentHTML('beforeend',
+      ` <span style="color:#ff6b6b;font-size:11px;font-weight:600">⚠ MISMATCH: summary=${summaryTotal} cards=${counts.all}</span>`);
+  }
+}
+recomputeCounts();
+
+function matchesActionFilter(card, f) {
+  if (f === 'all') return true;
+  if (f === 'escal') return card.dataset.escalation === '1';
+  if (f === 'block_ready') return card.dataset.blockReady === '1';
+  return card.dataset.action === f;
+}
+
+function matchesIpFilter(card, ip) {
+  return ip === '' || card.dataset.ip === ip;
+}
+
+function applyView() {
+  const matched = allCards.filter(c =>
+    matchesActionFilter(c, currentActionFilter) && matchesIpFilter(c, currentIpFilter)
+  );
+  const totalPages = Math.max(1, Math.ceil(matched.length / pageSize));
+  if (currentPage >= totalPages) currentPage = totalPages - 1;
+  if (currentPage < 0) currentPage = 0;
+  const start = currentPage * pageSize;
+  const end = start + pageSize;
+
+  // Hide all
+  allCards.forEach(c => c.style.display = 'none');
+  // Show matched in current page
+  matched.slice(start, end).forEach(c => c.style.display = '');
+
+  document.getElementById('visible-count').textContent = matched.length;
+  document.getElementById('page-num').textContent = currentPage + 1;
+  document.getElementById('page-total').textContent = totalPages;
+  document.getElementById('prev-btn').disabled = (currentPage === 0);
+  document.getElementById('next-btn').disabled = (currentPage >= totalPages - 1);
+  document.getElementById('empty-msg').style.display = matched.length === 0 ? 'block' : 'none';
+}
+
+document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentActionFilter = btn.dataset.filter;
+    currentPage = 0;
+    applyView();
+  });
+});
+document.querySelectorAll('.page-size').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.page-size').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    pageSize = parseInt(btn.dataset.size, 10);
+    currentPage = 0;
+    applyView();
+  });
+});
+document.getElementById('ip-filter').addEventListener('change', (e) => {
+  currentIpFilter = e.target.value;
+  currentPage = 0;
+  applyView();
+});
+document.getElementById('reset-ip').addEventListener('click', () => {
+  document.getElementById('ip-filter').value = '';
+  currentIpFilter = '';
+  currentPage = 0;
+  applyView();
+});
+document.getElementById('prev-btn').addEventListener('click', () => { currentPage--; applyView(); });
+document.getElementById('next-btn').addEventListener('click', () => { currentPage++; applyView(); });
+applyView();
 </script></body></html>"""
 
 
@@ -742,10 +885,56 @@ def _generate_html_report(jsonl_path: Path, html_path: Path, mode: str, source: 
     meta = (f"mode={mode} · source={source} · {len(records)} steps · "
             f"{n_episodes} episodes · generated {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-    # Per-step cards (cap at 200 to keep HTML manageable)
+    # ── Detect TRUE escalation: action=Block ON block_ready_latched=True ──
+    # block_ready chỉ True khi env-verified: redirect_hits≥12, presence≥8,
+    # honeypot≥5, escalation_score≥0.6 (sustained L7 attack signature).
+    # Đây mới là "proper escalation", không phải course-correction trên syn_flood.
+    is_escalation_flags: list[bool] = []
+    for r in records:
+        block_ready = r.get("temporal_before", {}).get("block_ready_latched", False)
+        is_escal = (r["action"] == 3 and block_ready)
+        is_escalation_flags.append(is_escal)
+
+    n_escalation = sum(is_escalation_flags)
+    n_block_ready = sum(1 for r in records if r.get("temporal_before", {}).get("block_ready_latched"))
+
+    # ── IP filter options: count visits per IP, group by type ──
+    type_order = {
+        "benign": 0, "noisy_normal": 1, "scan": 2, "syn_flood": 3,
+        "brute_force": 4, "brute_force_ka": 5, "sqli": 6, "xss": 7,
+    }
+    ip_stats: dict[tuple, dict] = {}
+    for r in records:
+        key = (r["acting_ip"], r["acting_ip_type"])
+        s = ip_stats.setdefault(key, {"count": 0, "actions": [0, 0, 0, 0]})
+        s["count"] += 1
+        s["actions"][r["action"]] += 1
+
+    sorted_ips = sorted(ip_stats.items(),
+                        key=lambda kv: (type_order.get(kv[0][1], 99), kv[0][0]))
+
+    ip_options_html = ['<option value="">— All IPs ({} visits across {} IPs) —</option>'.format(
+        len(records), len(ip_stats))]
+    last_type = None
+    for (ip, ip_type), st in sorted_ips:
+        if ip_type != last_type:
+            if last_type is not None:
+                ip_options_html.append('</optgroup>')
+            ip_options_html.append(f'<optgroup label="── {ip_type} ──">')
+            last_type = ip_type
+        a = st["actions"]
+        breakdown = f"A:{a[0]} L:{a[1]} R:{a[2]} B:{a[3]}"
+        ip_options_html.append(
+            f'<option value="{ip}">{ip} — {st["count"]} visits  ({breakdown})</option>'
+        )
+    if last_type is not None:
+        ip_options_html.append('</optgroup>')
+    ip_options_str = "".join(ip_options_html)
+
+    # ── Per-step cards (ALL records, no cap; filter via JS in browser) ──
     tag_class = ["bench", "rate", "redir", "block"]
     steps_html = []
-    for r in records[:200]:
+    for r, is_escal in zip(records, is_escalation_flags):
         probs = r.get("policy_probs") or [0.0] * 4
         probs_str = " ".join(
             f'{ACTION_NAMES[i]}={probs[i]:.2f}' for i in range(4)
@@ -753,7 +942,7 @@ def _generate_html_report(jsonl_path: Path, html_path: Path, mode: str, source: 
         argmax = int(np.argmax(probs)) if any(probs) else r["action"]
         rb = r["reward_breakdown"]
         temp = r.get("temporal_before", {})
-        head = (f"Episode {r['episode']+1} · Step {r['step_in_ep']+1} · global={r['global_step']+1} · "
+        head = (f"Episode {r['episode']} · Step {r['step_in_ep']} · global={r['global_step']} · "
                 f"IP {r['acting_ip']} ({r['acting_ip_type']})")
         action_tag = (f'<span class="tag {tag_class[r["action"]]}">'
                       f'{ACTION_NAMES[r["action"]]}</span>')
@@ -762,17 +951,17 @@ def _generate_html_report(jsonl_path: Path, html_path: Path, mode: str, source: 
         reward_class = "pos" if r["reward"] > 0 else "neg"
         sign = "+" if r["reward"] > 0 else ""
 
-        card = f"""<div class="step-card action-{r['action']}">
+        block_ready = temp.get("block_ready_latched", False)
+        extra_class = " escalation" if is_escal else ""
+
+        card = f"""<div class="step-card action-{r['action']}{extra_class}" data-action="{r['action']}" data-escalation="{1 if is_escal else 0}" data-block-ready="{1 if block_ready else 0}" data-ip="{r['acting_ip']}">
 <div class="head"><span>{head}</span><span>action: {action_tag}{argmax_tag}</span></div>
 <div class="row">policy probs: {probs_str}</div>
 <div class="row">reward: <span class="{reward_class}">{sign}{r['reward']:.4f}</span> = action_bonus({rb['action_bonus']:+.3f}) + action_cost({rb['action_cost']:+.3f}) + service_damage({rb['service_damage']:+.3f}) + shaping_other({rb['shaping_other']:+.3f})</div>
-<div class="row">temporal: session={temp.get('session_active')}, block_ready={temp.get('block_ready_latched')}, redirect_hits={temp.get('redirect_hits',0)}/15, presence_hits={temp.get('presence_hits',0)}/15, escalation_score={temp.get('escalation_score',0):.3f}</div>
+<div class="row">temporal: session={temp.get('session_active')}, block_ready={block_ready}, redirect_hits={temp.get('redirect_hits',0)}/15, presence_hits={temp.get('presence_hits',0)}/15, escalation_score={temp.get('escalation_score',0):.3f}</div>
 <div class="row">effect_t: F21={r['effect'][0]:.2f} F22={r['effect'][1]:.2f} F23={r['effect'][2]:.2f} F24={r['effect'][3]:.2f} → next IP: {r['next_ip']} ({r['next_ip_type']})</div>
 </div>"""
         steps_html.append(card)
-    if len(records) > 200:
-        steps_html.append(f'<p style="color:#888;text-align:center">'
-                          f'... {len(records) - 200} more steps in JSONL log</p>')
 
     # Compact JSON for charts (only what we need)
     chart_data = json.dumps([
@@ -783,7 +972,16 @@ def _generate_html_report(jsonl_path: Path, html_path: Path, mode: str, source: 
             .replace("__META__", meta)
             .replace("__SUMMARY__", summary)
             .replace("__STEPS__", "\n".join(steps_html))
-            .replace("__DATA__", chart_data))
+            .replace("__DATA__", chart_data)
+            .replace("__TOTAL__", str(len(records)))
+            .replace("__CNT_ALL__", str(len(records)))
+            .replace("__CNT_0__", str(action_counts[0]))
+            .replace("__CNT_1__", str(action_counts[1]))
+            .replace("__CNT_2__", str(action_counts[2]))
+            .replace("__CNT_3__", str(action_counts[3]))
+            .replace("__CNT_ESCAL__", str(n_escalation))
+            .replace("__CNT_BR__", str(n_block_ready))
+            .replace("__IP_OPTIONS__", ip_options_str))
 
     html_path.write_text(html, encoding="utf-8")
     console.print(f"[bright_green]✓ HTML report:[/] {html_path}")
