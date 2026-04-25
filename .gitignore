@@ -500,5 +500,6 @@ datasets/*/processed/
 datasets/CSE-CIC-IDS2018/processed/
 datasets/combined_analysis/charts/
 training_data_retrain.jsonl
+AI RL/runs/inspect/
 .claude/scheduled_tasks.lock
 .codex
