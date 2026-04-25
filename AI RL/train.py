@@ -56,6 +56,9 @@ def parse_args():
     parser.add_argument('--session_block_size', type=int, default=0,
                         help='Session-block scheduling: keep same IP for N consecutive steps before '
                              'advancing. 0=round-robin (default). Recommended: 20 (= episode_length/n_ips).')
+    parser.add_argument('--target_kl', type=float, default=None,
+                        help='Target KL divergence for early stopping per update (e.g. 0.015). '
+                             'Prevents large policy shifts during fine-tuning. Default: None (disabled).')
     return parser.parse_args()
 
 # ============================================================================
@@ -437,11 +440,17 @@ def train():
         if not os.path.exists(args.resume_from):
             print(f"[ERROR] Resume path not found: {args.resume_from}")
             sys.exit(1)
+        custom_objs = {}
+        if args.target_kl is not None:
+            custom_objs["target_kl"] = args.target_kl
         model = PPO.load(
             args.resume_from,
             env=env,
-            tensorboard_log=tb_dir
+            tensorboard_log=tb_dir,
+            custom_objects=custom_objs if custom_objs else None,
         )
+        if args.target_kl is not None:
+            print(f"[*] target_kl overridden → {args.target_kl}")
         print(f"[*] Model loaded successfully. Resuming training...\n")
     else:
         print(f"[*] Initializing new PPO agent...")

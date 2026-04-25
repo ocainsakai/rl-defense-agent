@@ -354,8 +354,9 @@ class SafetyNet:
       - Hold gates (was MIN_ESCALATE_HOLD)
     """
 
-    def __init__(self):
+    def __init__(self, override0: bool = True):
         self._state: Dict[str, dict] = {}   # ip → {action, ts}
+        self.override0 = override0
 
     def apply_safety_overrides(self, src_ip: str, rl_action: int,
                                 raw: list, tstate) -> int:
@@ -366,7 +367,7 @@ class SafetyNet:
         # Root cause: model v7 damage_ema is driven by network-level damage (F1/F2).
         # HTTP brute force / SQLi / XSS have low F1 (~6 pps) → damage_ema never rises →
         # model sees "low damage, no prior escalation" → Allow. Override corrects this.
-        if final_action < 2 and len(raw) >= 20:
+        if self.override0 and final_action < 2 and len(raw) >= 20:
             sqli_score = max(raw[11:17])   # F12-F17
             xss_score  = max(raw[17:20])   # F18-F20
             f6 = raw[5]   # URLConcentration — high = requests concentrated on 1 URL (brute force)
@@ -385,9 +386,16 @@ class SafetyNet:
         # → Block"; keeping this override active after latch prevents that learned behavior
         # from ever executing. soft_guard assist remains as backup if model outputs Redirect.
         if final_action == 3 and len(raw) >= 20 and not tstate.block_ready_latched:
-            sqli_score = max(raw[11:17])   # F12-F17
-            xss_score  = max(raw[17:20])   # F18-F20
-            if sqli_score > 0.08 or xss_score > 0.08:
+            sqli_score  = max(raw[11:17])   # F12-F17
+            xss_score   = max(raw[17:20])   # F18-F20
+            f1_pps      = raw[0]             # PacketRate raw pps (unnormalized)
+            f2_syn      = raw[1]             # SynAckRatio raw
+            ddos_signal = (f1_pps > 80 or f2_syn > 5)
+            if not ddos_signal:
+                # L7 session: downgrade Block→Redirect regardless of current L7 signal.
+                # Gap windows (sqlmap --delay=1) have SQLi=0 between requests but temporal
+                # state still high → model fires Block → iptables drop → session reset loop.
+                # DDoS (F1>80 pps) is network-level and doesn't need L7 evidence to Block.
                 final_action = 2  # Block → Redirect
 
         # Override 2: Block hold when damage is still high
@@ -775,7 +783,8 @@ class IDSDefenseAgent:
     """PPO agent with 34D input (20D NIDS + 10D temporal + 4D effect) and iptables executor."""
 
     def __init__(self, model_path: str = './policy_model', enforce: bool = True,
-                 demo_safe: bool = False, soft_guard_mode: str = 'off'):
+                 demo_safe: bool = False, soft_guard_mode: str = 'off',
+                 override0: bool = True):
         try:
             self.model = PPO.load(model_path)
             print(f"[+] Model loaded from {model_path}.zip")
@@ -786,6 +795,7 @@ class IDSDefenseAgent:
 
         self.enforce = enforce
         self.demo_safe = demo_safe
+        self.override0 = override0
         self.soft_guard_mode = soft_guard_mode if soft_guard_mode in ('off', 'assist') else 'off'
         self.l7_memory: Dict[str, dict] = {}
 
@@ -801,12 +811,12 @@ class IDSDefenseAgent:
 
         if self.model_version == 'v3':
             self.temporal_states: Dict[str, PersistenceTemporalState] = {}
-            self.safety_net = SafetyNet()
+            self.safety_net = SafetyNet(override0=self.override0)
             self.effect_collector = NginxEffectCollector()
             print(f"[+] Effect collector: ON (nginx log → 4D feedback)")
         elif self.model_version == 'v2':
             self.temporal_states: Dict[str, InferenceTemporalState] = {}
-            self.safety_net = SafetyNet()
+            self.safety_net = SafetyNet(override0=self.override0)
             self.guard_tracker = IPStateTracker()
         else:
             self.tracker = IPStateTracker()
@@ -1113,10 +1123,13 @@ class IDSDefenseAgent:
         tstate = self.temporal_states[src_ip]
 
         # Read nginx effect window aligned with the current sensor row.
-        # This is effect of PREVIOUS action (delayed 1 step — safe to include in obs_t).
+        # Use previous second (current_wts - 1.0): nginx entries for second S are only
+        # guaranteed to be written AFTER ingest() runs at S+0.115s. Requests arriving
+        # after 0.115s into second S are logged after ingest() → bucket (ip, S) missed.
+        # Looking up S-1 ensures all entries are fully written before we read them.
         self.effect_collector.ingest()
         current_wts = _math.floor(ts / 1.0) * 1.0
-        effect_prev = self.effect_collector.get_effect(src_ip, current_wts, raw)
+        effect_prev = self.effect_collector.get_effect(src_ip, current_wts - 1.0, raw)
 
         # observe_effect must be called BEFORE stage_action to mirror env step() order:
         # env: observe_effect uses last_action (previous step) → then stage_action updates it
@@ -1154,14 +1167,17 @@ class IDSDefenseAgent:
         final_action = guarded_action
 
         # soft_guard_mode=assist: promote to Block if session evidence is complete.
-        # Only fires when block_ready_latched=True AND attacker still present (F23>=0.5).
-        # Does NOT intervene for benign/noisy/scan/syn_flood — only for L7 session IPs.
+        # Fires when block_ready_latched=True — no F23 presence check needed because
+        # block_ready_latched already encodes multi-window honeypot+presence evidence.
+        # Removing the F23 condition fixes a timing gap: at the exact window when
+        # escalation_score crosses 0.60, nginx may return F23=0 for that 1s bucket
+        # (due to log flush timing), causing soft_guard to miss even though it should fire.
+        # Does NOT intervene for benign/noisy/scan/syn_flood — only for L7 session IPs
+        # (block_ready_latched requires redirect_hits≥6, honeypot_hits≥5, presence_hits≥8).
         soft_guard_promoted = False
         if (self.soft_guard_mode == 'assist'
                 and final_action < 3
-                and tstate.block_ready_latched
-                and len(effect_prev) >= 3
-                and float(effect_prev[2]) >= _ENV_PRESENCE_THRESHOLD):
+                and tstate.block_ready_latched):
             final_action = 3
             soft_guard_promoted = True
 
@@ -1278,13 +1294,24 @@ VALID_LABELS = [
     'brute_force', 'brute_force_ka',
     'sqli', 'xss', 'sqli_xss',
     'grayzone',
+    'slowloris',
 ]
+
+
+def _build_wazuh_log(action_log: dict) -> dict:
+    """Return a flat action event that Wazuh Indexer can map consistently."""
+    return {
+        key: value
+        for key, value in action_log.items()
+        if key not in {'action_probs', 'normalized_obs'}
+    }
 
 
 def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
                 output_file: str = 'actions.log', from_begin: bool = False,
                 label: Optional[str] = None, training_data_file: str = 'training_data.jsonl',
-                collect_file: Optional[str] = None):
+                collect_file: Optional[str] = None,
+                wazuh_output_file: Optional[str] = 'actions_wazuh.log'):
     """Tail sniffer_output.jsonl and write actions.log.
 
     If --label is provided, also appends labeled feature records to training_data.jsonl
@@ -1301,6 +1328,8 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
 
     print(f"[*] Watching {input_file}")
     print(f"[*] Writing actions to {output_file}")
+    if wazuh_output_file:
+        print(f"[*] Writing Wazuh-safe actions to {wazuh_output_file}")
     if label:
         print(f"[*] Collecting training data — label: '{label}' → {training_data_file}")
     if collect_file:
@@ -1312,10 +1341,18 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
     cur_inode = None
     last_expire_check = time.time()
     _waiting_shown = False  # Print "Waiting..." only once
+    train_f = None
+    collect_f = None
+    wazuh_f = None
 
     try:
         train_f   = open(training_data_file, 'a') if label else None
         collect_f = open(collect_file, 'a') if collect_file else None
+        wazuh_f   = (
+            open(wazuh_output_file, 'a')
+            if wazuh_output_file and wazuh_output_file != output_file
+            else None
+        )
         with open(output_file, 'a') as out_f:
             while True:
                 try:
@@ -1398,12 +1435,16 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
                                     })
                                 elif 'model_version' in info:
                                     log['model_version'] = info['model_version']
-                                out_f.write(json.dumps(log) + '\n')
-                                out_f.flush()
+                                if not info.get('whitelisted', False):
+                                    out_f.write(json.dumps(log) + '\n')
+                                    out_f.flush()
+                                    if wazuh_f is not None:
+                                        wazuh_f.write(json.dumps(_build_wazuh_log(log)) + '\n')
+                                        wazuh_f.flush()
 
                                 raw_features = [float(row.get(k, 0.0)) for k in NIDS_KEY_ORDER]
 
-                                if train_f is not None:
+                                if train_f is not None and not src.startswith('192.168.'):
                                     # Labeled collection (--label mode)
                                     train_record = {
                                         'timestamp': ts,
@@ -1419,7 +1460,7 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
                                     train_f.write(json.dumps(train_record) + '\n')
                                     train_f.flush()
 
-                                if collect_f is not None:
+                                if collect_f is not None and not src.startswith('192.168.'):
                                     # Passive collection (--collect mode): no label, review later
                                     collect_record = {
                                         'timestamp': ts,
@@ -1476,6 +1517,8 @@ def watch_jsonl(agent: IDSDefenseAgent, input_file: str,
     except KeyboardInterrupt:
         print("\n[*] Stopped.")
     finally:
+        if wazuh_f is not None:
+            wazuh_f.close()
         if train_f is not None:
             train_f.close()
         if collect_f is not None:
@@ -1545,11 +1588,17 @@ Examples:
     parser.add_argument('--no-enforce', action='store_true', help='Dry-run: print actions, no iptables')
     parser.add_argument('--demo-safe', action='store_true',
                         help='Demo-only guardrail: downgrade false benign HTTPS RateLimit caused by delayed tshark decrypt')
+    parser.add_argument('--no-override0', action='store_true',
+                        help='Disable Override 0 (L7 cold-start Redirect forcing). Default: ON')
     parser.add_argument('--soft-guard', type=str, default='off', choices=['off', 'assist'],
                         help='Soft-guard mode (default: off). '
                              '"assist": promote to Block when block_ready_latched=True and attacker still present')
     parser.add_argument('--model', type=str, default='./policy_model', help='Model path (without .zip)')
     parser.add_argument('--output', type=str, default='actions.log', help='Output log file')
+    parser.add_argument('--wazuh-output', type=str, default='actions_wazuh.log',
+                        help='Flat Wazuh-safe action log file (default: actions_wazuh.log)')
+    parser.add_argument('--no-wazuh-output', action='store_true',
+                        help='Disable the separate Wazuh-safe action log')
     parser.add_argument('--label', type=str, choices=VALID_LABELS, default=None,
                         help='Label current traffic for training data collection '
                              f'(choices: {", ".join(VALID_LABELS)})')
@@ -1569,12 +1618,14 @@ Examples:
         enforce=not args.no_enforce,
         demo_safe=args.demo_safe,
         soft_guard_mode=args.soft_guard,
+        override0=not args.no_override0,
     )
 
     if args.watch:
         watch_jsonl(agent, args.watch, output_file=args.output, from_begin=args.from_begin,
                     label=args.label, training_data_file=args.training_data,
-                    collect_file=args.collect)
+                    collect_file=args.collect,
+                    wazuh_output_file=None if args.no_wazuh_output else args.wazuh_output)
     elif args.interactive:
         interactive_mode(agent)
     else:

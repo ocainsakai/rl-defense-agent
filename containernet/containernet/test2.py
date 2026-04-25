@@ -256,6 +256,7 @@ http {{
   access_log /tmp/router-nginx/logs/access.log lab_detail;
   error_log  /tmp/router-nginx/logs/error.log notice;
   proxy_temp_path /tmp/router-nginx/cache;
+  client_header_timeout 300s;
 
   # ========== WEB VIP 192.168.10.10 ==========
   server {{

@@ -165,7 +165,7 @@ Mở **Terminal mới** (không phải node Mininet, chạy trên VM host):
 
 ```bash
 cd "/home/binhhl/Downloads/rl-defense-agent/AI RL"
-sudo python3 infer.py --watch /tmp/sniffer_output.jsonl --model runs/run_final_v4/best_model
+sudo python3 infer.py --watch /tmp/sniffer_output.jsonl --model runs/run_final_v4/best_model --demo-safe
 
 ```
 
@@ -340,9 +340,9 @@ SSLKEYLOGFILE=/tmp/tls_keys.log curl -k "https://192.168.10.10/" 2>&1 | grep -o 
 # → T3ch Stor3  (đang nhận trang honeypot thay vì webserver thật)
 ```
 
-**Escalation tự động sau 60 giây** nếu brute force tiếp tục:
+**Escalation tự động sau 15 giây** nếu brute force tiếp tục:
 ```
-[ESCALATE] 10.0.10.10: Redirect → Block (persisted 62s > 60s)
+[ESCALATE] 10.0.10.10: Redirect → Block (persisted 16s > 15s)
 ```
 
 ---
@@ -688,13 +688,13 @@ hping3 -S -p 443 -i u200 --count 500 192.168.10.10
 
 **Bản chất**: Malware sau khi xâm nhập sẽ gửi request định kỳ về C2 server để nhận lệnh — pattern rất đều đặn, traffic nhỏ, ẩn trong HTTPS bình thường.
 
-**Feature signature — khác hoàn toàn mọi loại đã train**:
-- F1 (PacketRate): **rất thấp** — chỉ 1 request mỗi 10-30 giây
+**Feature signature**:
+- F1 (PacketRate): **rất thấp** — chỉ 1 request mỗi 8-10 giây
 - F3 (InterArrivalTime): **rất cao và đều đặn** — khoảng cách giữa request gần như bằng nhau
 - F7 (HttpIatUniformity): **rất cao** — timing uniform (khác hẳn human browsing)
-- F6 (URLConcentration): cao — luôn hit cùng 1 endpoint `/beacon`
+- F6 (URLConcentration): **= 1.0** — malware hardcode 1 endpoint cố định `/beacon`, 100% request vào đó
 
-**Gần nhất với**: Không rõ ràng — không giống bất kỳ loại nào đã train
+**Gần nhất với**: Không rõ ràng — F1 thấp, không có L7 attack features
 
 ```bash
 # Trong terminal attacker — simulate C2 beacon mỗi 8 giây
@@ -714,9 +714,7 @@ done
 [ts] 10.0.10.10      | RL:RateLimit → RateLimit
 ```
 
-**Giải thích — honest limitation thứ 2**: C2 beaconing có PacketRate thấp, không flood, không SQLi/XSS features → AI không thấy dấu hiệu nguy hiểm rõ ràng → Allow hoặc RateLimit. Đây là giới hạn của **network-volume-based IDS**: C2 beaconing ẩn trong traffic HTTPS bình thường, cần thêm behavioral analysis (phân tích pattern thời gian) mới phát hiện được — nằm ngoài scope của hệ thống hiện tại.
-
-> **Lưu ý cho demo**: Kịch bản này chứng minh AI **trung thực về giới hạn** — không Block bừa traffic thấp chỉ vì nghi ngờ, giảm false positive. Nhưng cũng vì vậy mà C2 chậm sẽ thoát được.
+**Giải thích — honest limitation**: C2 beaconing gửi 1 request mỗi 8 giây → mỗi window 1 giây chỉ có 1 request → URLConcentration không được tính (cần ≥3 request để có ý nghĩa thống kê). F1 rất thấp, không có SQLi/XSS → AI không thấy dấu hiệu nguy hiểm → Allow. Đây là giới hạn của network-volume IDS: C2 beaconing ẩn trong HTTPS traffic thưa thớt, cần behavioral analysis theo thời gian mới phát hiện được.
 
 ---
 
@@ -770,9 +768,9 @@ done
 
 **Kết quả kỳ vọng**:
 ```
-[ts] 10.0.10.10      | RL:Allow → Allow
-# hoặc
 [ts] 10.0.10.10      | RL:RateLimit → RateLimit
+# hoặc
+[ts] 10.0.10.10      | RL:Allow → Allow
 ```
 
 **Giải thích — honest limitation**: Path traversal không tạo SQLi/XSS features rõ ràng trong 20D obs → AI không đủ confidence để Block/Redirect → conservative action. Đây là giới hạn chính đáng của network-based IDS: chỉ nhìn được L3/L4/L7 network features, không inspect được toàn bộ application logic.

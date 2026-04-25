@@ -23,8 +23,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 TARGET   = "https://192.168.10.10/login"
 USERNAME = "admin"
-DELAY    = 0.05   # 50ms giữa các request → CV ≈ 0 → F7 ≈ 1.0
-COUNT    = 30     # số lần thử trong 1 session
+DELAY    = 0.1    # 100ms → 10 req/s → F7=1.0 ổn định, brute_signal > 0.6 → Override 0 luôn force Redirect
+COUNT    = 1200   # 1200 × 0.1s = 2 phút → đủ time leo thang Redirect→Block
+SESSION_RECYCLE_EVERY = 5  # new TCP connection mỗi 5 req (0.5s) → sau Redirect, connection mới vào honeypot ngay
 
 WORDLIST = [
     "password", "123456", "admin", "admin123", "letmein",
@@ -53,7 +54,17 @@ def run():
     print(f"[+] Count:  {COUNT} requests\n")
 
     ok = 0
-    for i, pwd in enumerate(WORDLIST[:COUNT]):
+    for i in range(COUNT):
+        # Recycle session mỗi SESSION_RECYCLE_EVERY requests: tạo TCP connection mới
+        # Connection mới sẽ bị iptables Redirect rule bắt → đến honeypot thay vì web
+        # (Connection cũ bypass rule vì đã được conntrack track trước khi rule apply)
+        if i > 0 and i % SESSION_RECYCLE_EVERY == 0:
+            session.close()
+            session = requests.Session()
+            session.verify = False
+            print(f"  --- session recycled (new TCP connection) ---")
+
+        pwd = WORDLIST[i % len(WORDLIST)]   # cycle qua wordlist khi hết
         try:
             resp = session.post(
                 TARGET,
@@ -62,18 +73,19 @@ def run():
                 allow_redirects=False,
             )
             status = resp.status_code
-            # Login thành công thường redirect 302
             result = "HIT" if status in (302, 301) else f"fail({status})"
-            print(f"  [{i+1:02d}] {USERNAME}:{pwd:<20} → {result}")
+            print(f"  [{i+1:03d}] {USERNAME}:{pwd:<20} → {result}")
             if status in (302, 301):
                 ok += 1
         except Exception as e:
-            print(f"  [{i+1:02d}] ERROR: {e}")
+            print(f"  [{i+1:03d}] ERROR: {e}")
 
         time.sleep(DELAY)
 
+    session.close()
+
     print(f"\n[+] Done. {ok}/{COUNT} hits.")
-    print("[+] F7 expected ≈ 1.0 (requests đều {:.0f}ms)".format(DELAY * 1000))
+    print("[+] F7 expected ≈ 1.0 (requests đều {:.0f}ms, recycle every {} req)".format(DELAY * 1000, SESSION_RECYCLE_EVERY))
     print("[+] F6 expected = 1.0 (100% requests tới /login)")
     print("[+] F8 expected ≈ 1.0 (payload size đồng đều)")
 

@@ -56,15 +56,10 @@ run_scenario() {
 
     1)
         echo -e "\n${GREEN}[KC1] Noisy Normal → RateLimit${NC}"
-        PATHS=(
-            "/"
-            "/login"
-            "/register"
-        )
-        for i in $(seq 1 18); do
+        PATHS=("/" "/login" "/register" "/products" "/about" "/contact" "/search" "/faq")
+        for i in $(seq 1 16); do
             path="${PATHS[$(( (i - 1) % ${#PATHS[@]} ))]}"
             demo_page "$path" &
-            sleep 0.09
         done
         wait
         ;;
@@ -140,7 +135,7 @@ run_scenario() {
         ;;
 
     "7a")
-        echo -e "\n${YELLOW}[KC7a] C2 Beaconing (chưa train) → Allow/RateLimit (honest limitation)${NC}"
+        echo -e "\n${YELLOW}[KC7a] C2 Beaconing (chưa train) → Allow (honest limitation)${NC}"
         echo "Simulate beacon mỗi 8s trong ~2 phút (Ctrl+C để dừng sớm)..."
         for i in $(seq 1 15); do
             demo_curl "$WEB/beacon?id=c2_$(hostname)&seq=$i&cb=$(date +%s%N)" -o /dev/null

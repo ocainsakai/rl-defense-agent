@@ -330,12 +330,12 @@ def compute_action_bonus(action: int, obs_raw: List[float], damage: float) -> fl
     """
     # ── Attack signal detection from raw 20D vector ──────────────────────────
     signals = compute_attack_signals(obs_raw)
-    ddos_signal  = signals['ddos']
-    syn_signal   = signals['syn']
-    scan_signal  = signals['scan']
-    brute_signal = signals['brute']
-    sqli_signal  = signals['sqli']
-    xss_signal   = signals['xss']
+    ddos_signal         = signals['ddos']
+    syn_signal          = signals['syn']
+    scan_signal         = signals['scan']
+    brute_signal        = signals['brute']
+    sqli_signal         = signals['sqli']
+    xss_signal          = signals['xss']
     f1_pps       = obs_raw[0]   # PacketRate (reused below for noisy-normal shaping)
     f6_url       = obs_raw[5]   # URLConcentration [0,1]
     f8_size      = obs_raw[7]   # RequestSizeUniformity [0,1]
@@ -1434,12 +1434,25 @@ class IDSDefenseEnv(gym.Env):
         if mode == 'replay':
             if training_data is None:
                 raise ValueError("mode='replay' requires training_data path")
-            records = _load_replay_records(training_data)
-            # Single ReplayBehavior that cycles through all real records
-            self._replay = ReplayBehavior(records, rng=self.rng)
-            self.ip_list = ['replay_ip']
-            self.ip_types = [self._replay.ip_type]
-            self.ip_behaviors = {'replay_ip': self._replay}
+            sequences = _load_replay_records(training_data)  # List[List[dict]]
+
+            # Group sequences by label → one IP per traffic type.
+            # Mirrors mock mode structure (16 IPs round-robin) so MDP is valid:
+            # s_{t+1} comes from the same IP/traffic-type as s_t, temporal state
+            # accumulates correctly per-IP, and EV is comparable with mock mode.
+            label_seqs: Dict[str, list] = {}
+            for seq in sequences:
+                label = str(seq[0].get('label', 'unknown'))
+                label_seqs.setdefault(label, []).append(seq)
+
+            self.ip_list = []
+            self.ip_types = []
+            self.ip_behaviors = {}
+            for label in sorted(label_seqs.keys()):
+                ip = f'replay_{label}_ip'
+                self.ip_list.append(ip)
+                self.ip_types.append(label)
+                self.ip_behaviors[ip] = ReplayBehavior(label_seqs[label], rng=self.rng)
             self.current_ip_idx = 0
         else:
             # IP configuration — increased L7 persistence mix:
@@ -1510,11 +1523,9 @@ class IDSDefenseEnv(gym.Env):
         self.current_session_step = 0
         self.cumulative_damage = 0.0
 
-        if self.mode == 'replay':
-            # Replay: just update ip_type from current record
-            self.ip_types = [self._replay.ip_type]
-        else:
+        if self.mode != 'replay':
             # Mock: re-initialize all MockIPBehaviors with fresh RNG seeds
+            # Replay: behaviors continue cycling their records — no reinitialization needed
             self._init_behaviors()
 
         # Reset per-IP temporal state (fresh memory each episode)
@@ -1585,8 +1596,7 @@ class IDSDefenseEnv(gym.Env):
         """Get 34D observation for current IP: 20D sensor + 10D temporal + 4D effect_{t-1}."""
         current_ip = self.ip_list[self.current_ip_idx]
         behavior = self.ip_behaviors[current_ip]
-        # In replay mode, ip_type comes from the current record dynamically
-        ip_type = behavior.ip_type if self.mode == 'replay' else self.ip_types[self.current_ip_idx]
+        ip_type = self.ip_types[self.current_ip_idx]
 
         raw_features = behavior.get_features()
         raw_features = self._apply_concept_drift(raw_features, ip_type)
@@ -1726,7 +1736,7 @@ class IDSDefenseEnv(gym.Env):
         action = int(action)
         current_ip = self.ip_list[self.current_ip_idx]
         behavior   = self.ip_behaviors[current_ip]
-        ip_type    = behavior.ip_type if self.mode == 'replay' else self.ip_types[self.current_ip_idx]
+        ip_type    = self.ip_types[self.current_ip_idx]
 
         prev_effect = self._resolve_prev_effect(current_ip, behavior)
 

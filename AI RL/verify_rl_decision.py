@@ -10,6 +10,9 @@ Mục đích: chứng minh với hội đồng rằng quyết định Block
 đến từ PPO neural network, không phải rule-based system.
 
 Usage:
+    # Trước demo: xóa log cũ (tránh lẫn session cũ)
+    python3 verify_rl_decision.py --clear-log
+
     # Post-hoc: xem lại Block event cuối trong log
     python3 verify_rl_decision.py --model runs/run_34d_v13/best_model
 
@@ -18,6 +21,9 @@ Usage:
 
     # Xem tất cả Block events
     python3 verify_rl_decision.py --model runs/run_34d_v13/best_model --all-blocks
+
+    # Xem P(Block) tăng dần qua từng window (so sánh RL vs rule)
+    python3 verify_rl_decision.py --model runs/run_34d_v13/best_model --progression
 """
 
 import argparse
@@ -44,7 +50,23 @@ parser.add_argument('--all-blocks', action='store_true',
                     help='Show all Block events, not just one')
 parser.add_argument('--watch', action='store_true',
                     help='Real-time: theo dõi log, tự động in khi Block mới xuất hiện')
+parser.add_argument('--progression', action='store_true',
+                    help='Show P(Block) tăng dần qua từng window của RL self-block gần nhất'
+                         ' — chứng minh RL chờ đủ evidence thay vì rule ép sớm')
+parser.add_argument('--clear-log', action='store_true',
+                    help='Xóa actions.log trước demo để tránh lẫn session cũ')
 args = parser.parse_args()
+
+# ── Clear log mode ────────────────────────────────────────────────────────────
+if args.clear_log:
+    log_to_clear = Path(args.log)
+    if log_to_clear.exists():
+        size = log_to_clear.stat().st_size
+        log_to_clear.write_text('')
+        print(f"[✓] Đã xóa {log_to_clear} ({size/1024:.1f} KB) — sẵn sàng cho demo mới.")
+    else:
+        print(f"[INFO] {log_to_clear} chưa tồn tại — không cần xóa.")
+    sys.exit(0)
 
 # ── Load model ───────────────────────────────────────────────────────────────
 
@@ -167,12 +189,145 @@ def print_conclusion():
     print("  Block xảy ra vì P(Block) > P(các action khác) tại obs đó.")
     print(f"{'='*60}\n")
 
+
+# ── Progression mode ─────────────────────────────────────────────────────────
+
+import datetime as _dt
+
+def _get_probs(entry: dict, model) -> np.ndarray:
+    obs   = np.array(entry['normalized_obs'], dtype=np.float32)
+    obs_t, _ = model.policy.obs_to_tensor(obs)
+    with th.no_grad():
+        dist = model.policy.get_distribution(obs_t)
+        return dist.distribution.probs.cpu().numpy().flatten()
+
+
+def _ts_str(ts: float) -> str:
+    try:
+        return _dt.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+    except Exception:
+        return str(ts)
+
+
+def show_progression(log_path: Path, model, obs_dim: int):
+    """Tìm block event MỚI NHẤT, lấy toàn bộ session wlen=1→N,
+    in bảng P(Block) tăng dần với bar chart trực quan.
+    """
+    RULE_WLEN = 12   # soft_guard fires at this window length
+
+    # ── Tìm block event mới nhất ─────────────────────────────────────────────
+    block = None
+    with open(log_path) as f:
+        for line in f:
+            try:
+                d = json.loads(line.strip())
+                if (d.get('final_action') == 3
+                        and d.get('t_escalation_score', 0)
+                        and d.get('normalized_obs')
+                        and len(d['normalized_obs']) == obs_dim):
+                    block = d
+            except Exception:
+                pass
+
+    if not block:
+        print("\n[INFO] Chưa ada Block event nào trong log. Chạy demo trước.")
+        return
+
+    is_rule = block.get('soft_guard_promoted') is True
+    blk_wlen = block.get('t_window_len', 0)
+    blk_ts   = block.get('timestamp', 0)
+    src_ip   = block.get('src_ip', '?')
+
+    # ── Lấy toàn bộ session: tất cả entries của IP trong 60s trước block ────
+    session: dict = {}   # wlen → entry (newest wins)
+    with open(log_path) as f:
+        for line in f:
+            try:
+                d = json.loads(line.strip())
+                if (d.get('src_ip') == src_ip
+                        and d.get('normalized_obs')
+                        and len(d['normalized_obs']) == obs_dim
+                        and d.get('t_window_len', 0)
+                        and 0 <= blk_ts - d.get('timestamp', 0) <= 60):
+                    session[d['t_window_len']] = d
+            except Exception:
+                pass
+    session[blk_wlen] = block   # đảm bảo block event chính luôn có
+
+    # ── Header ───────────────────────────────────────────────────────────────
+    label = 'RULE-FORCED (soft_guard_promoted=True)' if is_rule \
+            else 'RL SELF-BLOCK (soft_guard_promoted=False)'
+    W = 72
+    print(f"\n{'═'*W}")
+    print(f"  P(Block) PROGRESSION — {label}")
+    print(f"{'─'*W}")
+    print(f"  IP : {src_ip}")
+    print(f"  Block tại wlen={blk_wlen}  ts={_ts_str(blk_ts)}  (unix={blk_ts:.1f})")
+    print(f"{'═'*W}")
+
+    # ── Bảng ─────────────────────────────────────────────────────────────────
+    BAR_W = 28
+    print(f"  {'wlen':>4}  {'time':>8}  {'P(Block)':>8}  {'bar':<{BAR_W}}  RL muốn   Ghi chú")
+    print(f"  {'─'*68}")
+
+    sorted_wlens = sorted(session.keys())
+    for w in sorted_wlens:
+        d     = session[w]
+        probs = _get_probs(d, model)
+        p     = float(probs[3])
+        act   = ACTION_MAP[int(probs.argmax())]
+        ts_w  = d.get('timestamp', 0)
+
+        # Bar: filled vs empty blocks, scale 0→1 over BAR_W chars
+        filled = int(round(p * BAR_W))
+        bar    = '█' * filled + '░' * (BAR_W - filled)
+
+        # Ghi chú
+        if w == blk_wlen and is_rule:
+            note = '◄ RULE ÉP BLOCK'
+        elif w == blk_wlen and not is_rule:
+            note = '◄ RL TỰ BLOCK ★'
+        elif w == RULE_WLEN and not is_rule:
+            note = f'← rule sẽ ép ở đây  P={p:.4f}'
+        else:
+            note = ''
+
+        prefix = '★ ' if (w == blk_wlen and not is_rule) else '  '
+        print(f"{prefix}{w:4d}  {_ts_str(ts_w):>8}  {p:8.4f}  {bar}  {act:<9}  {note}")
+
+    print(f"  {'─'*68}")
+
+    # ── Kết luận ─────────────────────────────────────────────────────────────
+    blk_probs = _get_probs(block, model)
+    p_at_block = float(blk_probs[3])
+
+    print(f"\n  KẾT LUẬN:")
+    if is_rule:
+        print(f"  Rule ép Block tại wlen={blk_wlen}  →  P(Block) = {p_at_block:.4f}")
+        print(f"  Neural network {(1 - p_at_block)*100:.1f}% KHÔNG muốn Block tại thời điểm này.")
+        print(f"  Chạy không có --soft-guard assist để thấy RL chờ đến P > 0.99.")
+    else:
+        p12 = float(_get_probs(session[RULE_WLEN], model)[3]) if RULE_WLEN in session else None
+        print(f"  RL tự Block tại wlen={blk_wlen}  →  P(Block) = {p_at_block:.4f}  (tự tin {p_at_block*100:.1f}%)")
+        if p12 is not None:
+            ts12 = _ts_str(session[RULE_WLEN].get('timestamp', 0))
+            print(f"  Nếu rule ép tại wlen={RULE_WLEN} ({ts12})  →  P(Block) = {p12:.4f}  (sai {(1-p12)*100:.1f}%)")
+            print(f"  RL chờ thêm {blk_wlen - RULE_WLEN} window: P tăng {p12:.4f} → {p_at_block:.4f}")
+    print(f"{'═'*W}\n")
+
+
 # ── Load Block events from log ───────────────────────────────────────────────
 
 log_path = Path(args.log)
 if not log_path.exists():
     print(f"\n[ERROR] actions.log not found: {log_path}")
     sys.exit(1)
+
+# ── Progression mode ──────────────────────────────────────────────────────────
+
+if args.progression:
+    show_progression(log_path, model, obs_dim)
+    sys.exit(0)
 
 # ── Watch mode ────────────────────────────────────────────────────────────────
 

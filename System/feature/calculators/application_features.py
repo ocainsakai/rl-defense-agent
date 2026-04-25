@@ -60,6 +60,11 @@ class F6_URLConcentration(FeatureBase):
         if total_requests == 0:
             return 0.0
 
+        # Single-request window: F6=1/1=1.0 là artifact thống kê (không đủ mẫu),
+        # không phải dấu hiệu tấn công. Brute force thật luôn có nhiều request liên tục.
+        if total_requests < 3:
+            return 0.0
+
         max_count = max(url_counts.values()) if url_counts else 0
         return float(max_count) / float(total_requests)
 
