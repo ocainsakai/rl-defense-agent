@@ -466,9 +466,17 @@ marimo/_lsp/
 __marimo__/
 
 
-# Large files — không commit
+# Large files — không commit (trừ run_34d_v13 và run_finetune_xss)
 AI RL/runs/*/checkpoints/
 AI RL/runs/*/tb/
+!AI RL/runs/run_34d_v13/checkpoints/
+!AI RL/runs/run_34d_v13/checkpoints/**
+!AI RL/runs/run_34d_v13/tb/
+!AI RL/runs/run_34d_v13/tb/**
+!AI RL/runs/run_finetune_xss/checkpoints/
+!AI RL/runs/run_finetune_xss/checkpoints/**
+!AI RL/runs/run_finetune_xss/tb/
+!AI RL/runs/run_finetune_xss/tb/**
 AI RL/runs/run_34d_v1/
 AI RL/runs/run_34d_v2/
 AI RL/runs/run_34d_v3/
