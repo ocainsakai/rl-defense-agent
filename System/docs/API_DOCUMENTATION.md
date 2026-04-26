@@ -49,7 +49,7 @@ The Feature Calculator system provides a **plugin-based architecture** for compu
 │    'F1': F1_PacketRate,                                     │
 │    'F2': F2_SynAckRatio,                                    │
 │    ...                                                      │
-│    'F16': F16_WammConfidence                                │
+│    'F16': F16_SqlStackedQuery                               │
 │  }                                                          │
 └────────────────┬────────────────────────────────────────────┘
                  │
@@ -236,12 +236,11 @@ Aggregator class that computes all 16 features using FeatureRegistry.
 #### Constructor
 
 ```python
-FlowFeatureCalculator(config=None, wamm_classifier=None)
+FlowFeatureCalculator(config=None)
 ```
 
 **Parameters:**
 - `config`: Optional NIDSConfig instance (passed to features)
-- `wamm_classifier`: Optional WammClassifier for F15/F16 (ML-based features)
 
 #### Methods
 
@@ -407,37 +406,32 @@ if sqli_score > 5.0:
     print("⚠️  SQL Injection detected!")
 ```
 
-### Context Features (F15-F16)
+### SQL Injection Pattern Features (F15-F16)
 
-**Location:** `feature/calculators/context_features.py`
+**Location:** `feature/calculators/sqli_features.py`
 
-ML-based attack classification using WAMM XGBoost model.
+Regex-based detection of high-risk SQL injection techniques over normalized payload (`FeatureContext.get_normalized()`).
 
 | Code | Name | Unit | Values |
 |------|------|------|--------|
-| F15 | WammAttackType | integer | 0=normal, 1=sqli, 2=xss |
-| F16 | WammConfidence | probability [0,1] | Confidence score |
+| F15 | SqlComment | binary | 1.0 = comment injection (--, #, /**/) detected |
+| F16 | SqlStackedQuery | binary | 1.0 = stacked query detected (; DROP/DELETE/INSERT/...) |
 
 **Example:**
 
 ```python
-from feature.wamm_classifier import WammClassifier
 from feature.calculator import FlowFeatureCalculator
 
-# Load WAMM model
-wamm = WammClassifier(model_path='models/wamm/xgboost_model.pkl')
-
-# Use with calculator
-calc = FlowFeatureCalculator(wamm_classifier=wamm)
+calc = FlowFeatureCalculator()
 features = calc.calculate_all_optimized(flows)
 
-attack_type = features[14]  # F15
-confidence = features[15]   # F16
+sql_comment = features[14]   # F15
+sql_stacked = features[15]   # F16
 
-if attack_type == 1 and confidence > 0.8:
-    print("⚠️  SQL Injection (high confidence)!")
-elif attack_type == 2 and confidence > 0.8:
-    print("⚠️  XSS (high confidence)!")
+if sql_stacked == 1.0:
+    print("⚠️  Stacked SQL query — high-risk technique (DROP/DELETE possible)!")
+elif sql_comment == 1.0:
+    print("⚠️  SQL comment injection (--, #, /**/)")
 ```
 
 ---
@@ -483,21 +477,15 @@ avg_size = calc.calculate(flows)
 
 ```python
 from feature.calculator import FlowFeatureCalculator
-from feature.wamm_classifier import WammClassifier
 from config.nids_config import NIDSConfig
 
-# Setup dependencies
+# Setup config
 config = NIDSConfig(analysis_window=5.0)
-wamm = WammClassifier(model_path='models/wamm/model.pkl')
 
-# Create calculator with dependencies
-calc = FlowFeatureCalculator(
-    config=config,
-    wamm_classifier=wamm
-)
+# Create calculator with config
+calc = FlowFeatureCalculator(config=config)
 
-# Features F15/F16 will use WAMM classifier
-# Other features will use config.analysis_window
+# All features will use config.analysis_window
 features = calc.calculate_all_optimized(flows)
 ```
 
@@ -606,8 +594,7 @@ The FeatureContext cache provides:
 
 ✅ **Use `calculate_all_optimized()` when:**
 - Processing flows with large payloads (>1KB)
-- Computing many payload-based features (F9-F14)
-- Using WAMM classifier (F15-F16)
+- Computing many payload-based features (F12-F20)
 - Batch processing multiple flow groups
 
 ❌ **Skip caching when:**
@@ -678,8 +665,8 @@ print(f"Speedup: {speedup:.2f}x")
 | F12 | SqlSpecialChar | Payload | ratio | [0,1] | SQLi chars |
 | F13 | XssKeyword | Payload | score | 0+ | XSS detection |
 | F14 | XssSpecialChar | Payload | ratio | [0,1] | XSS chars |
-| F15 | WammAttackType | Context | integer | {0,1,2} | ML classification |
-| F16 | WammConfidence | Context | prob | [0,1] | ML confidence |
+| F15 | SqlComment | SQLi | binary | {0,1} | SQL comment injection (--, #, /**/) |
+| F16 | SqlStackedQuery | SQLi | binary | {0,1} | Stacked query (; DROP/DELETE/...) |
 
 ### Feature Names (for dict output)
 
@@ -699,8 +686,8 @@ names = [
     'sql_special_char',     # F12
     'xss_keyword',          # F13
     'xss_special_char',     # F14
-    'wamm_attack_type',     # F15
-    'wamm_confidence',      # F16
+    'sql_comment',          # F15
+    'sql_stacked_query',    # F16
 ]
 ```
 
@@ -715,7 +702,7 @@ names = [
 **Solutions:**
 1. Check flows are not empty: `len(flows) > 0`
 2. Verify flows have packets: `flows[0].get_packet_count() > 0`
-3. For F15/F16: Check WAMM classifier is loaded
+3. For F15/F16: Verify HTTP payload is captured (need URI/body for regex match)
 
 ### Import Errors
 
