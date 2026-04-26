@@ -501,5 +501,15 @@ datasets/CSE-CIC-IDS2018/processed/
 datasets/combined_analysis/charts/
 training_data_retrain.jsonl
 AI RL/runs/inspect/
+
+# LaTeX compilation artifacts (sinh ra khi compile main.tex, không cần track)
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
 .claude/scheduled_tasks.lock
 .codex
