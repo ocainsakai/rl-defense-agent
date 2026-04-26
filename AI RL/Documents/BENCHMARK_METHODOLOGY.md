@@ -294,8 +294,13 @@ for row in results:
 # Mitigate rate = mitigated / total  (bị chặn bằng BẤT KỲ hành động nào != Allow)
 ```
 
-**Lý do recall thấp ở stateful/window-reset:**  
-`gt_action = "Redirect"` nhưng sau khi Redirect 15-60s, system escalate lên Block → `pred = "Block"` → `pred != gt` → `correct=False`. Tuy nhiên `mitigate=True` vì Block vẫn là chặn được attacker.
+**Lý do recall thấp ở stateful/window-reset (khi dùng metric strict):**
+`gt_action = "Redirect"` nhưng sau 15s (REDIRECT_TTL_SECONDS), IPStateTracker escalate lên Block
+→ `pred = "Block"` → `pred ≠ gt` → `correct=False` (recall strict miss).
+
+**Tuy nhiên `mitigate=True`** vì Block vẫn là chặn được attacker. Vì lý do này, **báo cáo dùng
+metric `mitigate_rate`** thay vì recall strict cho L3 — phản ánh đúng "có chặn được attacker
+không" trong context security. Chart benchmark output cũng dùng metric này (xem `datasets/plots/`).
 
 ---
 
@@ -307,16 +312,25 @@ for row in results:
 Chạy: python3 pcap_benchmark.py --day Thursday --skip-extract --eval-mode all
 ```
 
-| Layer | Benign FP | BruteForce recall | XSS recall | SQLi recall | Avg Mitigate% |
+| Layer | Benign FP | BruteForce mitigate | XSS mitigate | SQLi mitigate | Avg Mitigate% |
 |---|---|---|---|---|---|
-| **L1 Raw PPO** | 1.4% | 3.0% | 3.5% | 40.8% | 15.8% |
+| **L1 Raw PPO** | 1.4% | 99.97% | 99.95% | 69.14% | 89.7% |
 | **L2 AI Agent** (stateless) | 1.4% | **99.9%** | **89.3%** | **69.4%** | 86.2% |
-| **L3 Window-Reset** | 1.2% | 0.3% | 0.7% | 8.2% | **100.0%** |
+| **L3 Window-Reset** | 1.2% | **98.26%** | **93.59%** | **71.60%** | **87.8%** |
+
+> **Lưu ý metric:** Bảng dùng `mitigate_rate` = (Block + Redirect + RateLimit) / total — tỷ lệ
+> attack bị **chặn bằng BẤT KỲ hành động nào ≠ Allow**. Đây là metric phù hợp cho security
+> context vì cả Block lẫn Redirect đều là "ngăn được attack". Recall strict (chỉ count khi
+> `pred = gt_action`) sẽ thấp ở L3 do `gt=Redirect` nhưng sau 15s system escalate `pred=Block`
+> → mismatch, dù attacker vẫn bị mitigate. Số liệu trong bảng khớp với chart benchmark output.
 
 **Đọc bảng này:**
-- L1 → L2: safety_net override cứu BruteForce từ 3%→99.9%, XSS từ 3.5%→89.3%. Đây là rule-based override hỗ trợ PPO.
-- L2 → L3: Recall drop (vì Redirect escalate thành Block sau 15s), nhưng mitigate_rate tăng lên 100%.
-- PPO một mình không đủ (L1=3-41% attack recall) vì thiếu accumulated temporal signal cho IP mới.
+- L1 → L2: safety_net override hỗ trợ PPO. Trên IDS2018 Thursday, L1 PPO có mitigate cao
+  cho BruteForce/XSS (99%) nhờ features F6/F13/F18 mạnh, nhưng SQLi thấp (69%) do payload đa dạng.
+- L2 → L3: L3 = state reset per attack window + escalate Redirect→Block sau 15s. SQLi mitigate
+  cải thiện (69.14% → 71.60%) nhờ escalation; BruteForce/XSS giảm nhẹ do trade-off recall.
+- PPO một mình (L1) đủ cho Brute/XSS pure detection, nhưng L3 + escalation cần thiết cho
+  multi-window attacks (sqlmap sustained, brute keepalive lâu dài).
 
 ### 8.1 Layer 1 — Raw PPO
 
@@ -352,12 +366,20 @@ Chạy: python3 pcap_benchmark.py --day Thursday --skip-extract --eval-mode all
 
 | Label | Mitigate% | Timeline detail |
 |---|---|---|
-| benign | N/A | 98.8% Allow |
-| brute_force | **100%** | 0-15s: Redirect:10 → 60s+: Block:3929 |
-| xss | **100%** | 60-300s: Redirect:16 → 300s+: Block:2040 |
-| sqli | **100%** | 60-300s: Redirect:4, Block:23 → 300s+: Block:22 |
+| benign | N/A | ~98.8% Allow (FP rate ~1.2%) |
+| brute_force | **98.26%** | 0-15s: Redirect (REDIRECT_TTL_SECONDS) → 15s+: escalate Block (giữ qua BLOCK_IDLE_TTL=60s sau silence) |
+| xss | **93.59%** | Pattern tương tự: phase Redirect → escalate Block |
+| sqli | **71.60%** | Mitigate cải thiện so L1 (69.14% → 71.60%) nhờ escalation logic |
 
-**Nhận xét:** Mọi attacker đều bị mitigate 100% sau khi Redirect escalate lên Block. Recall thấp (Redirect→Block tính là sai vì gt=Redirect) nhưng đây là hành vi đúng theo thiết kế.
+**Cơ chế Timeline:**
+- `0-15s`: phase **Redirect** — IPStateTracker tích lũy evidence, Redirect attacker vào honeypot
+- `15s+`: phase **Block** — IPStateTracker.update() escalate sang Block khi `age > REDIRECT_TTL_SECONDS=15`
+- `60s+ silence`: Block tự expire khi attacker im lặng `BLOCK_IDLE_TTL=60s`
+- Trong cùng `(src_ip, window_id)`, state tích lũy bình thường; sang window mới → reset state
+
+**Nhận xét:** Mitigate% ~93-98% cho Brute/XSS, 71% cho SQLi. Khác với recall strict (chỉ count
+`pred=gt_action`), mitigate_rate count cả Block lẫn Redirect → metric này phản ánh đúng
+"có chặn được attacker không" trong context security.
 
 ### 8.4 Stateful — production simulation (tham khảo)
 

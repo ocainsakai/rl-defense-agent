@@ -1,0 +1,69 @@
+<!--
+  Wazuh Manager Custom Rules — RL Defense Agent alerts.
+
+  Đặt file này tại: /var/ossec/etc/rules/local_rl_rules.xml
+  Restart wazuh-manager để apply.
+
+  Rule IDs 100000-100099 reserved cho RL Defense.
+-->
+
+<group name="rl_defense_agent,">
+
+  <!-- Rule 100001: Mọi event từ RL agent (parent rule, không alert) -->
+  <rule id="100001" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="rl_action_name">\.+</field>
+    <description>RL Defense Agent decision logged</description>
+    <options>no_full_log</options>
+  </rule>
+
+  <!-- Rule 100002: AI Block fire — alert mỗi lần Block thành công -->
+  <rule id="100002" level="8">
+    <if_sid>100001</if_sid>
+    <field name="final_action_name">^Block$</field>
+    <description>RL agent BLOCKED attacker $(data.src_ip) at window=$(data.t_window_len), score=$(data.t_escalation_score)</description>
+    <group>rl_block,attack_mitigated,</group>
+  </rule>
+
+  <!-- Rule 100003: Override 1 fire — model muốn Block nhưng Rule chặn -->
+  <rule id="100003" level="5">
+    <if_sid>100001</if_sid>
+    <field name="rl_action_name">^Block$</field>
+    <field name="final_action_name">^Redirect$</field>
+    <description>SafetyNet Override 1 — RL muốn Block sớm tại window=$(data.t_window_len), bị giữ lại Redirect</description>
+    <group>rl_override,model_imperfection,</group>
+  </rule>
+
+  <!-- Rule 100004: Soft guard promoted — rule-based escalate Block thay AI -->
+  <rule id="100004" level="6">
+    <if_sid>100001</if_sid>
+    <field name="soft_guard_promoted">^true$</field>
+    <description>Soft guard promoted Block on $(data.src_ip) — rule-based escalation (AI did not output Block)</description>
+    <group>rl_soft_guard,rule_based_escalation,</group>
+  </rule>
+
+  <!-- Rule 100005: Block_ready_latched — đủ điều kiện Block (informational) -->
+  <rule id="100005" level="3">
+    <if_sid>100001</if_sid>
+    <field name="t_block_ready">^true$</field>
+    <description>Block-ready threshold reached for $(data.src_ip) — temporal evidence sufficient</description>
+    <group>rl_threshold,</group>
+  </rule>
+
+  <!-- Rule 100006: Override 0 fire — L7 attack but model says Allow -->
+  <rule id="100006" level="4">
+    <if_sid>100001</if_sid>
+    <field name="rl_action_name">^Allow$|^RateLimit$</field>
+    <field name="final_action_name">^Redirect$</field>
+    <description>Override 0 — L7 attack detected, model said $(data.rl_action_name), forced to Redirect</description>
+    <group>rl_override,cold_start_correction,</group>
+  </rule>
+
+  <!-- Rule 100010: High frequency Block events — possible attack burst -->
+  <rule id="100010" level="10" frequency="5" timeframe="60">
+    <if_matched_sid>100002</if_matched_sid>
+    <description>Multiple Block events (>5) in 60s — possible attack burst</description>
+    <group>rl_burst,multiple_blocks,</group>
+  </rule>
+
+</group>

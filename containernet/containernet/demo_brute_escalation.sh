@@ -271,13 +271,18 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Output brute_keepalive redirect vào tmpfile — terminal chỉ show AI state
+# Dùng setsid để brute_keepalive.py chạy trong process group riêng
 BRUTE_LOG=$(mktemp /tmp/brute_XXXXXX.log)
-SSLKEYLOGFILE=/tmp/tls_keys.log python3 "$SCRIPT_DIR/brute_keepalive.py" > "$BRUTE_LOG" 2>&1 &
+SSLKEYLOGFILE=/tmp/tls_keys.log setsid python3 "$SCRIPT_DIR/brute_keepalive.py" > "$BRUTE_LOG" 2>&1 &
 BRUTE_PID=$!
 
 cleanup_brute() {
-    kill "$BRUTE_PID" 2>/dev/null
-    wait "$BRUTE_PID" 2>/dev/null
+    if [ -n "$BRUTE_PID" ] && kill -0 "$BRUTE_PID" 2>/dev/null; then
+        # SIGKILL cả process group để Python không catch và hang
+        kill -9 -- -"$BRUTE_PID" 2>/dev/null
+        pkill -9 -f "brute_keepalive.py" 2>/dev/null
+    fi
+    BRUTE_PID=""
     rm -f "$BRUTE_LOG"
 }
 trap 'cleanup_brute; exit 0' EXIT INT TERM

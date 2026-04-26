@@ -1,0 +1,36 @@
+<!--
+  Wazuh Manager Custom Decoder — RL Defense Agent JSONL parser.
+
+  Đặt file này tại: /var/ossec/etc/decoders/local_rl_decoder.xml
+  Restart wazuh-manager để apply.
+
+  Vì actions_wazuh.log là JSON Lines format, Wazuh JSON decoder built-in tự
+  parse các top-level keys thành data.*. Custom decoder dưới đây chỉ là
+  parent decoder để gán tên + program_name cho dễ filter.
+-->
+
+<decoder name="rl-defense-agent">
+  <prematch>{"timestamp":</prematch>
+  <prematch>"src_ip":</prematch>
+  <prematch>"rl_action_name":</prematch>
+</decoder>
+
+<!--
+  Sau decoder này, Wazuh tự động extract các field JSON top-level thành:
+    data.timestamp
+    data.src_ip
+    data.rl_action_name
+    data.final_action_name
+    data.model_version
+    data.t_window_len
+    data.t_redirect_hits
+    data.t_presence_hits
+    data.t_honeypot_hits
+    data.t_escalation_score
+    data.t_block_ready
+    data.soft_guard_promoted
+    data.t_damage_ema
+    data.t_clean_streak
+    data.t_action_hold_steps
+    data.t_last_action_name
+-->

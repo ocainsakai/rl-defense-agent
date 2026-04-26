@@ -52,8 +52,8 @@ Network Traffic → Packet Capture → Flow Aggregation → Feature Extraction �
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
 | **Packet Capture** | Scapy + Npcap | Bắt gói tin từ network interface |
-| **Feature Extraction** | Python (Plugin-based) | Tính toán 20 behavioral features (network + SQLi + XSS) |
-| **L7 Detection** | Regex + ModSecurity CRS | F12-F20: SQLi/XSS pattern detection trên payload chuẩn hóa |
+| **Feature Extraction** | Python (Plugin-based) | Tính toán 16 behavioral features |
+| **ML Classification** | Scikit-learn | WAMM classifier (SQLi/XSS detection) |
 | **Flow Management** | Custom Python | Quản lý flows với sliding window |
 | **AI Detection** | Stable Baselines3 (RL) | Training AI agent (tích hợp với RL-Defense-Agent) |
 
@@ -103,15 +103,13 @@ Network Traffic → Packet Capture → Flow Aggregation → Feature Extraction �
 │                 FEATURE EXTRACTION LAYER                         │
 │  feature/calculator.py - FlowFeatureCalculator                   │
 │  • Auto-discover features via FeatureRegistry                    │
-│  • Calculate 20 behavioral features:                             │
-│    - Network (F1-F11): PPS, SYN/ACK, IAT, RST, Ports, URL,       │
-│                       HttpIatUnif, ReqSizeUnif, AvgPayload,      │
-│                       FwdBwdRatio, PktsPerPort                   │
-│    - SQLi (F12-F17): SqlSpecial, CrsSqliScore, SqlUnion,         │
-│                      SqlComment, SqlStackedQuery, SqlSelectCount │
-│    - XSS (F18-F20): CrsXssScore, JsFnCall, HtmlEventHandler      │
+│  • Calculate 16 behavioral features:                             │
+│    - Network (F1-F5): PPS, SYN/ACK, IAT, RST, Ports              │
+│    - Application (F6-F8): URL, Auth fail, Server errors          │
+│    - Payload (F9-F14): Length, Entropy, SQLi, XSS                │
+│    - Context (F15-F16): WAMM attack type & confidence            │
 └────────────────────────┬────────────────────────────────────────┘
-                         │ Feature Vector [f1, f2, ..., f20]
+                         │ Feature Vector [f1, f2, ..., f16]
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    AI DETECTION LAYER                            │
@@ -149,33 +147,29 @@ Network Traffic → Packet Capture → Flow Aggregation → Feature Extraction �
    ├─ fwd_packets: [pkt1, pkt2, ...]  (client → server)
    └─ bwd_packets: [pkt3, pkt4, ...]  (server → client)
 
-4. FEATURE VECTOR (20D)
+4. FEATURE VECTOR
    [
-     100.5,    # F1:  PacketRate (pkts/sec)
-     1.2,      # F2:  SynAckRatio
-     0.005,    # F3:  InterArrivalTime (sec)
-     0.1,      # F4:  RstRatio
-     15,       # F5:  DistinctPorts
-     0.8,      # F6:  URLConcentration
-     0.85,     # F7:  HttpIatUniformity (cross-flow timing)
-     0.92,     # F8:  RequestSizeUniformity
-     512.3,    # F9:  AvgPayloadSize (bytes)
-     2.1,      # F10: FwdBwdRatio
-     45,       # F11: PacketsPerPort
-     0.3,      # F12: SqlSpecialChar ratio
-     8.5,      # F13: CrsSqliScore (CRS 942 rules hit)
-     1.0,      # F14: SqlUnionSelect (binary)
-     1.0,      # F15: SqlComment (binary — --, #, /**/ detected)
-     0.0,      # F16: SqlStackedQuery (binary — ; DROP/DELETE)
-     2.0,      # F17: SqlSelectCount
-     0.0,      # F18: CrsXssScore
-     0.0,      # F19: JsFunctionCall (binary)
-     0.0       # F20: HtmlEventHandler (binary)
+     100.5,    # F1: Packet rate (packets/sec)
+     1.2,      # F2: SYN/ACK ratio
+     0.005,    # F3: Inter-arrival time (seconds)
+     0.1,      # F4: RST ratio
+     15,       # F5: Distinct ports
+     0.8,      # F6: URL concentration
+     0.0,      # F7: Auth failure rate
+     0.0,      # F8: Server error rate
+     512.3,    # F9: Average payload length
+     6.2,      # F10: Payload entropy
+     8.5,      # F11: SQLi keyword score
+     0.3,      # F12: SQL special char ratio
+     0.0,      # F13: XSS keyword score
+     0.0,      # F14: XSS special char ratio
+     1.0,      # F15: WAMM attack type (1=SQLi)
+     0.95      # F16: WAMM confidence
    ]
 
 5. AI DECISION
-   Action: REDIRECT (SQLi detected — F13/F14/F15 elevated)
-   Rule: iptables -t nat -A PREROUTING -s 192.168.1.100 -p tcp --dport 443 -j REDIRECT --to-ports 4443
+   Action: BLOCK (SQLi detected with high confidence)
+   Rule: iptables -A INPUT -s 192.168.1.100 -j DROP
 ```
 
 ---
@@ -640,30 +634,33 @@ context.composite_payloads  # Cached: [URI + User-Agent + Body]
 # Speedup: 1.14x average, 2-3x cho payload-heavy workloads
 ```
 
-**SQLI HIGH-RISK FEATURES (F15-F16) - feature/calculators/sqli_features.py**
+**CONTEXT FEATURES (F15-F16) - feature/calculators/context.py**
 
 | Feature | Code | Mô Tả | Đơn Vị | Phát Hiện |
 |---------|------|-------|--------|-----------|
-| **SqlComment** | F15 | Comment injection (--, #, /**/) | binary {0,1} | Cắt query gốc |
-| **SqlStackedQuery** | F16 | Stacked query (; DROP/DELETE/INSERT) | binary {0,1} | Lệnh phá hoại |
+| **WAMM Attack Type** | F15 | ML classifier prediction | 0=normal, 1=sqli, 2=xss | Web attacks |
+| **WAMM Confidence** | F16 | Prediction confidence | [0, 1] | Attack confidence |
 
 **Kỹ Thuật:**
 ```python
-# F15/F16 dùng regex trên payload đã chuẩn hóa qua FeatureContext
-from feature.context import FeatureContext
+# WAMM Classifier: Machine Learning-based detection
+from feature.wamm_classifier import WammClassifier
 
-ctx = FeatureContext(flows)
-for flow in flows:
-    for pkt in flow.get_fwd_packets():
-        normalized = ctx.get_normalized(pkt)   # cached
-        # F15: kiểm tra _COMMENT_PATTERNS (--, #, /**/)
-        # F16: kiểm tra _STACKED_QUERY_PATTERNS (; DROP, ; DELETE, ; INSERT, ...)
-        if any(p.search(normalized) for p in _COMMENT_PATTERNS):
-            return 1.0
-return 0.0
+wamm = WammClassifier(model_path='models/wamm/model.pkl')
+calculator = FlowFeatureCalculator(wamm_classifier=wamm)
+
+# F15, F16 use WAMM internally
+def calculate_f15_f16(flows, wamm_classifier):
+    all_payloads = get_all_payloads(flows)
+    
+    if not all_payloads or not wamm_classifier:
+        return (0.0, 0.0)  # Normal, no confidence
+    
+    # WAMM prediction
+    attack_type, confidence = wamm_classifier.predict(all_payloads)
+    
+    return (attack_type, confidence)
 ```
-
-→ Không cần ML model — pattern matching đủ chính xác cho 2 kỹ thuật high-risk này.
 
 ---
 
@@ -907,21 +904,33 @@ System/
 ├── feature/                       # Feature extraction (Plugin architecture)
 │   ├── __init__.py
 │   ├── base.py                    # FeatureBase, FeatureRegistry, @register_feature
-│   ├── context.py                 # FeatureContext caching + PayloadNormalizer
+│   ├── context.py                 # FeatureContext caching
 │   ├── calculator.py              # FlowFeatureCalculator (orchestrator)
-│   └── calculators/               # Modular features (plugin-based)
+│   ├── feature_flow.py            # [DEPRECATED] Old monolithic calculator
+│   ├── wamm_classifier.py         # ML classifier for F15, F16
+│   ├── payload_context.py         # Payload normalization (old)
+│   ├── payload_features.py        # Payload analysis (old)
+│   ├── behavioral_features.py     # Behavioral analysis (old)
+│   ├── kruegel_features.py        # Kruegel features (old)
+│   └── calculators/               # New modular features
 │       ├── __init__.py
-│       ├── network_features.py        # F1-F5: PacketRate, SynAck, IAT, Rst, Ports
-│       ├── application_features.py    # F6-F8: URL, HttpIatUnif, ReqSizeUnif (cross-flow)
-│       ├── network_features.py        # F9-F11: AvgPayload, FwdBwdRatio, PktsPerPort
-│       ├── sqli_features.py           # F12-F17: SQLi (chars, CRS, UNION, comment, stacked, SELECT)
-│       └── xss_features.py            # F18-F20: XSS (CRS, JsFnCall, HtmlEvent)
+│       ├── network.py             # F1-F5: Network features
+│       ├── application.py         # F6-F8: Application features
+│       ├── payload.py             # F9-F14: Payload features
+│       └── context.py             # F15-F16: Context features
 │
 ├── config/                        # Configuration files
 │   ├── __init__.py
 │   ├── nids_config.py             # Central config (thresholds, timeouts)
-│   ├── data_params.py             # FEATURE_ORDER, normalize_feature_vector, OBS_DIM=20
-│   └── ai_config.py               # AI model config
+│   ├── data_params.py             # Data processing params
+│   ├── ai_config.py               # AI model config
+│   └── wamm_config.py             # WAMM classifier config
+│
+├── models/                        # Pre-trained models
+│   └── wamm/
+│       ├── model.pkl              # WAMM sklearn model
+│       ├── vectorizer.pkl         # TF-IDF vectorizer
+│       └── scaler.pkl             # Feature scaler
 │
 ├── dataset/                       # Training datasets
 │   ├── csic_database.csv          # CSIC 2010 HTTP dataset
@@ -980,7 +989,7 @@ System/
 │ • NetworkSniffer(interface="Ethernet")                       │
 │ • PacketLayerExtractor(use_packet_time=False)               │
 │ • FlowManager(window_size=1.0, flow_timeout=30.0)           │
-│ • FlowFeatureCalculator()                                    │
+│ • FlowFeatureCalculator(wamm_classifier=wamm)               │
 └─────────────────────────────────────────────────────────────┘
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -1234,17 +1243,15 @@ features = calculator.calculate_all_optimized(flows)
 **3. Early Return Optimization**
 
 ```python
-# F15 (SqlComment), F16 (SqlStackedQuery): Skip regex nếu payload rỗng
-def calculate(self, flows, **kwargs):
-    ctx = kwargs.get('context') or FeatureContext(flows)
-    for flow in flows:
-        for pkt in flow.get_fwd_packets():
-            normalized = ctx.get_normalized(pkt)
-            if not normalized:
-                continue                              # Early skip
-            if any(p.search(normalized) for p in _PATTERNS):
-                return 1.0                            # Early return
-    return 0.0
+# F15, F16: Skip WAMM if no payload
+def calculate_wamm_features(flows, wamm_classifier):
+    payloads = get_all_payloads(flows)
+    
+    # Early return: Không có payload hoặc WAMM
+    if not payloads or not wamm_classifier:
+        return (0.0, 0.0)  # Skip expensive ML prediction
+    
+    return wamm_classifier.predict(payloads)
 ```
 
 ### 8.3 Performance Benchmarks
@@ -1332,27 +1339,26 @@ if f5_ports > 50 and f4_rst > 0.5 and f3_iat < 0.01:
 **Scenario:** Phát hiện SQLi attack qua HTTP
 
 **Features sử dụng:**
-- **F12 (SqlSpecialChar):** > 0.2 (tỷ lệ ký tự đặc biệt ', ;, --)
-- **F13 (CrsSqliScore):** ≥ 5 (số rule CRS 942 hit)
-- **F14 (SqlUnionSelect):** = 1 (UNION SELECT detected)
-- **F15 (SqlComment):** = 1 (--, #, /**/ injection)
-- **F16 (SqlStackedQuery):** = 1 (; DROP/DELETE/INSERT)
+- **F11 (SQLi Keyword):** > 5.0
+- **F12 (SQL Special Char):** > 0.2
+- **F15 (WAMM Attack Type):** = 1 (SQLi)
+- **F16 (WAMM Confidence):** > 0.8
 
 **Detection Logic:**
 ```python
-f12_sql_char    = features[11]
-f13_crs_score   = features[12]
-f14_union       = features[13]
-f15_comment     = features[14]
-f16_stacked     = features[15]
+f11_sqli_keyword = features[10]
+f12_sql_char = features[11]
+f15_attack_type = features[14]
+f16_confidence = features[15]
 
-# AI agent (PPO) học pattern từ tổng hợp F12-F17.
-# Rule-based safety_net override: Redirect → Block escalation
-if f16_stacked == 1.0 or (f13_crs_score >= 5 and f15_comment == 1.0):
-    action = "REDIRECT"   # Đẩy attacker vào honeypot
-    reason = "High-risk SQLi pattern (stacked query / comment + CRS hit)"
-    os.system(f"iptables -t nat -I PREROUTING 1 -s {src_ip} "
-              f"-d {server_ip} -p tcp --dport 443 -j REDIRECT --to-ports 4443")
+if (f11_sqli_keyword > 5.0 or f12_sql_char > 0.2) and f15_attack_type == 1.0 and f16_confidence > 0.8:
+    action = "BLOCK"
+    reason = "SQL Injection detected"
+    
+    # Auto-block + alert
+    os.system(f"iptables -A INPUT -s {src_ip} -j DROP")
+    send_email_alert(admin_email, src_ip, reason, features)
+    log_to_siem(src_ip, reason, features)
 ```
 
 ### 9.4 Use Case 4: Brute Force Login Detection
@@ -1456,12 +1462,12 @@ python generate_report.py -i analysis.csv -o incident_report.pdf
 ### Research Papers
 - CICFlowMeter: Network Traffic Flow Generator and Analyser
 - Kruegel et al. - Anomaly Detection of Web-based Attacks
-- OWASP ModSecurity Core Rule Set (CRS) — F13 (CrsSqliScore), F18 (CrsXssScore)
+- WAMM: Web Application Malicious Behavior Detection
 
 ### Tools & Libraries
 - [Scapy](https://scapy.net/) - Packet manipulation
 - [Npcap](https://npcap.com/) - Windows packet capture driver
-- [Stable-Baselines3](https://stable-baselines3.readthedocs.io/) - PPO/DQN RL agent
+- [Scikit-learn](https://scikit-learn.org/) - Machine learning
 
 ---
 

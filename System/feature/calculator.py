@@ -70,11 +70,12 @@ class FlowFeatureCalculator:
 
     NUM_FEATURES = len(FEATURE_ORDER)  # 20
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, wamm_classifier=None):
         """Khởi tạo calculator với tất cả features đã đăng ký.
 
         Args:
             config: NIDSConfig instance (tùy chọn, truyền cho features)
+            wamm_classifier: Không sử dụng (giữ lại để tương thích ngược).
         """
         self.config = config
 

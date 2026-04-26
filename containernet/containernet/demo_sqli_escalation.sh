@@ -24,8 +24,11 @@ NC='\033[0m'
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 demo_curl() {
+    # --connect-timeout 2: TCP handshake không quá 2s (tránh hang khi attacker bị Block iptables DROP)
+    # --max-time 5: tổng request không quá 5s
     SSLKEYLOGFILE=/tmp/tls_keys.log curl -sk \
         --http1.1 --no-sessionid --no-keepalive \
+        --connect-timeout 2 --max-time 5 \
         -H 'Connection: close' -H 'Cache-Control: no-cache' \
         "$@"
 }
@@ -169,7 +172,6 @@ wait_for_block() {
             echo -e "  \033[2m  • Sniffer vẫn thấy SYN từ attacker vì capture trước iptables DROP\033[0m"
             echo ""
             echo -e "  \033[1;31mVerify: curl thử ngay bây giờ → không có response = BLOCKED ✓\033[0m"
-            sleep 5
             return 0
         fi
     done
@@ -275,8 +277,9 @@ echo -e "${DIM}  Đó là Override 1 ngăn Block khi chưa đủ bằng chứng.
 echo -e "${DIM}  Khi score ≥ 0.60, Override 1 nhường cho RL tự quyết.${NC}"
 echo ""
 
-# Chạy sqlmap ngầm
-SSLKEYLOGFILE=/tmp/tls_keys.log sqlmap \
+# Chạy sqlmap ngầm — dùng setsid để sqlmap chạy trong process group riêng
+# → có thể kill cả group bằng -PGID, không bị orphan processes
+SSLKEYLOGFILE=/tmp/tls_keys.log setsid sqlmap \
     -u "$WEB/?search=test" \
     --batch --level=1 --risk=1 \
     --ignore-code=401 --no-cast \
@@ -285,10 +288,19 @@ SSLKEYLOGFILE=/tmp/tls_keys.log sqlmap \
     > /tmp/sqlmap_demo.log 2>&1 &
 SQLMAP_PID=$!
 
-# Đảm bảo sqlmap bị kill khi script thoát (Ctrl+C, kill, hoặc kết thúc bình thường)
-trap 'kill "$SQLMAP_PID" 2>/dev/null; wait "$SQLMAP_PID" 2>/dev/null' EXIT INT TERM
+# Cleanup function — kill cả process group bằng SIGKILL, không wait (tránh hang)
+cleanup_sqlmap() {
+    if [ -n "$SQLMAP_PID" ] && kill -0 "$SQLMAP_PID" 2>/dev/null; then
+        # Kill cả process group (-PGID = âm của PID khi setsid)
+        kill -9 -- -"$SQLMAP_PID" 2>/dev/null
+        # Backup: kill bằng tên (catch các sqlmap.py còn sót)
+        pkill -9 -f "sqlmap.*search=test" 2>/dev/null
+    fi
+    SQLMAP_PID=""
+}
+trap 'cleanup_sqlmap' EXIT INT TERM
 
-echo -e "${DIM}sqlmap chạy ngầm (PID=$SQLMAP_PID)${NC}"
+echo -e "${DIM}sqlmap chạy ngầm (PID=$SQLMAP_PID, process group)${NC}"
 echo -e "${DIM}Chi tiết sqlmap: tail -f /tmp/sqlmap_demo.log${NC}"
 echo ""
 echo "Theo dõi AI state (cập nhật mỗi 2s)..."
@@ -297,9 +309,9 @@ echo ""
 wait_for_block 120
 BLOCK_RESULT=$?
 
-kill "$SQLMAP_PID" 2>/dev/null
-wait "$SQLMAP_PID" 2>/dev/null
-trap - EXIT INT TERM   # reset trap sau khi đã kill thủ công
+# Cleanup ngay sau khi Block detected
+cleanup_sqlmap
+trap - EXIT INT TERM
 
 # ── KẾT QUẢ ──────────────────────────────────────────────────────────────────
 echo ""
