@@ -38,7 +38,7 @@ class FeatureBase(ABC):
     Attributes:
         metadata: FeatureMetadata mô tả đặc trưng này
         config: Đối tượng cấu hình NIDSConfig
-        dependencies: Dict các phụ thuộc được inject (ví dụ: payload_scorer, wamm_classifier)
+        dependencies: Dict các phụ thuộc được inject (ví dụ: payload_scorer)
     
     Example:
         @register_feature(FeatureMetadata(
@@ -60,8 +60,7 @@ class FeatureBase(ABC):
         Args:
             config: Phiên bản NIDSConfig (nếu None, sẽ sử dụng mặc định)
             dependencies: Dict của các phụ thuộc được inject
-                Ví dụ: {"payload_scorer": PayloadContextScorer(), 
-                        "wamm_classifier": WammClassifier()}
+                Ví dụ: {"payload_scorer": PayloadContextScorer()}
         """
         self.config = config
         self.dependencies = dependencies or {}

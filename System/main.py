@@ -45,7 +45,6 @@ from core.packet_queue import PacketQueue
 from core.sniffer import NetworkSniffer
 from core.tshark_l7 import TsharkL7Reader, enrich_flows_with_tshark
 from feature.calculator import FlowFeatureCalculator
-from feature.wamm_classifier import WammClassifier
 
 scapy_conf.checkIPaddr = False
 
@@ -186,8 +185,7 @@ def _run_realtime(interface: str, window_size: float, output_file: str,
     packet_queue = PacketQueue(max_size=DEFAULT_CONFIG.MAX_QUEUE_SIZE)
     parser       = PacketLayerExtractor()
     flow_manager = FlowManager(window_size=window_size)
-    wamm         = WammClassifier()
-    calc         = FlowFeatureCalculator(wamm_classifier=wamm)
+    calc         = FlowFeatureCalculator()
     sniffer      = NetworkSniffer()
     lock         = threading.Lock()
     stats        = {
