@@ -1,0 +1,1255 @@
+================================================================================
+SPOT VERIFICATION — Raw F1-F20 values per class
+================================================================================
+
+Mục đích: hội đồng đọc trực tiếp giá trị features trên sample rows,
+verify rằng F-values khớp với design intent.
+
+================================================================================
+DATASET: CSE-CIC-IDS2018 (Thursday-22-02-2018)
+================================================================================
+
+--- Class: BENIGN  (sampled 5 rows from 500 total) ---
+
+  Row #1: src_ip=209.126.136.5  ts=1519314402.64  day=2018
+    F1 - PacketRate              =     2.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.5000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=202.52.12.218  ts=1519306967.64  day=2018
+    F1 - PacketRate              =     4.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     2.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.7699 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.5000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=77.72.82.145  ts=1519304842.64  day=2018
+    F1 - PacketRate              =     3.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.2741 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.6667 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=141.212.122.131  ts=1519321761.64  day=2018
+    F1 - PacketRate              =     2.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.5000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=183.91.7.93  ts=1519328387.64  day=2018
+    F1 - PacketRate              =     2.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.5000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: BRUTE_FORCE  (sampled 5 rows from 3940 total) ---
+
+  Row #1: src_ip=18.218.115.60  ts=1519312942.64  day=2018
+    F1 - PacketRate              =     5.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0386 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =   103.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.5000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     3.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0129 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     1.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=18.218.115.60  ts=1519309466.64  day=2018
+    F1 - PacketRate              =     5.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0355 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =   103.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.5000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     3.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0129 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     1.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=18.218.115.60  ts=1519311168.64  day=2018
+    F1 - PacketRate              =     4.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0060 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =   154.5000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0129 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     1.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=18.218.115.60  ts=1519312098.64  day=2018
+    F1 - PacketRate              =     5.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0405 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =   103.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.5000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     3.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0129 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     1.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=18.218.115.60  ts=1519311998.64  day=2018
+    F1 - PacketRate              =     5.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0334 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =   103.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.5000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     3.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0129 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     1.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: SQLI  (sampled 5 rows from 49 total) ---
+
+  Row #1: src_ip=18.218.115.60  ts=1519330767.64  day=2018
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0023 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    42.2500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0255 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =    11.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     1.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     1.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=18.218.115.60  ts=1519330920.64  day=2018
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0192 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    49.2500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0157 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =    11.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     1.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     1.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=18.218.115.60  ts=1519330732.64  day=2018
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0045 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    39.2500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0268 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     8.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     1.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     1.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=18.218.115.60  ts=1519330709.64  day=2018
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0004 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=18.218.115.60  ts=1519330616.64  day=2018
+    F1 - PacketRate              =     1.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: XSS  (sampled 5 rows from 2202 total) ---
+
+  Row #1: src_ip=18.218.115.60  ts=1519323137.64  day=2018
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.1100 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    98.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0219 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     3.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.5000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=18.218.115.60  ts=1519322438.64  day=2018
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0416 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    98.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0219 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     3.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.5000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=18.218.115.60  ts=1519322929.64  day=2018
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0657 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    98.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0219 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     3.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.5000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=18.218.115.60  ts=1519322913.64  day=2018
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0418 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    98.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0219 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     3.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.5000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=18.218.115.60  ts=1519323746.64  day=2018
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0575 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    98.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0219 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     3.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.5000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+================================================================================
+DATASET: CIC-IDS2017 (3 days)
+================================================================================
+
+--- Class: BENIGN  (sampled 5 rows from 600 total) ---
+
+  Row #1: src_ip=204.44.79.1  ts=1499429152.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =     5.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0398 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.5000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     3.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=192.168.10.51  ts=1499349397.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    12.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0003 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     8.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=192.168.10.15  ts=1499429632.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =  3464.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0008 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0006 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     2.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0645 bytes    varies
+    F10 - FwdBwdRatio            =     0.7539 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =   744.5000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=192.168.10.51  ts=1499349327.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    38.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     2.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     9.5000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=104.16.24.216  ts=1499350100.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     3.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0154 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: BRUTE_FORCE  (sampled 5 rows from 2306 total) ---
+
+  Row #1: src_ip=172.16.0.1  ts=1499345941.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    15.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0399 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.7500 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.4411 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.6817 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    47.2000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    10.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0169 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.5000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=172.16.0.1  ts=1499343909.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    17.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0315 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.7500 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.4414 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.6817 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    47.2000 bytes    varies
+    F10 - FwdBwdRatio            =     1.4286 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    10.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0169 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.5000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=172.16.0.1  ts=1499344906.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    15.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0079 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.5000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    17.7000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    10.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0226 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=172.16.0.1  ts=1499345449.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    21.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0301 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.7500 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.4481 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.6817 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    33.7143 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    14.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0169 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.5000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=172.16.0.1  ts=1499345389.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    17.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0318 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.7500 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.4386 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.6817 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    42.9091 bytes    varies
+    F10 - FwdBwdRatio            =     1.8333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    11.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0169 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.5000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: SCAN_FW_OFF  (sampled 5 rows from 332 total) ---
+
+  Row #1: src_ip=172.16.0.1  ts=1499450131.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =  3040.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   151.2000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0004 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.4961 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =   996.0000 count    >50 → port scan ★ port scan signal
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0159 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.5382 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=172.16.0.1  ts=1499451728.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =    20.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0058 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0500 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     3.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0909 bytes    varies
+    F10 - FwdBwdRatio            =     1.2222 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     3.6667 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=172.16.0.1  ts=1499450114.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =  3986.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   198.4000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0004 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.4972 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =   997.0000 count    >50 → port scan ★ port scan signal
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0111 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0100 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=172.16.0.1  ts=1499450088.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =  3984.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   198.3000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0004 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.4972 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =   997.0000 count    >50 → port scan ★ port scan signal
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0111 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0090 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=172.16.0.1  ts=1499449958.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =  1992.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   198.8000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0005 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.4985 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =   994.0000 count    >50 → port scan ★ port scan signal
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0060 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0050 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: SCAN_FW_ON  (sampled 5 rows from 257 total) ---
+
+  Row #1: src_ip=172.16.0.1  ts=1499446792.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =    10.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.5000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0003 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.3000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     3.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.3333 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=172.16.0.1  ts=1499446608.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =     2.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.5000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=172.16.0.1  ts=1499446768.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     2.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0004 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.3333 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     2.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     2.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=172.16.0.1  ts=1499446754.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =     2.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.5000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=172.16.0.1  ts=1499447688.71  day=Friday-07-07-2017-PortScan
+    F1 - PacketRate              =     8.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.5000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0008 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.3750 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal ★ port scan signal
+    F5 - DistinctPorts           =     3.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =     1.6667 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     1.6667 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: SQLI  (sampled 5 rows from 22 total) ---
+
+  Row #1: src_ip=172.16.0.1  ts=1499348413.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0230 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    32.2500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0325 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     6.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=172.16.0.1  ts=1499348506.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0023 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    42.7500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0258 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =    14.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     1.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     1.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=172.16.0.1  ts=1499348513.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     9.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0031 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    38.4000 bytes    varies
+    F10 - FwdBwdRatio            =     1.2500 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     5.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0217 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =    12.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     1.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     1.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=172.16.0.1  ts=1499348422.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0114 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    42.7500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0258 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =    14.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     1.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     1.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=172.16.0.1  ts=1499348494.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     7.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0017 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    32.2500 bytes    varies
+    F10 - FwdBwdRatio            =     1.3333 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0325 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     6.0000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     1.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: SYN_FLOOD  (sampled 5 rows from 1169 total) ---
+
+  Row #1: src_ip=172.16.0.1  ts=1499454833.80  day=Friday-07-07-2017-DDoS
+    F1 - PacketRate              =   225.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   225.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =   225.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =   225.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=172.16.0.1  ts=1499454700.80  day=Friday-07-07-2017-DDoS
+    F1 - PacketRate              =   150.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   150.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =   150.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =   150.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=172.16.0.1  ts=1499454310.80  day=Friday-07-07-2017-DDoS
+    F1 - PacketRate              =   188.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   188.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =   188.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =   188.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=172.16.0.1  ts=1499454921.80  day=Friday-07-07-2017-DDoS
+    F1 - PacketRate              =   150.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   150.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =   150.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =   150.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=172.16.0.1  ts=1499454582.80  day=Friday-07-07-2017-DDoS
+    F1 - PacketRate              =   156.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =   156.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0000 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     0.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =     0.0000 bytes    varies
+    F10 - FwdBwdRatio            =   156.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =   156.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0000 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+
+--- Class: XSS  (sampled 5 rows from 1136 total) ---
+
+  Row #1: src_ip=172.16.0.1  ts=1499347013.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0838 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    83.5000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0260 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     2.5000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.0000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #2: src_ip=172.16.0.1  ts=1499347527.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    19.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0357 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    27.8333 bytes    varies
+    F10 - FwdBwdRatio            =     1.7143 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    12.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0260 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     2.5000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.0000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #3: src_ip=172.16.0.1  ts=1499347583.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =    19.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     1.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0376 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    27.8333 bytes    varies
+    F10 - FwdBwdRatio            =     1.7143 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =    12.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0260 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     2.5000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.0000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #4: src_ip=172.16.0.1  ts=1499347808.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0898 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    83.5000 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0260 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     2.5000 count    >3 → SQLi (CRS-942 PL2) ★ SQLi signal
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     2.0000 count    >3 → XSS (CRS-941 PL2) ★ XSS signal
+    F19 - JsFunctionCall         =     1.0000 {0,1}    1 → alert()/eval() detected ★ JS function call
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected
+
+  Row #5: src_ip=172.16.0.1  ts=1499347139.88  day=Thursday-06-07-2017
+    F1 - PacketRate              =     6.0000 pkts/s   high → DDoS/scan; low → normal
+    F2 - SynAckRatio             =     0.0000 ratio    high → SYN flood; ~0 → normal
+    F3 - InterArrivalTime        =     0.0022 s        low → bot/automated; high → human
+    F4 - RstRatio                =     0.0000 [0,1]    >0.3 → port scan; ~0 → L7 attack/normal
+    F5 - DistinctPorts           =     1.0000 count    >50 → port scan
+    F6 - URLConcentration        =     1.0000 [0,1]    >0.9 → brute force on 1 URL
+    F7 - HttpIatUniformity       =     0.0000 (0,1]    ~1 → bot timing
+    F8 - RequestSizeUniformity   =     0.0000 (0,1]    ~1 → bot payload
+    F9 - AvgPayloadSize          =    23.7500 bytes    varies
+    F10 - FwdBwdRatio            =     2.0000 ratio    high → unidirectional flood
+    F11 - PacketsPerPort         =     4.0000 ratio    
+    F12 - SqlSpecialChar         =     0.0211 [0,1]    >0.15 → SQLi
+    F13 - CrsSqliScore           =     0.0000 count    >3 → SQLi (CRS-942 PL2)
+    F14 - SqlUnionSelect         =     0.0000 {0,1}    1 → UNION SELECT detected
+    F15 - SqlComment             =     0.0000 {0,1}    1 → SQL comment detected
+    F16 - SqlStackedQuery        =     0.0000 {0,1}    1 → ; DROP/DELETE detected
+    F17 - SqlSelectCount         =     0.0000 count    >1 → multiple SELECTs
+    F18 - CrsXssScore            =     0.0000 count    >3 → XSS (CRS-941 PL2)
+    F19 - JsFunctionCall         =     0.0000 {0,1}    1 → alert()/eval() detected
+    F20 - HtmlEventHandler       =     0.0000 {0,1}    1 → onerror=/onload= detected

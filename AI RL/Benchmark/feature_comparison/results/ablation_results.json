@@ -1,0 +1,4340 @@
+{
+  "metadata": {
+    "purpose": "Validate that each feature group c\u00f3 vai tr\u00f2 trong 20D feature set",
+    "classifier": "rf",
+    "n_seeds": 3,
+    "n_folds": 3,
+    "feature_groups": {
+      "Network_F1_F5_F9_F11": [
+        "F1 - PacketRate",
+        "F2 - SynAckRatio",
+        "F3 - InterArrivalTime",
+        "F4 - RstRatio",
+        "F5 - DistinctPorts",
+        "F9 - AvgPayloadSize",
+        "F10 - FwdBwdRatio",
+        "F11 - PacketsPerPort"
+      ],
+      "Application_F6_F8": [
+        "F6 - URLConcentration",
+        "F7 - HttpIatUniformity",
+        "F8 - RequestSizeUniformity"
+      ],
+      "SQLi_F12_F17": [
+        "F12 - SqlSpecialChar",
+        "F13 - CrsSqliScore",
+        "F14 - SqlUnionSelect",
+        "F15 - SqlComment",
+        "F16 - SqlStackedQuery",
+        "F17 - SqlSelectCount"
+      ],
+      "XSS_F18_F20": [
+        "F18 - CrsXssScore",
+        "F19 - JsFunctionCall",
+        "F20 - HtmlEventHandler"
+      ]
+    }
+  },
+  "summary": {
+    "full_20d": {
+      "n_features": 20,
+      "f1_macro_mean": 0.9579664576463716,
+      "f1_macro_std": 0.030952938688359664,
+      "per_class_f1_mean": {
+        "benign": 0.9861122347563333,
+        "brute_force": 0.9981765785119655,
+        "sqli": 0.8498404100265249,
+        "xss": 0.9977366072906625
+      },
+      "per_class_f1_std": {
+        "benign": 0.005536805857927795,
+        "brute_force": 0.0011020361369084223,
+        "sqli": 0.11451729323253489,
+        "xss": 0.0008359107881707172
+      }
+    },
+    "minus_Application_F6_F8": {
+      "n_features": 17,
+      "f1_macro_mean": 0.9505636717941859,
+      "f1_macro_std": 0.04441157867909331,
+      "per_class_f1_mean": {
+        "benign": 0.9864166473497957,
+        "brute_force": 0.9984756061299633,
+        "sqli": 0.820520977396224,
+        "xss": 0.9968414563007606
+      },
+      "per_class_f1_std": {
+        "benign": 0.0058187156526398965,
+        "brute_force": 0.0005057890087463029,
+        "sqli": 0.16392940170983958,
+        "xss": 0.0026567352410716066
+      },
+      "drop_macro_f1": 0.007402785852185678,
+      "per_class_drop": {
+        "benign": -0.0003044125934624775,
+        "brute_force": -0.00029902761799782684,
+        "sqli": 0.0293194326303009,
+        "xss": 0.0008951509899018939
+      }
+    },
+    "minus_Network_F1_F5_F9_F11": {
+      "n_features": 12,
+      "f1_macro_mean": 0.9251394090494812,
+      "f1_macro_std": 0.05967999620187915,
+      "per_class_f1_mean": {
+        "benign": 0.9727873954716989,
+        "brute_force": 0.9986996135196065,
+        "sqli": 0.7321543226421275,
+        "xss": 0.996916304564492
+      },
+      "per_class_f1_std": {
+        "benign": 0.009685653432819536,
+        "brute_force": 0.0004693978747762636,
+        "sqli": 0.21790797655512287,
+        "xss": 0.0030285014772573706
+      },
+      "drop_macro_f1": 0.03282704859689034,
+      "per_class_drop": {
+        "benign": 0.013324839284634349,
+        "brute_force": -0.0005230350076409485,
+        "sqli": 0.11768608738439734,
+        "xss": 0.0008203027261705076
+      }
+    },
+    "minus_SQLi_F12_F17": {
+      "n_features": 14,
+      "f1_macro_mean": 0.9452213462415797,
+      "f1_macro_std": 0.023248853605448174,
+      "per_class_f1_mean": {
+        "benign": 0.9850640495331775,
+        "brute_force": 0.9980861051652936,
+        "sqli": 0.7999595765563037,
+        "xss": 0.9977756537115438
+      },
+      "per_class_f1_std": {
+        "benign": 0.006765687856529223,
+        "brute_force": 0.0006437693359449483,
+        "sqli": 0.08561397562984392,
+        "xss": 0.0006696062453839738
+      },
+      "drop_macro_f1": 0.012745111404791842,
+      "per_class_drop": {
+        "benign": 0.001048185223155751,
+        "brute_force": 9.047334667189322e-05,
+        "sqli": 0.04988083347022121,
+        "xss": -3.904642088126131e-05
+      }
+    },
+    "minus_XSS_F18_F20": {
+      "n_features": 17,
+      "f1_macro_mean": 0.9448371369777154,
+      "f1_macro_std": 0.043791035689567596,
+      "per_class_f1_mean": {
+        "benign": 0.9871031365263997,
+        "brute_force": 0.999029534020847,
+        "sqli": 0.7968708370954307,
+        "xss": 0.9963450402681845
+      },
+      "per_class_f1_std": {
+        "benign": 0.005505825842602754,
+        "brute_force": 0.0006008175192484855,
+        "sqli": 0.16095136051208095,
+        "xss": 0.0029238728414548703
+      },
+      "drop_macro_f1": 0.01312932066865613,
+      "per_class_drop": {
+        "benign": -0.0009909017700664435,
+        "brute_force": -0.0008529555088815366,
+        "sqli": 0.05296957293109417,
+        "xss": 0.001391567022478002
+      }
+    }
+  },
+  "all_runs": [
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 20,
+      "train_time_sec": 0.5927040576934814,
+      "predict_time_ms_per_sample": 0.039504387623416314,
+      "f1_macro": 0.8910620791430255,
+      "f1_weighted": 0.9908500452800774,
+      "precision_macro": 0.9667833172429571,
+      "recall_macro": 0.8573237080753037,
+      "accuracy": 0.9919318691169879,
+      "confusion_matrix": [
+        [
+          153,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1292,
+          1,
+          1
+        ],
+        [
+          3,
+          9,
+          10,
+          1
+        ],
+        [
+          2,
+          1,
+          0,
+          758
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9683544303797469,
+          "recall": 1.0,
+          "f1-score": 0.9839228295819936,
+          "support": 153.0
+        },
+        "brute_force": {
+          "precision": 0.9923195084485407,
+          "recall": 0.9984544049459042,
+          "f1-score": 0.9953775038520801,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.9090909090909091,
+          "recall": 0.43478260869565216,
+          "f1-score": 0.5882352941176471,
+          "support": 23.0
+        },
+        "xss": {
+          "precision": 0.9973684210526316,
+          "recall": 0.9960578186596584,
+          "f1-score": 0.9967126890203813,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997839577270826,
+      "feature_importance": {
+        "F1 - PacketRate": 0.028387031445022304,
+        "F2 - SynAckRatio": 0.055401464201228885,
+        "F3 - InterArrivalTime": 0.07904752761783443,
+        "F4 - RstRatio": 0.08502770614927285,
+        "F5 - DistinctPorts": 0.00029578480049798154,
+        "F6 - URLConcentration": 0.05560584409892288,
+        "F7 - HttpIatUniformity": 0.0002571173681846174,
+        "F8 - RequestSizeUniformity": 0.0007680090750912357,
+        "F9 - AvgPayloadSize": 0.142547015598198,
+        "F10 - FwdBwdRatio": 0.04708529775473213,
+        "F11 - PacketsPerPort": 0.022817544815026635,
+        "F12 - SqlSpecialChar": 0.11579192489277255,
+        "F13 - CrsSqliScore": 0.0986320062093285,
+        "F14 - SqlUnionSelect": 0.03884482705869121,
+        "F15 - SqlComment": 0.010973478134501048,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.04931793703711568,
+        "F18 - CrsXssScore": 0.09666406353268739,
+        "F19 - JsFunctionCall": 0.07253542021089167,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 20,
+      "train_time_sec": 0.5826826095581055,
+      "predict_time_ms_per_sample": 0.0439096459358797,
+      "f1_macro": 0.9863988691126401,
+      "f1_weighted": 0.997776189462848,
+      "precision_macro": 0.9748520710059172,
+      "recall_macro": 0.9987872355438476,
+      "accuracy": 0.9977578475336323,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1206,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          842
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9763313609467456,
+          "recall": 1.0,
+          "f1-score": 0.9880239520958084,
+          "support": 165.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9975186104218362,
+          "f1-score": 0.9987577639751553,
+          "support": 1209.0
+        },
+        "sqli": {
+          "precision": 0.9230769230769231,
+          "recall": 1.0,
+          "f1-score": 0.96,
+          "support": 12.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9976303317535545,
+          "f1-score": 0.9988137603795967,
+          "support": 844.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.999880500002057,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03289237158980255,
+        "F2 - SynAckRatio": 0.05721209978359505,
+        "F3 - InterArrivalTime": 0.08989601480127118,
+        "F4 - RstRatio": 0.0841287739895013,
+        "F5 - DistinctPorts": 3.198955249226062e-05,
+        "F6 - URLConcentration": 0.059677449468225785,
+        "F7 - HttpIatUniformity": 0.00018086776839719944,
+        "F8 - RequestSizeUniformity": 0.000939607917115816,
+        "F9 - AvgPayloadSize": 0.1701379807002587,
+        "F10 - FwdBwdRatio": 0.04894476518356168,
+        "F11 - PacketsPerPort": 0.027843261987600804,
+        "F12 - SqlSpecialChar": 0.11610455028952077,
+        "F13 - CrsSqliScore": 0.09889324685353727,
+        "F14 - SqlUnionSelect": 0.0039794467351039866,
+        "F15 - SqlComment": 0.0321931897068578,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0031711746083776344,
+        "F18 - CrsXssScore": 0.08596917179965921,
+        "F19 - JsFunctionCall": 0.08780403726512104,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 20,
+      "train_time_sec": 0.5648465156555176,
+      "predict_time_ms_per_sample": 0.043136228894973545,
+      "f1_macro": 0.9738677332894237,
+      "f1_weighted": 0.9978202768237492,
+      "precision_macro": 0.9555344058291375,
+      "recall_macro": 0.9964860396716966,
+      "accuracy": 0.9977578475336323,
+      "confusion_matrix": [
+        [
+          180,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1435,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          14,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          596
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.989010989010989,
+          "f1-score": 0.994475138121547,
+          "support": 182.0
+        },
+        "brute_force": {
+          "precision": 0.9986082115518441,
+          "recall": 0.9986082115518441,
+          "f1-score": 0.9986082115518441,
+          "support": 1437.0
+        },
+        "sqli": {
+          "precision": 0.8235294117647058,
+          "recall": 1.0,
+          "f1-score": 0.9032258064516129,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.998324958123953,
+          "f1-score": 0.9991617770326907,
+          "support": 597.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997639379306109,
+      "feature_importance": {
+        "F1 - PacketRate": 0.038939113017602674,
+        "F2 - SynAckRatio": 0.06649117076788129,
+        "F3 - InterArrivalTime": 0.07549913353917885,
+        "F4 - RstRatio": 0.09027737611792758,
+        "F5 - DistinctPorts": 0.00036263408877968366,
+        "F6 - URLConcentration": 0.05396222639165162,
+        "F7 - HttpIatUniformity": 0.00011550703860772607,
+        "F8 - RequestSizeUniformity": 0.0019569099540339154,
+        "F9 - AvgPayloadSize": 0.169753190572163,
+        "F10 - FwdBwdRatio": 0.05402309611566206,
+        "F11 - PacketsPerPort": 0.03412054970789938,
+        "F12 - SqlSpecialChar": 0.11683599356608491,
+        "F13 - CrsSqliScore": 0.08156089468367708,
+        "F14 - SqlUnionSelect": 0.0026449388775706788,
+        "F15 - SqlComment": 0.029734068448416265,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.002584621730877864,
+        "F18 - CrsXssScore": 0.09081277146332427,
+        "F19 - JsFunctionCall": 0.09032580391866137,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 20,
+      "train_time_sec": 0.5666861534118652,
+      "predict_time_ms_per_sample": 0.04387382753544033,
+      "f1_macro": 0.9624574183330787,
+      "f1_weighted": 0.9958668457957767,
+      "precision_macro": 0.9793723531478997,
+      "recall_macro": 0.9489858002159678,
+      "accuracy": 0.9959659345584939,
+      "confusion_matrix": [
+        [
+          151,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1232,
+          1,
+          1
+        ],
+        [
+          3,
+          2,
+          20,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          819
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.967948717948718,
+          "recall": 1.0,
+          "f1-score": 0.9837133550488599,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 0.9983792544570502,
+          "recall": 0.9983792544570502,
+          "f1-score": 0.9983792544570502,
+          "support": 1234.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.998780487804878,
+          "recall": 0.997563946406821,
+          "f1-score": 0.9981718464351006,
+          "support": 821.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9948215507926954,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03257331613709399,
+        "F2 - SynAckRatio": 0.036902856697900714,
+        "F3 - InterArrivalTime": 0.08294489257946486,
+        "F4 - RstRatio": 0.07047475273580796,
+        "F5 - DistinctPorts": 7.58820482385456e-06,
+        "F6 - URLConcentration": 0.06645633974843025,
+        "F7 - HttpIatUniformity": 0.00023023636603305406,
+        "F8 - RequestSizeUniformity": 0.000781580291857695,
+        "F9 - AvgPayloadSize": 0.18108553103246308,
+        "F10 - FwdBwdRatio": 0.05853596908350411,
+        "F11 - PacketsPerPort": 0.02633134614755475,
+        "F12 - SqlSpecialChar": 0.1068484234699554,
+        "F13 - CrsSqliScore": 0.13170844344371807,
+        "F14 - SqlUnionSelect": 0.029600904887213855,
+        "F15 - SqlComment": 0.00888609999305891,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.023370192422786287,
+        "F18 - CrsXssScore": 0.07324780785547128,
+        "F19 - JsFunctionCall": 0.07001371890286205,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 20,
+      "train_time_sec": 0.5675187110900879,
+      "predict_time_ms_per_sample": 0.043161888293621255,
+      "f1_macro": 0.9859347100530591,
+      "f1_weighted": 0.9968902143938254,
+      "precision_macro": 0.9744575936883629,
+      "recall_macro": 0.9981505395231033,
+      "accuracy": 0.9968609865470852,
+      "confusion_matrix": [
+        [
+          163,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          1385,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          14,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          661
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9644970414201184,
+          "recall": 1.0,
+          "f1-score": 0.9819277108433735,
+          "support": 163.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9971202303815695,
+          "f1-score": 0.9985580389329488,
+          "support": 1389.0
+        },
+        "sqli": {
+          "precision": 0.9333333333333333,
+          "recall": 1.0,
+          "f1-score": 0.9655172413793104,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9954819277108434,
+          "f1-score": 0.9977358490566037,
+          "support": 664.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998713120342777,
+      "feature_importance": {
+        "F1 - PacketRate": 0.035532656286686976,
+        "F2 - SynAckRatio": 0.05132448177053343,
+        "F3 - InterArrivalTime": 0.09546453100037983,
+        "F4 - RstRatio": 0.08894387200866918,
+        "F5 - DistinctPorts": 0.0003365649606898155,
+        "F6 - URLConcentration": 0.05895662707655787,
+        "F7 - HttpIatUniformity": 0.00022189825478621672,
+        "F8 - RequestSizeUniformity": 0.0008986467074617874,
+        "F9 - AvgPayloadSize": 0.16540239991783115,
+        "F10 - FwdBwdRatio": 0.05247770246268341,
+        "F11 - PacketsPerPort": 0.023226904477853794,
+        "F12 - SqlSpecialChar": 0.1259762245969134,
+        "F13 - CrsSqliScore": 0.10863167124971515,
+        "F14 - SqlUnionSelect": 0.0057804332400100125,
+        "F15 - SqlComment": 0.03380730796282085,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.005675678228292779,
+        "F18 - CrsXssScore": 0.06930115254584096,
+        "F19 - JsFunctionCall": 0.07804124725227334,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 20,
+      "train_time_sec": 0.6027629375457764,
+      "predict_time_ms_per_sample": 0.044395677711931585,
+      "f1_macro": 0.9280240777733858,
+      "f1_weighted": 0.9960773567681505,
+      "precision_macro": 0.9154007040116398,
+      "recall_macro": 0.9437364804835753,
+      "accuracy": 0.9959641255605381,
+      "confusion_matrix": [
+        [
+          182,
+          1,
+          3,
+          0
+        ],
+        [
+          0,
+          1316,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          2
+        ],
+        [
+          0,
+          2,
+          0,
+          715
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.978494623655914,
+          "f1-score": 0.9891304347826086,
+          "support": 186.0
+        },
+        "brute_force": {
+          "precision": 0.9977255496588324,
+          "recall": 0.9992406985573272,
+          "f1-score": 0.9984825493171472,
+          "support": 1317.0
+        },
+        "sqli": {
+          "precision": 0.6666666666666666,
+          "recall": 0.8,
+          "f1-score": 0.7272727272727273,
+          "support": 10.0
+        },
+        "xss": {
+          "precision": 0.99721059972106,
+          "recall": 0.99721059972106,
+          "f1-score": 0.99721059972106,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.999857806373167,
+      "feature_importance": {
+        "F1 - PacketRate": 0.05111429377230947,
+        "F2 - SynAckRatio": 0.06483969823767398,
+        "F3 - InterArrivalTime": 0.07200963468567355,
+        "F4 - RstRatio": 0.09437828962039294,
+        "F5 - DistinctPorts": 0.0004430992644687004,
+        "F6 - URLConcentration": 0.06459934230333202,
+        "F7 - HttpIatUniformity": 0.00023950127745285362,
+        "F8 - RequestSizeUniformity": 0.0018236320590943583,
+        "F9 - AvgPayloadSize": 0.17304891407935594,
+        "F10 - FwdBwdRatio": 0.06254672023452156,
+        "F11 - PacketsPerPort": 0.025823705800711822,
+        "F12 - SqlSpecialChar": 0.11982767805035512,
+        "F13 - CrsSqliScore": 0.10468784521963055,
+        "F14 - SqlUnionSelect": 0.003981377797336209,
+        "F15 - SqlComment": 0.011565558654174683,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.003054694966316305,
+        "F18 - CrsXssScore": 0.06399205335120174,
+        "F19 - JsFunctionCall": 0.08202396062599814,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 20,
+      "train_time_sec": 0.563091516494751,
+      "predict_time_ms_per_sample": 0.04321296671376213,
+      "f1_macro": 0.9605507632349848,
+      "f1_weighted": 0.9949776635238899,
+      "precision_macro": 0.9774361256539884,
+      "recall_macro": 0.947107742492251,
+      "accuracy": 0.9950694755714926,
+      "confusion_matrix": [
+        [
+          150,
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          1291,
+          1,
+          1
+        ],
+        [
+          3,
+          2,
+          20,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9615384615384616,
+          "recall": 0.9933774834437086,
+          "f1-score": 0.9771986970684039,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 0.9984532095901005,
+          "recall": 0.9976816074188563,
+          "f1-score": 0.998067259373792,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9973718791064389,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9973718791064389,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9947848838061721,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03770492294951791,
+        "F2 - SynAckRatio": 0.04829797023200576,
+        "F3 - InterArrivalTime": 0.08510005481412954,
+        "F4 - RstRatio": 0.08374036804829829,
+        "F5 - DistinctPorts": 1.0698079209707288e-05,
+        "F6 - URLConcentration": 0.056108182417502955,
+        "F7 - HttpIatUniformity": 0.00011936704572044033,
+        "F8 - RequestSizeUniformity": 0.0010599498767090484,
+        "F9 - AvgPayloadSize": 0.14776338953694534,
+        "F10 - FwdBwdRatio": 0.05195807683627483,
+        "F11 - PacketsPerPort": 0.0306246127828082,
+        "F12 - SqlSpecialChar": 0.12330745417929598,
+        "F13 - CrsSqliScore": 0.10156804076449928,
+        "F14 - SqlUnionSelect": 0.012276839409706097,
+        "F15 - SqlComment": 0.024432925321748414,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.031166577989487795,
+        "F18 - CrsXssScore": 0.0825852001718998,
+        "F19 - JsFunctionCall": 0.08217536954424075,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 20,
+      "train_time_sec": 0.5986080169677734,
+      "predict_time_ms_per_sample": 0.04364257436162153,
+      "f1_macro": 0.9551034409675151,
+      "f1_weighted": 0.9960262328911134,
+      "precision_macro": 0.9461250311523313,
+      "recall_macro": 0.9652691508566986,
+      "accuracy": 0.9959641255605381,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          1319,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          16,
+          2
+        ],
+        [
+          2,
+          1,
+          0,
+          721
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9880239520958084,
+          "recall": 0.9763313609467456,
+          "f1-score": 0.9821428571428571,
+          "support": 169.0
+        },
+        "brute_force": {
+          "precision": 0.9992424242424243,
+          "recall": 1.0,
+          "f1-score": 0.9996210685865858,
+          "support": 1319.0
+        },
+        "sqli": {
+          "precision": 0.8,
+          "recall": 0.8888888888888888,
+          "f1-score": 0.8421052631578947,
+          "support": 18.0
+        },
+        "xss": {
+          "precision": 0.9972337482710927,
+          "recall": 0.9958563535911602,
+          "f1-score": 0.9965445749827229,
+          "support": 724.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997835912257342,
+      "feature_importance": {
+        "F1 - PacketRate": 0.04144273522909902,
+        "F2 - SynAckRatio": 0.06926480331334166,
+        "F3 - InterArrivalTime": 0.080758930870652,
+        "F4 - RstRatio": 0.08329206517845973,
+        "F5 - DistinctPorts": 0.00046714975025564145,
+        "F6 - URLConcentration": 0.06853000200517215,
+        "F7 - HttpIatUniformity": 0.000293088567251094,
+        "F8 - RequestSizeUniformity": 0.0019705493268932952,
+        "F9 - AvgPayloadSize": 0.16983584216516687,
+        "F10 - FwdBwdRatio": 0.05625393138221168,
+        "F11 - PacketsPerPort": 0.023199793442234013,
+        "F12 - SqlSpecialChar": 0.12517167696598258,
+        "F13 - CrsSqliScore": 0.10420752996146772,
+        "F14 - SqlUnionSelect": 0.003141105804451146,
+        "F15 - SqlComment": 0.015892995621986192,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0017904423729435096,
+        "F18 - CrsXssScore": 0.06792876788722087,
+        "F19 - JsFunctionCall": 0.08655859015521085,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 20,
+      "train_time_sec": 0.5717642307281494,
+      "predict_time_ms_per_sample": 0.039549793363152064,
+      "f1_macro": 0.978299026910231,
+      "f1_weighted": 0.9973276579380457,
+      "precision_macro": 0.9608119410367223,
+      "recall_macro": 0.9985490704276274,
+      "accuracy": 0.9973094170403587,
+      "confusion_matrix": [
+        [
+          180,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1323,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          715
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.989010989010989,
+          "recall": 1.0,
+          "f1-score": 0.994475138121547,
+          "support": 180.0
+        },
+        "brute_force": {
+          "precision": 0.9984905660377359,
+          "recall": 0.9969856819894499,
+          "f1-score": 0.997737556561086,
+          "support": 1327.0
+        },
+        "sqli": {
+          "precision": 0.8571428571428571,
+          "recall": 1.0,
+          "f1-score": 0.9230769230769231,
+          "support": 6.0
+        },
+        "xss": {
+          "precision": 0.9986033519553073,
+          "recall": 0.99721059972106,
+          "f1-score": 0.9979064898813678,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998163749283977,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03931044904028332,
+        "F2 - SynAckRatio": 0.05999574209754107,
+        "F3 - InterArrivalTime": 0.0978067712690491,
+        "F4 - RstRatio": 0.08146579259795075,
+        "F5 - DistinctPorts": 0.00041098282043275895,
+        "F6 - URLConcentration": 0.05694704537221534,
+        "F7 - HttpIatUniformity": 0.0002655238740174135,
+        "F8 - RequestSizeUniformity": 0.0010276330086893988,
+        "F9 - AvgPayloadSize": 0.1436786240628834,
+        "F10 - FwdBwdRatio": 0.05621988094972634,
+        "F11 - PacketsPerPort": 0.023250498830188926,
+        "F12 - SqlSpecialChar": 0.12351875427990769,
+        "F13 - CrsSqliScore": 0.11383519815604566,
+        "F14 - SqlUnionSelect": 0.006056260162043022,
+        "F15 - SqlComment": 0.0235749554806975,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.003752473696069946,
+        "F18 - CrsXssScore": 0.09062759859601824,
+        "F19 - JsFunctionCall": 0.07825581570624024,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "full_20d",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 12,
+      "train_time_sec": 0.5622620582580566,
+      "predict_time_ms_per_sample": 0.04367922411430902,
+      "f1_macro": 0.7791265291520055,
+      "f1_weighted": 0.9849437209428868,
+      "precision_macro": 0.9798176154468065,
+      "recall_macro": 0.7706957014478684,
+      "accuracy": 0.9887942626624832,
+      "confusion_matrix": [
+        [
+          153,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1292,
+          0,
+          1
+        ],
+        [
+          7,
+          0,
+          2,
+          14
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9386503067484663,
+          "recall": 1.0,
+          "f1-score": 0.9683544303797469,
+          "support": 153.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9984544049459042,
+          "f1-score": 0.9992266047950503,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.08695652173913043,
+          "f1-score": 0.16,
+          "support": 23.0
+        },
+        "xss": {
+          "precision": 0.9806201550387597,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9889250814332248,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9951058859989461,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.12284099549241606,
+        "F7 - HttpIatUniformity": 0.0003176393673176279,
+        "F8 - RequestSizeUniformity": 0.0014657926614545355,
+        "F12 - SqlSpecialChar": 0.24444516666599753,
+        "F13 - CrsSqliScore": 0.21344196645339775,
+        "F14 - SqlUnionSelect": 0.09456386275102488,
+        "F15 - SqlComment": 0.021239677296628123,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.07800307493514819,
+        "F18 - CrsXssScore": 0.09918527619168958,
+        "F19 - JsFunctionCall": 0.12449654818492573,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 12,
+      "train_time_sec": 0.5902092456817627,
+      "predict_time_ms_per_sample": 0.045520093943506076,
+      "f1_macro": 0.9424591530419943,
+      "f1_weighted": 0.9953879969476548,
+      "precision_macro": 0.986772053403227,
+      "recall_macro": 0.9151576936797086,
+      "accuracy": 0.9955156950672646,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1206,
+          0,
+          1
+        ],
+        [
+          4,
+          0,
+          8,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          841
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9482758620689655,
+          "recall": 1.0,
+          "f1-score": 0.9734513274336283,
+          "support": 165.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9975186104218362,
+          "f1-score": 0.9987577639751553,
+          "support": 1209.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.8,
+          "support": 12.0
+        },
+        "xss": {
+          "precision": 0.998812351543943,
+          "recall": 0.9964454976303317,
+          "f1-score": 0.9976275207591934,
+          "support": 844.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.996292329039703,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.12606239898585145,
+        "F7 - HttpIatUniformity": 0.0002764436206239542,
+        "F8 - RequestSizeUniformity": 0.0014219055909144075,
+        "F12 - SqlSpecialChar": 0.2954713560589001,
+        "F13 - CrsSqliScore": 0.20389430962582153,
+        "F14 - SqlUnionSelect": 0.02340180706159524,
+        "F15 - SqlComment": 0.07129789778902258,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.02464688195881256,
+        "F18 - CrsXssScore": 0.11690783664208498,
+        "F19 - JsFunctionCall": 0.13661916266637303,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 12,
+      "train_time_sec": 0.6023592948913574,
+      "predict_time_ms_per_sample": 0.03927245802943482,
+      "f1_macro": 0.9530332830539928,
+      "f1_weighted": 0.996284158309165,
+      "precision_macro": 0.9916306625136295,
+      "recall_macro": 0.9264310946167515,
+      "accuracy": 0.9964125560538116,
+      "confusion_matrix": [
+        [
+          181,
+          1,
+          0,
+          0
+        ],
+        [
+          2,
+          1435,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          10,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          596
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9679144385026738,
+          "recall": 0.9945054945054945,
+          "f1-score": 0.981029810298103,
+          "support": 182.0
+        },
+        "brute_force": {
+          "precision": 0.9986082115518441,
+          "recall": 0.9986082115518441,
+          "f1-score": 0.9986082115518441,
+          "support": 1437.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1-score": 0.8333333333333334,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.998324958123953,
+          "f1-score": 0.9991617770326907,
+          "support": 597.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9966374235087861,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.1125882587971344,
+        "F7 - HttpIatUniformity": 0.00021380722996913143,
+        "F8 - RequestSizeUniformity": 0.0013326250441689116,
+        "F12 - SqlSpecialChar": 0.2717456827742276,
+        "F13 - CrsSqliScore": 0.246123198027648,
+        "F14 - SqlUnionSelect": 0.020150143324353623,
+        "F15 - SqlComment": 0.06755859591997063,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.016297650089379733,
+        "F18 - CrsXssScore": 0.12199178618171064,
+        "F19 - JsFunctionCall": 0.1419982526114374,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 12,
+      "train_time_sec": 0.5680155754089355,
+      "predict_time_ms_per_sample": 0.04088274837341719,
+      "f1_macro": 0.9189694784493642,
+      "f1_weighted": 0.9926843244682134,
+      "precision_macro": 0.9806826832654157,
+      "recall_macro": 0.8889858002159678,
+      "accuracy": 0.9932765575974899,
+      "confusion_matrix": [
+        [
+          151,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1232,
+          0,
+          1
+        ],
+        [
+          9,
+          0,
+          14,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          819
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9263803680981595,
+          "recall": 1.0,
+          "f1-score": 0.9617834394904459,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9983792544570502,
+          "f1-score": 0.9991889699918897,
+          "support": 1234.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.56,
+          "f1-score": 0.717948717948718,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9963503649635036,
+          "recall": 0.997563946406821,
+          "f1-score": 0.996956786366403,
+          "support": 821.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9946782300142782,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.1308801967891922,
+        "F7 - HttpIatUniformity": 0.000482735626011128,
+        "F8 - RequestSizeUniformity": 0.0013507354642136316,
+        "F12 - SqlSpecialChar": 0.2885641000444264,
+        "F13 - CrsSqliScore": 0.20704434191355475,
+        "F14 - SqlUnionSelect": 0.0584684599896777,
+        "F15 - SqlComment": 0.03504755143791893,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.05762193565598999,
+        "F18 - CrsXssScore": 0.10394685262272892,
+        "F19 - JsFunctionCall": 0.11659309045628652,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 12,
+      "train_time_sec": 0.5730948448181152,
+      "predict_time_ms_per_sample": 0.044554124498581135,
+      "f1_macro": 0.9510508157469406,
+      "f1_weighted": 0.9949584291817771,
+      "precision_macro": 0.987565959795957,
+      "recall_macro": 0.9267219680945319,
+      "accuracy": 0.9950672645739911,
+      "confusion_matrix": [
+        [
+          163,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          1385,
+          0,
+          1
+        ],
+        [
+          2,
+          2,
+          10,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          661
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9532163742690059,
+          "recall": 1.0,
+          "f1-score": 0.9760479041916168,
+          "support": 163.0
+        },
+        "brute_force": {
+          "precision": 0.9985580389329488,
+          "recall": 0.9971202303815695,
+          "f1-score": 0.9978386167146974,
+          "support": 1389.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1-score": 0.8333333333333334,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 0.9984894259818731,
+          "recall": 0.9954819277108434,
+          "f1-score": 0.9969834087481146,
+          "support": 664.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.998119075880779,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.12905285394281468,
+        "F7 - HttpIatUniformity": 0.0005673581378784923,
+        "F8 - RequestSizeUniformity": 0.0012540665323691308,
+        "F12 - SqlSpecialChar": 0.31654124946043805,
+        "F13 - CrsSqliScore": 0.19449533849283823,
+        "F14 - SqlUnionSelect": 0.015069967948289182,
+        "F15 - SqlComment": 0.06989577292460017,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.020697217241004765,
+        "F18 - CrsXssScore": 0.11912134820785239,
+        "F19 - JsFunctionCall": 0.13330482711191483,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 12,
+      "train_time_sec": 0.568784236907959,
+      "predict_time_ms_per_sample": 0.039776985955345255,
+      "f1_macro": 0.9315039237289935,
+      "f1_weighted": 0.9957506213439676,
+      "precision_macro": 0.9925934880722115,
+      "recall_macro": 0.8954292415399482,
+      "accuracy": 0.9959641255605381,
+      "confusion_matrix": [
+        [
+          183,
+          3,
+          0,
+          0
+        ],
+        [
+          1,
+          1316,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          6,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          716
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.973404255319149,
+          "recall": 0.9838709677419355,
+          "f1-score": 0.9786096256684492,
+          "support": 186.0
+        },
+        "brute_force": {
+          "precision": 0.996969696969697,
+          "recall": 0.9992406985573272,
+          "f1-score": 0.9981039059537353,
+          "support": 1317.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.6,
+          "f1-score": 0.75,
+          "support": 10.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.99860529986053,
+          "f1-score": 0.9993021632937893,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.995523598119265,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.145167189495453,
+        "F7 - HttpIatUniformity": 0.0002340253477885603,
+        "F8 - RequestSizeUniformity": 0.0011559570706849217,
+        "F12 - SqlSpecialChar": 0.2828144320037251,
+        "F13 - CrsSqliScore": 0.21088442051148873,
+        "F14 - SqlUnionSelect": 0.018249916782357756,
+        "F15 - SqlComment": 0.06866337866172971,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.024619455374936393,
+        "F18 - CrsXssScore": 0.11310339082175293,
+        "F19 - JsFunctionCall": 0.13510783393008305,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 12,
+      "train_time_sec": 0.5812957286834717,
+      "predict_time_ms_per_sample": 0.038045984060440505,
+      "f1_macro": 0.9342321792391053,
+      "f1_weighted": 0.9929209766964382,
+      "precision_macro": 0.98160863866887,
+      "recall_macro": 0.907107742492251,
+      "accuracy": 0.9932765575974899,
+      "confusion_matrix": [
+        [
+          150,
+          0,
+          0,
+          1
+        ],
+        [
+          2,
+          1291,
+          0,
+          1
+        ],
+        [
+          7,
+          0,
+          16,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9316770186335404,
+          "recall": 0.9933774834437086,
+          "f1-score": 0.9615384615384616,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9976816074188563,
+          "f1-score": 0.9988394584139265,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.64,
+          "f1-score": 0.7804878048780488,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9947575360419397,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9960629921259843,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9954077048353915,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.14917117350931086,
+        "F7 - HttpIatUniformity": 0.00022434397664726963,
+        "F8 - RequestSizeUniformity": 0.0011882679408862932,
+        "F12 - SqlSpecialChar": 0.2686008062840709,
+        "F13 - CrsSqliScore": 0.18427006338305466,
+        "F14 - SqlUnionSelect": 0.06763566429125697,
+        "F15 - SqlComment": 0.05372351259401828,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.04634910319888254,
+        "F18 - CrsXssScore": 0.1207461696801426,
+        "F19 - JsFunctionCall": 0.10809089514172969,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 12,
+      "train_time_sec": 0.58487868309021,
+      "predict_time_ms_per_sample": 0.04295629236195654,
+      "f1_macro": 0.9184970092538549,
+      "f1_weighted": 0.993732454772333,
+      "precision_macro": 0.9841720606622494,
+      "recall_macro": 0.8848943974050222,
+      "accuracy": 0.9941704035874439,
+      "confusion_matrix": [
+        [
+          167,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          1319,
+          0,
+          0
+        ],
+        [
+          8,
+          0,
+          10,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          721
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9382022471910112,
+          "recall": 0.9881656804733728,
+          "f1-score": 0.962536023054755,
+          "support": 169.0
+        },
+        "brute_force": {
+          "precision": 0.9984859954579863,
+          "recall": 1.0,
+          "f1-score": 0.9992424242424243,
+          "support": 1319.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 0.5555555555555556,
+          "f1-score": 0.7142857142857143,
+          "support": 18.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9958563535911602,
+          "f1-score": 0.9979238754325259,
+          "support": 724.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9950988597817715,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.17368891041733076,
+        "F7 - HttpIatUniformity": 0.0004913334356226964,
+        "F8 - RequestSizeUniformity": 0.001186851029718888,
+        "F12 - SqlSpecialChar": 0.2563897285349007,
+        "F13 - CrsSqliScore": 0.21166996933501692,
+        "F14 - SqlUnionSelect": 0.024401400091451326,
+        "F15 - SqlComment": 0.05938014976582569,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.020217558492018194,
+        "F18 - CrsXssScore": 0.13010962382467584,
+        "F19 - JsFunctionCall": 0.12246447507343891,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 12,
+      "train_time_sec": 0.5834414958953857,
+      "predict_time_ms_per_sample": 0.038085924670300676,
+      "f1_macro": 0.99738230977908,
+      "f1_weighted": 0.9982106395777336,
+      "precision_macro": 0.9955534499292206,
+      "recall_macro": 0.9992464204973625,
+      "accuracy": 0.9982062780269059,
+      "confusion_matrix": [
+        [
+          180,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          1323,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          717
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9836065573770492,
+          "recall": 1.0,
+          "f1-score": 0.9917355371900827,
+          "support": 180.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9969856819894499,
+          "f1-score": 0.9984905660377359,
+          "support": 1327.0
+        },
+        "sqli": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 6.0
+        },
+        "xss": {
+          "precision": 0.9986072423398329,
+          "recall": 1.0,
+          "f1-score": 0.9993031358885017,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997567566446657,
+      "feature_importance": {
+        "F6 - URLConcentration": 0.14766571584145372,
+        "F7 - HttpIatUniformity": 0.0005267514014415454,
+        "F8 - RequestSizeUniformity": 0.001131746524742389,
+        "F12 - SqlSpecialChar": 0.26379368795654257,
+        "F13 - CrsSqliScore": 0.21371938516676675,
+        "F14 - SqlUnionSelect": 0.026499390047418272,
+        "F15 - SqlComment": 0.06913100327866009,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.03094385097251541,
+        "F18 - CrsXssScore": 0.1365465038028207,
+        "F19 - JsFunctionCall": 0.1100419650076386,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Network_F1_F5_F9_F11",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 17,
+      "train_time_sec": 0.5687837600708008,
+      "predict_time_ms_per_sample": 0.04396402264111569,
+      "f1_macro": 0.842886929441572,
+      "f1_weighted": 0.9880293042899985,
+      "precision_macro": 0.951579866502538,
+      "recall_macro": 0.8138454472057384,
+      "accuracy": 0.9901389511429852,
+      "confusion_matrix": [
+        [
+          153,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1292,
+          1,
+          1
+        ],
+        [
+          3,
+          2,
+          6,
+          12
+        ],
+        [
+          2,
+          1,
+          0,
+          758
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9683544303797469,
+          "recall": 1.0,
+          "f1-score": 0.9839228295819936,
+          "support": 153.0
+        },
+        "brute_force": {
+          "precision": 0.9976833976833976,
+          "recall": 0.9984544049459042,
+          "f1-score": 0.9980687524140595,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.8571428571428571,
+          "recall": 0.2608695652173913,
+          "f1-score": 0.4,
+          "support": 23.0
+        },
+        "xss": {
+          "precision": 0.9831387808041504,
+          "recall": 0.9960578186596584,
+          "f1-score": 0.9895561357702349,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9943425637890398,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03307264638284356,
+        "F2 - SynAckRatio": 0.037052063966990886,
+        "F3 - InterArrivalTime": 0.08456530892144358,
+        "F4 - RstRatio": 0.08398470224269201,
+        "F5 - DistinctPorts": 0.00025672621302650045,
+        "F9 - AvgPayloadSize": 0.19554209961680408,
+        "F10 - FwdBwdRatio": 0.03678132996479532,
+        "F11 - PacketsPerPort": 0.02187328412143668,
+        "F12 - SqlSpecialChar": 0.13288590036194495,
+        "F13 - CrsSqliScore": 0.10555138453998839,
+        "F14 - SqlUnionSelect": 0.04766924304930953,
+        "F15 - SqlComment": 0.007159323110877215,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.04988854497698898,
+        "F18 - CrsXssScore": 0.08022988052861703,
+        "F19 - JsFunctionCall": 0.08348756200224122,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5831332206726074,
+      "predict_time_ms_per_sample": 0.04426631157708275,
+      "f1_macro": 0.9869926125708193,
+      "f1_weighted": 0.9977716417072354,
+      "precision_macro": 0.9760083851498442,
+      "recall_macro": 0.9987872355438476,
+      "accuracy": 0.9977578475336323,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1206,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          12,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          842
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9821428571428571,
+          "recall": 1.0,
+          "f1-score": 0.990990990990991,
+          "support": 165.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9975186104218362,
+          "f1-score": 0.9987577639751553,
+          "support": 1209.0
+        },
+        "sqli": {
+          "precision": 0.9230769230769231,
+          "recall": 1.0,
+          "f1-score": 0.96,
+          "support": 12.0
+        },
+        "xss": {
+          "precision": 0.9988137603795967,
+          "recall": 0.9976303317535545,
+          "f1-score": 0.998221695317131,
+          "support": 844.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997467819419026,
+      "feature_importance": {
+        "F1 - PacketRate": 0.034480382192657796,
+        "F2 - SynAckRatio": 0.05782379764843742,
+        "F3 - InterArrivalTime": 0.08457206855539634,
+        "F4 - RstRatio": 0.09670113808869735,
+        "F5 - DistinctPorts": 3.899247897219693e-05,
+        "F9 - AvgPayloadSize": 0.20475158217261036,
+        "F10 - FwdBwdRatio": 0.046610755977651415,
+        "F11 - PacketsPerPort": 0.016613198993824303,
+        "F12 - SqlSpecialChar": 0.15219087905749604,
+        "F13 - CrsSqliScore": 0.11786404607278836,
+        "F14 - SqlUnionSelect": 0.003932661722613152,
+        "F15 - SqlComment": 0.01865302630979841,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0042197671348895485,
+        "F18 - CrsXssScore": 0.08195019562488028,
+        "F19 - JsFunctionCall": 0.07959750796928707,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5714111328125,
+      "predict_time_ms_per_sample": 0.04513295776640888,
+      "f1_macro": 0.9545397740797241,
+      "f1_weighted": 0.9968977297151562,
+      "precision_macro": 0.9488159324866232,
+      "recall_macro": 0.9607717539574108,
+      "accuracy": 0.9968609865470852,
+      "confusion_matrix": [
+        [
+          180,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1435,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          2
+        ],
+        [
+          0,
+          1,
+          0,
+          596
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.989010989010989,
+          "f1-score": 0.994475138121547,
+          "support": 182.0
+        },
+        "brute_force": {
+          "precision": 0.9986082115518441,
+          "recall": 0.9986082115518441,
+          "f1-score": 0.9986082115518441,
+          "support": 1437.0
+        },
+        "sqli": {
+          "precision": 0.8,
+          "recall": 0.8571428571428571,
+          "f1-score": 0.8275862068965517,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 0.9966555183946488,
+          "recall": 0.998324958123953,
+          "f1-score": 0.9974895397489539,
+          "support": 597.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997612682419631,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03966961273277009,
+        "F2 - SynAckRatio": 0.06270064966797216,
+        "F3 - InterArrivalTime": 0.0857549953736196,
+        "F4 - RstRatio": 0.10271460516535184,
+        "F5 - DistinctPorts": 0.0003421064829812403,
+        "F9 - AvgPayloadSize": 0.19616851901418694,
+        "F10 - FwdBwdRatio": 0.0530652899492782,
+        "F11 - PacketsPerPort": 0.02217492274258384,
+        "F12 - SqlSpecialChar": 0.14494748281735784,
+        "F13 - CrsSqliScore": 0.10084488134571194,
+        "F14 - SqlUnionSelect": 0.0016207203170001962,
+        "F15 - SqlComment": 0.016315677667425567,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0026056991638094807,
+        "F18 - CrsXssScore": 0.07350292794844719,
+        "F19 - JsFunctionCall": 0.0975719096115038,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 17,
+      "train_time_sec": 0.5802938938140869,
+      "predict_time_ms_per_sample": 0.04404898130108241,
+      "f1_macro": 0.9618111100431783,
+      "f1_weighted": 0.9958746537342128,
+      "precision_macro": 0.9781359115821121,
+      "recall_macro": 0.9489858002159678,
+      "accuracy": 0.9959659345584939,
+      "confusion_matrix": [
+        [
+          151,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1232,
+          1,
+          0
+        ],
+        [
+          3,
+          2,
+          20,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          819
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9617834394904459,
+          "recall": 1.0,
+          "f1-score": 0.9805194805194806,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 0.9983792544570502,
+          "recall": 0.9983792544570502,
+          "f1-score": 0.9983792544570502,
+          "support": 1234.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.997563946406821,
+          "f1-score": 0.998780487804878,
+          "support": 821.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9948378230187875,
+      "feature_importance": {
+        "F1 - PacketRate": 0.027833717448018873,
+        "F2 - SynAckRatio": 0.042417534409600346,
+        "F3 - InterArrivalTime": 0.07744668738570833,
+        "F4 - RstRatio": 0.07328087147154791,
+        "F5 - DistinctPorts": 9.475332431287952e-06,
+        "F9 - AvgPayloadSize": 0.19870586259475742,
+        "F10 - FwdBwdRatio": 0.049045261242643225,
+        "F11 - PacketsPerPort": 0.01465991831857252,
+        "F12 - SqlSpecialChar": 0.13171762973068774,
+        "F13 - CrsSqliScore": 0.13731892322018674,
+        "F14 - SqlUnionSelect": 0.02771440902876901,
+        "F15 - SqlComment": 0.01210582338501807,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.031122303783093906,
+        "F18 - CrsXssScore": 0.08643131444609073,
+        "F19 - JsFunctionCall": 0.09019026820287396,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5872030258178711,
+      "predict_time_ms_per_sample": 0.044796605815801915,
+      "f1_macro": 0.986865311126262,
+      "f1_weighted": 0.9973321136825128,
+      "precision_macro": 0.9758928571428571,
+      "recall_macro": 0.9985270455471996,
+      "accuracy": 0.9973094170403587,
+      "confusion_matrix": [
+        [
+          163,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          1385,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          14,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          662
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9702380952380952,
+          "recall": 1.0,
+          "f1-score": 0.9848942598187311,
+          "support": 163.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9971202303815695,
+          "f1-score": 0.9985580389329488,
+          "support": 1389.0
+        },
+        "sqli": {
+          "precision": 0.9333333333333333,
+          "recall": 1.0,
+          "f1-score": 0.9655172413793104,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9969879518072289,
+          "f1-score": 0.9984917043740573,
+          "support": 664.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997906535184812,
+      "feature_importance": {
+        "F1 - PacketRate": 0.024203379016782843,
+        "F2 - SynAckRatio": 0.051380909407824235,
+        "F3 - InterArrivalTime": 0.09956315646289642,
+        "F4 - RstRatio": 0.097723770107762,
+        "F5 - DistinctPorts": 0.00028943671273766306,
+        "F9 - AvgPayloadSize": 0.20373968773625278,
+        "F10 - FwdBwdRatio": 0.06304014286370149,
+        "F11 - PacketsPerPort": 0.01520326316070659,
+        "F12 - SqlSpecialChar": 0.13007114831200162,
+        "F13 - CrsSqliScore": 0.10055447475833088,
+        "F14 - SqlUnionSelect": 0.0038948219955251356,
+        "F15 - SqlComment": 0.02955859443079725,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0025517768790616945,
+        "F18 - CrsXssScore": 0.09236645041211533,
+        "F19 - JsFunctionCall": 0.08585898774350413,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5664572715759277,
+      "predict_time_ms_per_sample": 0.0443797475019378,
+      "f1_macro": 0.9280240777733858,
+      "f1_weighted": 0.9960773567681505,
+      "precision_macro": 0.9154007040116398,
+      "recall_macro": 0.9437364804835753,
+      "accuracy": 0.9959641255605381,
+      "confusion_matrix": [
+        [
+          182,
+          1,
+          3,
+          0
+        ],
+        [
+          0,
+          1316,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          2
+        ],
+        [
+          0,
+          2,
+          0,
+          715
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.978494623655914,
+          "f1-score": 0.9891304347826086,
+          "support": 186.0
+        },
+        "brute_force": {
+          "precision": 0.9977255496588324,
+          "recall": 0.9992406985573272,
+          "f1-score": 0.9984825493171472,
+          "support": 1317.0
+        },
+        "sqli": {
+          "precision": 0.6666666666666666,
+          "recall": 0.8,
+          "f1-score": 0.7272727272727273,
+          "support": 10.0
+        },
+        "xss": {
+          "precision": 0.99721059972106,
+          "recall": 0.99721059972106,
+          "f1-score": 0.99721059972106,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998578740426273,
+      "feature_importance": {
+        "F1 - PacketRate": 0.040788543217614305,
+        "F2 - SynAckRatio": 0.06597426647300829,
+        "F3 - InterArrivalTime": 0.08718983451651487,
+        "F4 - RstRatio": 0.11122836179854882,
+        "F5 - DistinctPorts": 0.00036240453297779437,
+        "F9 - AvgPayloadSize": 0.18600981256787208,
+        "F10 - FwdBwdRatio": 0.06461229591383438,
+        "F11 - PacketsPerPort": 0.022115281844025707,
+        "F12 - SqlSpecialChar": 0.12283617728977389,
+        "F13 - CrsSqliScore": 0.09690627656736174,
+        "F14 - SqlUnionSelect": 0.002395084007424746,
+        "F15 - SqlComment": 0.015302156680325871,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.002481521549471553,
+        "F18 - CrsXssScore": 0.0887762444411365,
+        "F19 - JsFunctionCall": 0.09302173860010944,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 17,
+      "train_time_sec": 0.5659105777740479,
+      "predict_time_ms_per_sample": 0.04018149211341519,
+      "f1_macro": 0.9605507632349848,
+      "f1_weighted": 0.9949776635238899,
+      "precision_macro": 0.9774361256539884,
+      "recall_macro": 0.947107742492251,
+      "accuracy": 0.9950694755714926,
+      "confusion_matrix": [
+        [
+          150,
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          1291,
+          1,
+          1
+        ],
+        [
+          3,
+          2,
+          20,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9615384615384616,
+          "recall": 0.9933774834437086,
+          "f1-score": 0.9771986970684039,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 0.9984532095901005,
+          "recall": 0.9976816074188563,
+          "f1-score": 0.998067259373792,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9973718791064389,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9973718791064389,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9947682985072135,
+      "feature_importance": {
+        "F1 - PacketRate": 0.02923979606905285,
+        "F2 - SynAckRatio": 0.045343154024804565,
+        "F3 - InterArrivalTime": 0.0836466542008247,
+        "F4 - RstRatio": 0.10140131698842847,
+        "F5 - DistinctPorts": 1.9972572558561528e-05,
+        "F9 - AvgPayloadSize": 0.2017345038843299,
+        "F10 - FwdBwdRatio": 0.051801881893004775,
+        "F11 - PacketsPerPort": 0.023928730928866306,
+        "F12 - SqlSpecialChar": 0.11925787775202044,
+        "F13 - CrsSqliScore": 0.10883220664927488,
+        "F14 - SqlUnionSelect": 0.023243675699946967,
+        "F15 - SqlComment": 0.0226735023845838,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.016677486641623142,
+        "F18 - CrsXssScore": 0.0962978020234591,
+        "F19 - JsFunctionCall": 0.07590143828722175,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.579963207244873,
+      "predict_time_ms_per_sample": 0.04102691941197143,
+      "f1_macro": 0.9551034409675151,
+      "f1_weighted": 0.9960262328911134,
+      "precision_macro": 0.9461250311523313,
+      "recall_macro": 0.9652691508566986,
+      "accuracy": 0.9959641255605381,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          1319,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          16,
+          2
+        ],
+        [
+          2,
+          1,
+          0,
+          721
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9880239520958084,
+          "recall": 0.9763313609467456,
+          "f1-score": 0.9821428571428571,
+          "support": 169.0
+        },
+        "brute_force": {
+          "precision": 0.9992424242424243,
+          "recall": 1.0,
+          "f1-score": 0.9996210685865858,
+          "support": 1319.0
+        },
+        "sqli": {
+          "precision": 0.8,
+          "recall": 0.8888888888888888,
+          "f1-score": 0.8421052631578947,
+          "support": 18.0
+        },
+        "xss": {
+          "precision": 0.9972337482710927,
+          "recall": 0.9958563535911602,
+          "f1-score": 0.9965445749827229,
+          "support": 724.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997236734110786,
+      "feature_importance": {
+        "F1 - PacketRate": 0.04185977126637924,
+        "F2 - SynAckRatio": 0.059601588139013804,
+        "F3 - InterArrivalTime": 0.0726614992667499,
+        "F4 - RstRatio": 0.11066844256888905,
+        "F5 - DistinctPorts": 0.00039375135774176597,
+        "F9 - AvgPayloadSize": 0.2383977823994232,
+        "F10 - FwdBwdRatio": 0.04810905487913484,
+        "F11 - PacketsPerPort": 0.034484515114792766,
+        "F12 - SqlSpecialChar": 0.11724380264284731,
+        "F13 - CrsSqliScore": 0.10538337075602229,
+        "F14 - SqlUnionSelect": 0.0010056677058369748,
+        "F15 - SqlComment": 0.012189943934794462,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0006597957669183391,
+        "F18 - CrsXssScore": 0.08973331517783226,
+        "F19 - JsFunctionCall": 0.0676076990236238,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5740892887115479,
+      "predict_time_ms_per_sample": 0.04507169595213749,
+      "f1_macro": 0.978299026910231,
+      "f1_weighted": 0.9973276579380457,
+      "precision_macro": 0.9608119410367223,
+      "recall_macro": 0.9985490704276274,
+      "accuracy": 0.9973094170403587,
+      "confusion_matrix": [
+        [
+          180,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1323,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          715
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.989010989010989,
+          "recall": 1.0,
+          "f1-score": 0.994475138121547,
+          "support": 180.0
+        },
+        "brute_force": {
+          "precision": 0.9984905660377359,
+          "recall": 0.9969856819894499,
+          "f1-score": 0.997737556561086,
+          "support": 1327.0
+        },
+        "sqli": {
+          "precision": 0.8571428571428571,
+          "recall": 1.0,
+          "f1-score": 0.9230769230769231,
+          "support": 6.0
+        },
+        "xss": {
+          "precision": 0.9986033519553073,
+          "recall": 0.99721059972106,
+          "f1-score": 0.9979064898813678,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9999126256113764,
+      "feature_importance": {
+        "F1 - PacketRate": 0.02986506126915946,
+        "F2 - SynAckRatio": 0.05545648651127449,
+        "F3 - InterArrivalTime": 0.09974024133387634,
+        "F4 - RstRatio": 0.10076290317449083,
+        "F5 - DistinctPorts": 0.0004691505896238213,
+        "F9 - AvgPayloadSize": 0.21175552245196275,
+        "F10 - FwdBwdRatio": 0.051297395179311325,
+        "F11 - PacketsPerPort": 0.02813819411466277,
+        "F12 - SqlSpecialChar": 0.12977917033623443,
+        "F13 - CrsSqliScore": 0.09229115946159466,
+        "F14 - SqlUnionSelect": 0.0031632628342328395,
+        "F15 - SqlComment": 0.02791409643000147,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.004852066927176024,
+        "F18 - CrsXssScore": 0.09474074964279143,
+        "F19 - JsFunctionCall": 0.06977453974360742,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_Application_F6_F8",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 14,
+      "train_time_sec": 0.5671079158782959,
+      "predict_time_ms_per_sample": 0.0432949331190382,
+      "f1_macro": 0.9399334978318369,
+      "f1_weighted": 0.9943937707092396,
+      "precision_macro": 0.963347067288246,
+      "recall_macro": 0.9225410993796515,
+      "accuracy": 0.994621246077992,
+      "confusion_matrix": [
+        [
+          153,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1292,
+          2,
+          0
+        ],
+        [
+          3,
+          4,
+          16,
+          0
+        ],
+        [
+          2,
+          1,
+          0,
+          758
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9683544303797469,
+          "recall": 1.0,
+          "f1-score": 0.9839228295819936,
+          "support": 153.0
+        },
+        "brute_force": {
+          "precision": 0.9961449498843485,
+          "recall": 0.9984544049459042,
+          "f1-score": 0.9972983404091085,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.8888888888888888,
+          "recall": 0.6956521739130435,
+          "f1-score": 0.7804878048780488,
+          "support": 23.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9960578186596584,
+          "f1-score": 0.9980250164581962,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9942887726397841,
+      "feature_importance": {
+        "F1 - PacketRate": 0.05549198409806116,
+        "F2 - SynAckRatio": 0.06675398494515479,
+        "F3 - InterArrivalTime": 0.1393704341848455,
+        "F4 - RstRatio": 0.08648713343519826,
+        "F5 - DistinctPorts": 0.0002370285908172635,
+        "F6 - URLConcentration": 0.09257055513479752,
+        "F7 - HttpIatUniformity": 0.0004036803304385962,
+        "F8 - RequestSizeUniformity": 0.003285059571003741,
+        "F9 - AvgPayloadSize": 0.23202206868452582,
+        "F10 - FwdBwdRatio": 0.08465851870598716,
+        "F11 - PacketsPerPort": 0.05203557565312544,
+        "F18 - CrsXssScore": 0.09786224920325542,
+        "F19 - JsFunctionCall": 0.0888217274627894,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 14,
+      "train_time_sec": 0.5948469638824463,
+      "predict_time_ms_per_sample": 0.04508848147541953,
+      "f1_macro": 0.9276381879669353,
+      "f1_weighted": 0.9953995458958315,
+      "precision_macro": 0.9444776289006147,
+      "recall_macro": 0.913849324629404,
+      "accuracy": 0.9955156950672646,
+      "confusion_matrix": [
+        [
+          164,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          1207,
+          1,
+          0
+        ],
+        [
+          0,
+          4,
+          8,
+          0
+        ],
+        [
+          2,
+          1,
+          0,
+          841
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9820359281437125,
+          "recall": 0.9939393939393939,
+          "f1-score": 0.9879518072289156,
+          "support": 165.0
+        },
+        "brute_force": {
+          "precision": 0.9958745874587459,
+          "recall": 0.9983457402812241,
+          "f1-score": 0.9971086327963652,
+          "support": 1209.0
+        },
+        "sqli": {
+          "precision": 0.8,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.7272727272727273,
+          "support": 12.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9964454976303317,
+          "f1-score": 0.9982195845697329,
+          "support": 844.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.99975574211866,
+      "feature_importance": {
+        "F1 - PacketRate": 0.06878454208531651,
+        "F2 - SynAckRatio": 0.07331313795406988,
+        "F3 - InterArrivalTime": 0.14152933684390115,
+        "F4 - RstRatio": 0.08219395741794051,
+        "F5 - DistinctPorts": 0.000159136467957203,
+        "F6 - URLConcentration": 0.1037023660303597,
+        "F7 - HttpIatUniformity": 0.00038232761538944975,
+        "F8 - RequestSizeUniformity": 0.0030751116358296113,
+        "F9 - AvgPayloadSize": 0.21538637196357485,
+        "F10 - FwdBwdRatio": 0.08603327634931207,
+        "F11 - PacketsPerPort": 0.051334115107378196,
+        "F18 - CrsXssScore": 0.0749100874599496,
+        "F19 - JsFunctionCall": 0.09919623306902144,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 14,
+      "train_time_sec": 0.5728576183319092,
+      "predict_time_ms_per_sample": 0.04501588676007874,
+      "f1_macro": 0.9545397740797241,
+      "f1_weighted": 0.9968977297151562,
+      "precision_macro": 0.9488159324866232,
+      "recall_macro": 0.9607717539574108,
+      "accuracy": 0.9968609865470852,
+      "confusion_matrix": [
+        [
+          180,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          1435,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          2
+        ],
+        [
+          0,
+          1,
+          0,
+          596
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.989010989010989,
+          "f1-score": 0.994475138121547,
+          "support": 182.0
+        },
+        "brute_force": {
+          "precision": 0.9986082115518441,
+          "recall": 0.9986082115518441,
+          "f1-score": 0.9986082115518441,
+          "support": 1437.0
+        },
+        "sqli": {
+          "precision": 0.8,
+          "recall": 0.8571428571428571,
+          "f1-score": 0.8275862068965517,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 0.9966555183946488,
+          "recall": 0.998324958123953,
+          "f1-score": 0.9974895397489539,
+          "support": 597.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9993632525216302,
+      "feature_importance": {
+        "F1 - PacketRate": 0.0723457955357179,
+        "F2 - SynAckRatio": 0.08759076329018811,
+        "F3 - InterArrivalTime": 0.10592576092359288,
+        "F4 - RstRatio": 0.08788836844130986,
+        "F5 - DistinctPorts": 0.0004727519775105665,
+        "F6 - URLConcentration": 0.10354735470996927,
+        "F7 - HttpIatUniformity": 0.00034709173123432884,
+        "F8 - RequestSizeUniformity": 0.004531924712276614,
+        "F9 - AvgPayloadSize": 0.20684928387931323,
+        "F10 - FwdBwdRatio": 0.07024748058951771,
+        "F11 - PacketsPerPort": 0.06418631852126601,
+        "F18 - CrsXssScore": 0.08977200029456815,
+        "F19 - JsFunctionCall": 0.1062951053935354,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 14,
+      "train_time_sec": 0.5623559951782227,
+      "predict_time_ms_per_sample": 0.04310471121370392,
+      "f1_macro": 0.9604320558937922,
+      "f1_weighted": 0.9958943638274453,
+      "precision_macro": 0.9755166217430369,
+      "recall_macro": 0.9489858002159678,
+      "accuracy": 0.9959659345584939,
+      "confusion_matrix": [
+        [
+          151,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1232,
+          1,
+          0
+        ],
+        [
+          5,
+          0,
+          20,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          819
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.949685534591195,
+          "recall": 1.0,
+          "f1-score": 0.9741935483870968,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9983792544570502,
+          "f1-score": 0.9991889699918897,
+          "support": 1234.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.997563946406821,
+          "f1-score": 0.998780487804878,
+          "support": 821.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.994782051650985,
+      "feature_importance": {
+        "F1 - PacketRate": 0.06859542789218685,
+        "F2 - SynAckRatio": 0.0629893292505281,
+        "F3 - InterArrivalTime": 0.12549154078700545,
+        "F4 - RstRatio": 0.0784321872382851,
+        "F5 - DistinctPorts": 4.202700061467169e-05,
+        "F6 - URLConcentration": 0.08985272222701175,
+        "F7 - HttpIatUniformity": 0.0003563202016141428,
+        "F8 - RequestSizeUniformity": 0.0029528777540169947,
+        "F9 - AvgPayloadSize": 0.23316003678373665,
+        "F10 - FwdBwdRatio": 0.08506354624528226,
+        "F11 - PacketsPerPort": 0.0584809123744584,
+        "F18 - CrsXssScore": 0.09550217640246103,
+        "F19 - JsFunctionCall": 0.09908089584279871,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 14,
+      "train_time_sec": 0.56662917137146,
+      "predict_time_ms_per_sample": 0.04296623537893253,
+      "f1_macro": 0.9874227390311251,
+      "f1_weighted": 0.9973258505179136,
+      "precision_macro": 0.9771650642478562,
+      "recall_macro": 0.9983305251242551,
+      "accuracy": 0.9973094170403587,
+      "confusion_matrix": [
+        [
+          163,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1386,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          14,
+          0
+        ],
+        [
+          2,
+          1,
+          0,
+          661
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9760479041916168,
+          "recall": 1.0,
+          "f1-score": 0.9878787878787879,
+          "support": 163.0
+        },
+        "brute_force": {
+          "precision": 0.9992790194664743,
+          "recall": 0.9978401727861771,
+          "f1-score": 0.9985590778097982,
+          "support": 1389.0
+        },
+        "sqli": {
+          "precision": 0.9333333333333333,
+          "recall": 1.0,
+          "f1-score": 0.9655172413793104,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.9954819277108434,
+          "f1-score": 0.9977358490566037,
+          "support": 664.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998806243451046,
+      "feature_importance": {
+        "F1 - PacketRate": 0.06243996809611192,
+        "F2 - SynAckRatio": 0.06177162989693616,
+        "F3 - InterArrivalTime": 0.13574862535079205,
+        "F4 - RstRatio": 0.10693573627416321,
+        "F5 - DistinctPorts": 0.00037837713623356696,
+        "F6 - URLConcentration": 0.07926515306271381,
+        "F7 - HttpIatUniformity": 0.00041075804371841734,
+        "F8 - RequestSizeUniformity": 0.003740939744149475,
+        "F9 - AvgPayloadSize": 0.2449044546963972,
+        "F10 - FwdBwdRatio": 0.07251139551557854,
+        "F11 - PacketsPerPort": 0.04814191967006187,
+        "F18 - CrsXssScore": 0.0871410649120189,
+        "F19 - JsFunctionCall": 0.09660997760112489,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 14,
+      "train_time_sec": 0.5674526691436768,
+      "predict_time_ms_per_sample": 0.04525259471260379,
+      "f1_macro": 0.9194303361874039,
+      "f1_weighted": 0.9957058202889281,
+      "precision_macro": 0.902580191191127,
+      "recall_macro": 0.9423923944620699,
+      "accuracy": 0.9955156950672646,
+      "confusion_matrix": [
+        [
+          181,
+          1,
+          4,
+          0
+        ],
+        [
+          0,
+          1316,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          2
+        ],
+        [
+          0,
+          2,
+          0,
+          715
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.9731182795698925,
+          "f1-score": 0.9863760217983651,
+          "support": 186.0
+        },
+        "brute_force": {
+          "precision": 0.9977255496588324,
+          "recall": 0.9992406985573272,
+          "f1-score": 0.9984825493171472,
+          "support": 1317.0
+        },
+        "sqli": {
+          "precision": 0.6153846153846154,
+          "recall": 0.8,
+          "f1-score": 0.6956521739130435,
+          "support": 10.0
+        },
+        "xss": {
+          "precision": 0.99721059972106,
+          "recall": 0.99721059972106,
+          "f1-score": 0.99721059972106,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.998833833497867,
+      "feature_importance": {
+        "F1 - PacketRate": 0.07886209060772474,
+        "F2 - SynAckRatio": 0.0788671969678716,
+        "F3 - InterArrivalTime": 0.09868075360528035,
+        "F4 - RstRatio": 0.11125035843485305,
+        "F5 - DistinctPorts": 0.0005527859853177539,
+        "F6 - URLConcentration": 0.09578447484911123,
+        "F7 - HttpIatUniformity": 0.0002385462564135622,
+        "F8 - RequestSizeUniformity": 0.0040213751639140375,
+        "F9 - AvgPayloadSize": 0.2121675255003172,
+        "F10 - FwdBwdRatio": 0.07292680217968954,
+        "F11 - PacketsPerPort": 0.058460805207674875,
+        "F18 - CrsXssScore": 0.0832527336505564,
+        "F19 - JsFunctionCall": 0.1049345515912758,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 14,
+      "train_time_sec": 0.5659334659576416,
+      "predict_time_ms_per_sample": 0.04414216866144841,
+      "f1_macro": 0.9407379120692113,
+      "f1_weighted": 0.9938712513312913,
+      "precision_macro": 0.9750670913340646,
+      "recall_macro": 0.917300941874013,
+      "accuracy": 0.9941730165844913,
+      "confusion_matrix": [
+        [
+          150,
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          1292,
+          1,
+          0
+        ],
+        [
+          3,
+          3,
+          17,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9615384615384616,
+          "recall": 0.9933774834437086,
+          "f1-score": 0.9771986970684039,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 0.9969135802469136,
+          "recall": 0.9984544049459042,
+          "f1-score": 0.9976833976833976,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.9444444444444444,
+          "recall": 0.68,
+          "f1-score": 0.7906976744186046,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9973718791064389,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9973718791064389,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9947236750542962,
+      "feature_importance": {
+        "F1 - PacketRate": 0.06009646621217197,
+        "F2 - SynAckRatio": 0.06232018637987319,
+        "F3 - InterArrivalTime": 0.12992156894603657,
+        "F4 - RstRatio": 0.09026908821469945,
+        "F5 - DistinctPorts": 2.9422738489259748e-05,
+        "F6 - URLConcentration": 0.09388652655780547,
+        "F7 - HttpIatUniformity": 0.0002975527872825934,
+        "F8 - RequestSizeUniformity": 0.003610850861230806,
+        "F9 - AvgPayloadSize": 0.23197697888517507,
+        "F10 - FwdBwdRatio": 0.0955026749287895,
+        "F11 - PacketsPerPort": 0.05352925525333308,
+        "F18 - CrsXssScore": 0.0859943795372083,
+        "F19 - JsFunctionCall": 0.0925650486979047,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 14,
+      "train_time_sec": 0.580085039138794,
+      "predict_time_ms_per_sample": 0.04079630556662521,
+      "f1_macro": 0.914867887168989,
+      "f1_weighted": 0.9936387962425332,
+      "precision_macro": 0.9218228683489669,
+      "recall_macro": 0.9082343053603147,
+      "accuracy": 0.9937219730941704,
+      "confusion_matrix": [
+        [
+          164,
+          0,
+          5,
+          0
+        ],
+        [
+          0,
+          1319,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          12,
+          2
+        ],
+        [
+          2,
+          1,
+          0,
+          721
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9879518072289156,
+          "recall": 0.9704142011834319,
+          "f1-score": 0.9791044776119403,
+          "support": 169.0
+        },
+        "brute_force": {
+          "precision": 0.9962235649546828,
+          "recall": 1.0,
+          "f1-score": 0.9981082103670071,
+          "support": 1319.0
+        },
+        "sqli": {
+          "precision": 0.7058823529411765,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.6857142857142857,
+          "support": 18.0
+        },
+        "xss": {
+          "precision": 0.9972337482710927,
+          "recall": 0.9958563535911602,
+          "f1-score": 0.9965445749827229,
+          "support": 724.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9855389592742262,
+      "feature_importance": {
+        "F1 - PacketRate": 0.0780916408157772,
+        "F2 - SynAckRatio": 0.07593505338816157,
+        "F3 - InterArrivalTime": 0.10286918163718074,
+        "F4 - RstRatio": 0.08921960012156745,
+        "F5 - DistinctPorts": 0.00028713588954790484,
+        "F6 - URLConcentration": 0.10365708397126669,
+        "F7 - HttpIatUniformity": 0.00039921473107455333,
+        "F8 - RequestSizeUniformity": 0.003193847082742681,
+        "F9 - AvgPayloadSize": 0.2390255940483768,
+        "F10 - FwdBwdRatio": 0.10061539813203096,
+        "F11 - PacketsPerPort": 0.05628353458083736,
+        "F18 - CrsXssScore": 0.07972400158434166,
+        "F19 - JsFunctionCall": 0.07069871401709432,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 14,
+      "train_time_sec": 0.5769038200378418,
+      "predict_time_ms_per_sample": 0.043504762008051166,
+      "f1_macro": 0.9619897259451994,
+      "f1_weighted": 0.9973743152077362,
+      "precision_macro": 0.9343753887621813,
+      "recall_macro": 0.9985490704276274,
+      "accuracy": 0.9973094170403587,
+      "confusion_matrix": [
+        [
+          180,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1323,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          715
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.989010989010989,
+          "recall": 1.0,
+          "f1-score": 0.994475138121547,
+          "support": 180.0
+        },
+        "brute_force": {
+          "precision": 0.9984905660377359,
+          "recall": 0.9969856819894499,
+          "f1-score": 0.997737556561086,
+          "support": 1327.0
+        },
+        "sqli": {
+          "precision": 0.75,
+          "recall": 1.0,
+          "f1-score": 0.8571428571428571,
+          "support": 6.0
+        },
+        "xss": {
+          "precision": 1.0,
+          "recall": 0.99721059972106,
+          "f1-score": 0.9986033519553073,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998072753891454,
+      "feature_importance": {
+        "F1 - PacketRate": 0.06207655425948854,
+        "F2 - SynAckRatio": 0.06732971367458872,
+        "F3 - InterArrivalTime": 0.14002743766372802,
+        "F4 - RstRatio": 0.08892159116915059,
+        "F5 - DistinctPorts": 0.00047812603197019385,
+        "F6 - URLConcentration": 0.10388580887327048,
+        "F7 - HttpIatUniformity": 0.00035931527428356626,
+        "F8 - RequestSizeUniformity": 0.0037866850359210805,
+        "F9 - AvgPayloadSize": 0.2156510776070968,
+        "F10 - FwdBwdRatio": 0.08963121833653732,
+        "F11 - PacketsPerPort": 0.054091279270674655,
+        "F18 - CrsXssScore": 0.09671562599848646,
+        "F19 - JsFunctionCall": 0.07704556680480348,
+        "F20 - HtmlEventHandler": 0.0
+      },
+      "setup": "minus_SQLi_F12_F17",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 17,
+      "train_time_sec": 0.6128449440002441,
+      "predict_time_ms_per_sample": 0.04350439094738381,
+      "f1_macro": 0.8430186289525672,
+      "f1_weighted": 0.9884856147474336,
+      "precision_macro": 0.9515293606403409,
+      "recall_macro": 0.8141739623174336,
+      "accuracy": 0.9905871806364859,
+      "confusion_matrix": [
+        [
+          153,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1292,
+          1,
+          1
+        ],
+        [
+          3,
+          0,
+          6,
+          14
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9683544303797469,
+          "recall": 1.0,
+          "f1-score": 0.9839228295819936,
+          "support": 153.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9984544049459042,
+          "f1-score": 0.9992266047950503,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.8571428571428571,
+          "recall": 0.2608695652173913,
+          "f1-score": 0.4,
+          "support": 23.0
+        },
+        "xss": {
+          "precision": 0.9806201550387597,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9889250814332248,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997644776376893,
+      "feature_importance": {
+        "F1 - PacketRate": 0.024438659124969557,
+        "F2 - SynAckRatio": 0.0417798195802833,
+        "F3 - InterArrivalTime": 0.07562469382070602,
+        "F4 - RstRatio": 0.07894131403383788,
+        "F5 - DistinctPorts": 0.0001256174929397824,
+        "F6 - URLConcentration": 0.07369460414155674,
+        "F7 - HttpIatUniformity": 0.000274720039219701,
+        "F8 - RequestSizeUniformity": 0.0007326950964861379,
+        "F9 - AvgPayloadSize": 0.21932310292753657,
+        "F10 - FwdBwdRatio": 0.06194973593304303,
+        "F11 - PacketsPerPort": 0.029333874727961107,
+        "F12 - SqlSpecialChar": 0.14685792153359295,
+        "F13 - CrsSqliScore": 0.12055269897877213,
+        "F14 - SqlUnionSelect": 0.057040625517447235,
+        "F15 - SqlComment": 0.012514706502300847,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.05681521054934715
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5634987354278564,
+      "predict_time_ms_per_sample": 0.04314478202785612,
+      "f1_macro": 0.9869926125708193,
+      "f1_weighted": 0.9977716417072354,
+      "precision_macro": 0.9760083851498442,
+      "recall_macro": 0.9987872355438476,
+      "accuracy": 0.9977578475336323,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1206,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          12,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          842
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9821428571428571,
+          "recall": 1.0,
+          "f1-score": 0.990990990990991,
+          "support": 165.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9975186104218362,
+          "f1-score": 0.9987577639751553,
+          "support": 1209.0
+        },
+        "sqli": {
+          "precision": 0.9230769230769231,
+          "recall": 1.0,
+          "f1-score": 0.96,
+          "support": 12.0
+        },
+        "xss": {
+          "precision": 0.9988137603795967,
+          "recall": 0.9976303317535545,
+          "f1-score": 0.998221695317131,
+          "support": 844.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998345404429474,
+      "feature_importance": {
+        "F1 - PacketRate": 0.038209760480253104,
+        "F2 - SynAckRatio": 0.07072711444546262,
+        "F3 - InterArrivalTime": 0.09300697742044912,
+        "F4 - RstRatio": 0.08475081945137222,
+        "F5 - DistinctPorts": 9.12649800472496e-06,
+        "F6 - URLConcentration": 0.07159511548332295,
+        "F7 - HttpIatUniformity": 0.0002701267484264269,
+        "F8 - RequestSizeUniformity": 0.001452185616622392,
+        "F9 - AvgPayloadSize": 0.205572336428824,
+        "F10 - FwdBwdRatio": 0.07558488832788189,
+        "F11 - PacketsPerPort": 0.029897555471601157,
+        "F12 - SqlSpecialChar": 0.16271777920912472,
+        "F13 - CrsSqliScore": 0.13177314324671568,
+        "F14 - SqlUnionSelect": 0.004295286188431758,
+        "F15 - SqlComment": 0.02537890999446596,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.004758874989041421
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 42,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5743687152862549,
+      "predict_time_ms_per_sample": 0.04402479248731126,
+      "f1_macro": 0.9547146751309636,
+      "f1_weighted": 0.9973469708763855,
+      "precision_macro": 0.94875,
+      "recall_macro": 0.9611905144264226,
+      "accuracy": 0.9973094170403587,
+      "confusion_matrix": [
+        [
+          180,
+          0,
+          1,
+          1
+        ],
+        [
+          0,
+          1435,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          597
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.989010989010989,
+          "f1-score": 0.994475138121547,
+          "support": 182.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9986082115518441,
+          "f1-score": 0.9993036211699164,
+          "support": 1437.0
+        },
+        "sqli": {
+          "precision": 0.8,
+          "recall": 0.8571428571428571,
+          "f1-score": 0.8275862068965517,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 0.995,
+          "recall": 1.0,
+          "f1-score": 0.9974937343358395,
+          "support": 597.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.999748260148841,
+      "feature_importance": {
+        "F1 - PacketRate": 0.04375956859245433,
+        "F2 - SynAckRatio": 0.0898841769174354,
+        "F3 - InterArrivalTime": 0.08695091403595448,
+        "F4 - RstRatio": 0.07966521665571583,
+        "F5 - DistinctPorts": 0.0003016749045448512,
+        "F6 - URLConcentration": 0.07201376664310116,
+        "F7 - HttpIatUniformity": 0.00017165878670101302,
+        "F8 - RequestSizeUniformity": 0.002302895478264053,
+        "F9 - AvgPayloadSize": 0.217977711318298,
+        "F10 - FwdBwdRatio": 0.08442904930543155,
+        "F11 - PacketsPerPort": 0.02815620033001354,
+        "F12 - SqlSpecialChar": 0.15636946051755882,
+        "F13 - CrsSqliScore": 0.11117492548122014,
+        "F14 - SqlUnionSelect": 0.0029313536960683725,
+        "F15 - SqlComment": 0.021772717150808397,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.00213871018643015
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 17,
+      "train_time_sec": 0.5796518325805664,
+      "predict_time_ms_per_sample": 0.04495873359327945,
+      "f1_macro": 0.9623560821996142,
+      "f1_weighted": 0.995867574013433,
+      "precision_macro": 0.9791700088232935,
+      "recall_macro": 0.9489858002159678,
+      "accuracy": 0.9959659345584939,
+      "confusion_matrix": [
+        [
+          151,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1232,
+          1,
+          1
+        ],
+        [
+          3,
+          0,
+          20,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          819
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.967948717948718,
+          "recall": 1.0,
+          "f1-score": 0.9837133550488599,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9983792544570502,
+          "f1-score": 0.9991889699918897,
+          "support": 1234.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9963503649635036,
+          "recall": 0.997563946406821,
+          "f1-score": 0.996956786366403,
+          "support": 821.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9948053854904079,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03285905330230323,
+        "F2 - SynAckRatio": 0.05345400319048447,
+        "F3 - InterArrivalTime": 0.07633506403137164,
+        "F4 - RstRatio": 0.07583073348369834,
+        "F5 - DistinctPorts": 1.3411202828956165e-05,
+        "F6 - URLConcentration": 0.0742160510290528,
+        "F7 - HttpIatUniformity": 0.00027609897256636914,
+        "F8 - RequestSizeUniformity": 0.0012914082707550254,
+        "F9 - AvgPayloadSize": 0.18311857378984,
+        "F10 - FwdBwdRatio": 0.0698765030999613,
+        "F11 - PacketsPerPort": 0.02996016404013672,
+        "F12 - SqlSpecialChar": 0.17109076836171133,
+        "F13 - CrsSqliScore": 0.14732533393693692,
+        "F14 - SqlUnionSelect": 0.03554107925161328,
+        "F15 - SqlComment": 0.013017157365888888,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.035794596670850685
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.595224142074585,
+      "predict_time_ms_per_sample": 0.04031733012520144,
+      "f1_macro": 0.9680863887436155,
+      "f1_weighted": 0.9963970381686761,
+      "precision_macro": 0.9740436426438865,
+      "recall_macro": 0.9628127598329139,
+      "accuracy": 0.9964125560538116,
+      "confusion_matrix": [
+        [
+          163,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1385,
+          1,
+          1
+        ],
+        [
+          0,
+          2,
+          12,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          662
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9760479041916168,
+          "recall": 1.0,
+          "f1-score": 0.9878787878787879,
+          "support": 163.0
+        },
+        "brute_force": {
+          "precision": 0.9985580389329488,
+          "recall": 0.9971202303815695,
+          "f1-score": 0.9978386167146974,
+          "support": 1389.0
+        },
+        "sqli": {
+          "precision": 0.9230769230769231,
+          "recall": 0.8571428571428571,
+          "f1-score": 0.8888888888888888,
+          "support": 14.0
+        },
+        "xss": {
+          "precision": 0.9984917043740573,
+          "recall": 0.9969879518072289,
+          "f1-score": 0.9977392614920875,
+          "support": 664.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998684938228097,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03673247490342366,
+        "F2 - SynAckRatio": 0.055602203467915,
+        "F3 - InterArrivalTime": 0.10955929402440302,
+        "F4 - RstRatio": 0.10227366264611927,
+        "F5 - DistinctPorts": 0.000371345746838759,
+        "F6 - URLConcentration": 0.07855072313476313,
+        "F7 - HttpIatUniformity": 0.0002368533738644273,
+        "F8 - RequestSizeUniformity": 0.002008825699223858,
+        "F9 - AvgPayloadSize": 0.1809455141828906,
+        "F10 - FwdBwdRatio": 0.07343289937807015,
+        "F11 - PacketsPerPort": 0.03377310110568377,
+        "F12 - SqlSpecialChar": 0.17623024409484345,
+        "F13 - CrsSqliScore": 0.09896753839220246,
+        "F14 - SqlUnionSelect": 0.006872640507133735,
+        "F15 - SqlComment": 0.041553678478533126,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.002889000864091601
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 123,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5847158432006836,
+      "predict_time_ms_per_sample": 0.043236728206343715,
+      "f1_macro": 0.9284839211180884,
+      "f1_weighted": 0.9969748563985854,
+      "precision_macro": 0.9156249999999999,
+      "recall_macro": 0.9444338305533103,
+      "accuracy": 0.9968609865470852,
+      "confusion_matrix": [
+        [
+          182,
+          0,
+          3,
+          1
+        ],
+        [
+          0,
+          1316,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          717
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 1.0,
+          "recall": 0.978494623655914,
+          "f1-score": 0.9891304347826086,
+          "support": 186.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9992406985573272,
+          "f1-score": 0.9996202050892518,
+          "support": 1317.0
+        },
+        "sqli": {
+          "precision": 0.6666666666666666,
+          "recall": 0.8,
+          "f1-score": 0.7272727272727273,
+          "support": 10.0
+        },
+        "xss": {
+          "precision": 0.9958333333333333,
+          "recall": 1.0,
+          "f1-score": 0.9979123173277662,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9998545749179024,
+      "feature_importance": {
+        "F1 - PacketRate": 0.050597592415338205,
+        "F2 - SynAckRatio": 0.08928816418562022,
+        "F3 - InterArrivalTime": 0.0900506702065254,
+        "F4 - RstRatio": 0.10262201726092647,
+        "F5 - DistinctPorts": 0.0002917335409070329,
+        "F6 - URLConcentration": 0.07774328546850981,
+        "F7 - HttpIatUniformity": 0.00029968787450938427,
+        "F8 - RequestSizeUniformity": 0.0018935407108025492,
+        "F9 - AvgPayloadSize": 0.16886864833088175,
+        "F10 - FwdBwdRatio": 0.08359689592008762,
+        "F11 - PacketsPerPort": 0.02883649353175798,
+        "F12 - SqlSpecialChar": 0.17023488327755448,
+        "F13 - CrsSqliScore": 0.11069204775354842,
+        "F14 - SqlUnionSelect": 0.004576660871465042,
+        "F15 - SqlComment": 0.016722250755521483,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0036854278960441146
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 2
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4460,
+      "n_test": 2231,
+      "n_features": 17,
+      "train_time_sec": 0.5674605369567871,
+      "predict_time_ms_per_sample": 0.04467372133399488,
+      "f1_macro": 0.9604165912499047,
+      "f1_weighted": 0.9949790810791602,
+      "precision_macro": 0.9771692374903385,
+      "recall_macro": 0.947107742492251,
+      "accuracy": 0.9950694755714926,
+      "confusion_matrix": [
+        [
+          150,
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          1291,
+          1,
+          1
+        ],
+        [
+          3,
+          0,
+          20,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          759
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9615384615384616,
+          "recall": 0.9933774834437086,
+          "f1-score": 0.9771986970684039,
+          "support": 151.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9976816074188563,
+          "f1-score": 0.9988394584139265,
+          "support": 1294.0
+        },
+        "sqli": {
+          "precision": 0.9523809523809523,
+          "recall": 0.8,
+          "f1-score": 0.8695652173913043,
+          "support": 25.0
+        },
+        "xss": {
+          "precision": 0.9947575360419397,
+          "recall": 0.9973718791064389,
+          "f1-score": 0.9960629921259843,
+          "support": 761.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9947792647170296,
+      "feature_importance": {
+        "F1 - PacketRate": 0.02952842090017108,
+        "F2 - SynAckRatio": 0.049482012182096795,
+        "F3 - InterArrivalTime": 0.11448729102876286,
+        "F4 - RstRatio": 0.09407031772549657,
+        "F5 - DistinctPorts": 9.203771073711049e-06,
+        "F6 - URLConcentration": 0.08146803702080659,
+        "F7 - HttpIatUniformity": 0.00019155561857486618,
+        "F8 - RequestSizeUniformity": 0.0013428768785435218,
+        "F9 - AvgPayloadSize": 0.17883317748130217,
+        "F10 - FwdBwdRatio": 0.07026646946942877,
+        "F11 - PacketsPerPort": 0.03274692552694825,
+        "F12 - SqlSpecialChar": 0.15815467793275673,
+        "F13 - CrsSqliScore": 0.10898906843591398,
+        "F14 - SqlUnionSelect": 0.02068619314385091,
+        "F15 - SqlComment": 0.0348569912387404,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.02488678164553279
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 0
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.5702435970306396,
+      "predict_time_ms_per_sample": 0.04405226942669651,
+      "f1_macro": 0.9206288920526889,
+      "f1_weighted": 0.9944838764546325,
+      "precision_macro": 0.9324455484635126,
+      "recall_macro": 0.9100588991685463,
+      "accuracy": 0.9946188340807175,
+      "confusion_matrix": [
+        [
+          165,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          1319,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          6
+        ],
+        [
+          2,
+          0,
+          0,
+          722
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.9880239520958084,
+          "recall": 0.9763313609467456,
+          "f1-score": 0.9821428571428571,
+          "support": 169.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 1319.0
+        },
+        "sqli": {
+          "precision": 0.75,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.7058823529411765,
+          "support": 18.0
+        },
+        "xss": {
+          "precision": 0.9917582417582418,
+          "recall": 0.9972375690607734,
+          "f1-score": 0.9944903581267218,
+          "support": 724.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.9997552059038194,
+      "feature_importance": {
+        "F1 - PacketRate": 0.040144840617388794,
+        "F2 - SynAckRatio": 0.07750705820022516,
+        "F3 - InterArrivalTime": 0.08583325461836941,
+        "F4 - RstRatio": 0.10118936175117556,
+        "F5 - DistinctPorts": 0.0004328008284495769,
+        "F6 - URLConcentration": 0.0801225283275757,
+        "F7 - HttpIatUniformity": 0.00030333944905234903,
+        "F8 - RequestSizeUniformity": 0.0016940641084486165,
+        "F9 - AvgPayloadSize": 0.20415827058755567,
+        "F10 - FwdBwdRatio": 0.08060571342190884,
+        "F11 - PacketsPerPort": 0.040742559487453284,
+        "F12 - SqlSpecialChar": 0.14515500055718328,
+        "F13 - CrsSqliScore": 0.12283663571668793,
+        "F14 - SqlUnionSelect": 0.003122959484171707,
+        "F15 - SqlComment": 0.014789431065637529,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0013621817787166416
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 1
+    },
+    {
+      "classifier": "rf",
+      "seed": 456,
+      "n_train": 4461,
+      "n_test": 2230,
+      "n_features": 17,
+      "train_time_sec": 0.561366081237793,
+      "predict_time_ms_per_sample": 0.037645652155170524,
+      "f1_macro": 0.9788364407811769,
+      "f1_weighted": 0.9982248053652337,
+      "precision_macro": 0.9611902721234198,
+      "recall_macro": 0.9992464204973625,
+      "accuracy": 0.9982062780269059,
+      "confusion_matrix": [
+        [
+          180,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1323,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          717
+        ]
+      ],
+      "class_names": [
+        "benign",
+        "brute_force",
+        "sqli",
+        "xss"
+      ],
+      "per_class": {
+        "benign": {
+          "precision": 0.989010989010989,
+          "recall": 1.0,
+          "f1-score": 0.994475138121547,
+          "support": 180.0
+        },
+        "brute_force": {
+          "precision": 1.0,
+          "recall": 0.9969856819894499,
+          "f1-score": 0.9984905660377359,
+          "support": 1327.0
+        },
+        "sqli": {
+          "precision": 0.8571428571428571,
+          "recall": 1.0,
+          "f1-score": 0.9230769230769231,
+          "support": 6.0
+        },
+        "xss": {
+          "precision": 0.9986072423398329,
+          "recall": 1.0,
+          "f1-score": 0.9993031358885017,
+          "support": 717.0
+        }
+      },
+      "roc_auc_ovr_macro": 0.999898546225176,
+      "feature_importance": {
+        "F1 - PacketRate": 0.03288084256930527,
+        "F2 - SynAckRatio": 0.058658124814179334,
+        "F3 - InterArrivalTime": 0.1179211836552854,
+        "F4 - RstRatio": 0.09325460212570862,
+        "F5 - DistinctPorts": 0.0003720254208716941,
+        "F6 - URLConcentration": 0.07848429716694258,
+        "F7 - HttpIatUniformity": 0.00029439968037729366,
+        "F8 - RequestSizeUniformity": 0.0011367170743505333,
+        "F9 - AvgPayloadSize": 0.17005875212310645,
+        "F10 - FwdBwdRatio": 0.08058688158328782,
+        "F11 - PacketsPerPort": 0.03737588282736014,
+        "F12 - SqlSpecialChar": 0.1864325269069087,
+        "F13 - CrsSqliScore": 0.10566576137428801,
+        "F14 - SqlUnionSelect": 0.0065384981993252276,
+        "F15 - SqlComment": 0.026738767216201123,
+        "F16 - SqlStackedQuery": 0.0,
+        "F17 - SqlSelectCount": 0.0036007372625017206
+      },
+      "setup": "minus_XSS_F18_F20",
+      "fold": 2
+    }
+  ]
+}

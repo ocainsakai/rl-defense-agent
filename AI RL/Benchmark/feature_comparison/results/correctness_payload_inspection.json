@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "purpose": "Verify F20=0 hypothesis on CIC-IDS2018 \u2014 inspect raw payloads",
+    "pcap": "/mnt/hgfs/Dataset/Thursday-22-02-2018_pcap/pcap/UCAP172.31.69.28",
+    "attacker_ip": "18.218.115.60",
+    "window_ast": "2018-02-22 13:50:00 to 14:29:00 (XSS attack)",
+    "n_requests": 3793
+  },
+  "pattern_counts": {
+    "script_tag": 1878,
+    "event_handler": 0,
+    "js_function_call": 0
+  },
+  "interpretation": {
+    "f20_expected_zero": true,
+    "verdict": "CONFIRMED: CIC XSS kh\u00f4ng inject event handlers, F20=0 L\u00c0 EXPECTED, kh\u00f4ng ph\u1ea3i code bug (boundary_test verified F20 code path active)"
+  },
+  "sample_event_handlers": [],
+  "sample_script_tags": [
+    {
+      "ts": 1519321900.634904,
+      "method": "GET",
+      "uri": "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%277E0KD4U3IGIFVBRZT6JFWKAIYRLY8X99UT1TFJB952BYGVL765%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=57153d1be84c2b29d7a588a2984df174",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:58.0) Gecko/20100101 Firefox/58.0",
+      "body": ""
+    },
+    {
+      "ts": 1519321901.82511,
+      "method": "GET",
+      "uri": "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27WANO5TCIY6IF17XGY2DJEE6ASZWEMY0JFW83NLNW0JCLM7CDKO%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=beb4c42b0d60b5a79cea106f1233e84a",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:58.0) Gecko/20100101 Firefox/58.0",
+      "body": ""
+    },
+    {
+      "ts": 1519321903.071896,
+      "method": "GET",
+      "uri": "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27K01I1UI1FGZZHAXGO8OBVUS5DMNEODU0W874WLDNBWCGH3WP1A%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=aa7a538f4490c53bd2c0812874df8f48",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:58.0) Gecko/20100101 Firefox/58.0",
+      "body": ""
+    },
+    {
+      "ts": 1519321904.293227,
+      "method": "GET",
+      "uri": "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27EUBN72JRUGQH77FUHD5N357029D2413M117ET930YMC6GKHQTL%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=e5c2896237d8e25a95d9639bac5bac8a",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:58.0) Gecko/20100101 Firefox/58.0",
+      "body": ""
+    },
+    {
+      "ts": 1519321905.487889,
+      "method": "GET",
+      "uri": "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27D921KQO1PXAL5LTRWAGUF3TONZTZPGKQ1HY103GWR2MXRS65ZP%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=5d5db5d6327387b46fbf397316d1e4e0",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:58.0) Gecko/20100101 Firefox/58.0",
+      "body": ""
+    }
+  ],
+  "sample_random_uris": [
+    "/DVWA/vulnerabilities/xss_r/",
+    "/DVWA/vulnerabilities/xss_r/",
+    "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27X23F698DJKO0DR9H3QJA0Y0191MBHWVXHLF97BMDOH4ES0V7NQ%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=55c56c25a69d99f1efe3743d5a6c2b88",
+    "/DVWA/vulnerabilities/xss_r/",
+    "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%273QOC46XHJ1MS0PTBR2PH7VM3J1SPY12B4RHVGMG3FF5N7NJ2B9%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=93915297dabba99f62aafaf76d1d1c23",
+    "/DVWA/vulnerabilities/xss_r/",
+    "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27LY7LML1IM54ZXEGR23OA7KW7Z0BI6T6NJKD9XZB4YSGF68V1KE%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=b90fdb32ce6640fe383440922a922179",
+    "/DVWA/vulnerabilities/xss_r/",
+    "/DVWA/vulnerabilities/xss_r/?name=%3Cscript%3Econsole.log%28%27MRU1UTHNUNH6NZ6S8BNCHCWRKXXU15ODTZTH6JR3YJD9MTSUAQ%27%29%3Bconsole.log%28document.cookie%29%3B%3C%2Fscript%3E&user_token=b2f9e48ae71035ea83a5602f15694d2e",
+    "/DVWA/vulnerabilities/xss_r/"
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "metadata": {
+    "purpose": "Verify F1-F20 code paths active by feeding designed patterns directly to feature regex/logic. Distinguishes 'feature broken' from 'dataset doesn't contain pattern'.",
+    "n_total": 17,
+    "n_pass": 17,
+    "n_fail": 0
+  },
+  "results": [
+    {
+      "label": "F20: img onerror",
+      "payload": "<img src=x onerror=alert(1)>",
+      "expected": {
+        "F20_event": true,
+        "F19_jsfunc": true,
+        "F18_crs": true
+      },
+      "actual": {
+        "F20_event": true,
+        "F19_jsfunc": true,
+        "F18_crs": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F20: svg onload",
+      "payload": "<svg onload=alert(1)>",
+      "expected": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F20: body onload",
+      "payload": "<body onload=alert(1)>",
+      "expected": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F20: a onclick",
+      "payload": "<a href=\"#\" onclick=alert(1)>x</a>",
+      "expected": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F20: input onfocus",
+      "payload": "<input onfocus=alert(1) autofocus>",
+      "expected": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": true,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F19: script alert (no event handler)",
+      "payload": "<script>alert(\"XSS\")</script>",
+      "expected": {
+        "F20_event": false,
+        "F19_jsfunc": true,
+        "F18_crs": true
+      },
+      "actual": {
+        "F20_event": false,
+        "F19_jsfunc": true,
+        "F18_crs": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F19: eval call",
+      "payload": "eval(\"malicious code\")",
+      "expected": {
+        "F20_event": false,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": false,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F19: document.cookie",
+      "payload": "document.cookie",
+      "expected": {
+        "F20_event": false,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": false,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F19: window.location",
+      "payload": "window.location=\"evil.com\"",
+      "expected": {
+        "F20_event": false,
+        "F19_jsfunc": true
+      },
+      "actual": {
+        "F20_event": false,
+        "F19_jsfunc": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F18: javascript: URI",
+      "payload": "<a href=\"javascript:alert(1)\">link</a>",
+      "expected": {
+        "F18_crs": true
+      },
+      "actual": {
+        "F18_crs": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F13/F14: UNION SELECT",
+      "payload": "id=1' UNION SELECT username,password FROM users--",
+      "expected": {
+        "F13_crs": true,
+        "F14_union": true
+      },
+      "actual": {
+        "F13_crs": true,
+        "F14_union": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F13/F15: comment injection",
+      "payload": "id=1' OR '1'='1' --",
+      "expected": {
+        "F13_crs": true,
+        "F15_comment": true
+      },
+      "actual": {
+        "F13_crs": true,
+        "F15_comment": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F13/F16: stacked query",
+      "payload": "id=1; DROP TABLE users--",
+      "expected": {
+        "F13_crs": true,
+        "F16_stacked": true
+      },
+      "actual": {
+        "F13_crs": true,
+        "F16_stacked": true
+      },
+      "passed": true
+    },
+    {
+      "label": "F17: multiple SELECTs",
+      "payload": "id=1 UNION SELECT a FROM t1 UNION SELECT b FROM t2",
+      "expected": {
+        "F13_crs": true,
+        "F17_count": true
+      },
+      "actual": {
+        "F13_crs": true,
+        "F17_count": true
+      },
+      "passed": true
+    },
+    {
+      "label": "Benign: normal URL params (no JS/event)",
+      "payload": "?search=hello+world&page=1",
+      "expected": {
+        "F19_jsfunc": false,
+        "F20_event": false
+      },
+      "actual": {
+        "F19_jsfunc": false,
+        "F20_event": false
+      },
+      "passed": true
+    },
+    {
+      "label": "Benign: HTML form (no event handler)",
+      "payload": "<form><input name=\"user\" type=\"text\"></form>",
+      "expected": {
+        "F19_jsfunc": false,
+        "F20_event": false
+      },
+      "actual": {
+        "F19_jsfunc": false,
+        "F20_event": false
+      },
+      "passed": true
+    },
+    {
+      "label": "Benign: legit URL",
+      "payload": "https://example.com/products/12345",
+      "expected": {
+        "F18_crs": false,
+        "F19_jsfunc": false,
+        "F20_event": false,
+        "F13_crs": false
+      },
+      "actual": {
+        "F18_crs": false,
+        "F19_jsfunc": false,
+        "F20_event": false,
+        "F13_crs": false
+      },
+      "passed": true
+    }
+  ]
+}

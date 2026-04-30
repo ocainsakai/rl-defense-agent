@@ -1,0 +1,294 @@
+{
+  "anova_2018": {
+    "F1 - PacketRate": {
+      "anova_f_stat": 30.129073778907753,
+      "anova_p_value": 2.4321132436220273e-19,
+      "kruskal_h_stat": 2538.6039455592004,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F2 - SynAckRatio": {
+      "anova_f_stat": 2997.7663916402157,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 3987.377236438086,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F3 - InterArrivalTime": {
+      "anova_f_stat": 281.9761910761301,
+      "anova_p_value": 2.3583051845016477e-172,
+      "kruskal_h_stat": 2114.2927337744864,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F4 - RstRatio": {
+      "anova_f_stat": 5559.242223046822,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 5533.6056994179135,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F5 - DistinctPorts": {
+      "anova_f_stat": 10.834494490078463,
+      "anova_p_value": 4.253503380957967e-07,
+      "kruskal_h_stat": 49.55021484527305,
+      "kruskal_p_value": 9.9605656464058e-11,
+      "discriminative": true
+    },
+    "F6 - URLConcentration": {
+      "anova_f_stat": 37362.316579323946,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 6227.40052553912,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F7 - HttpIatUniformity": {
+      "anova_f_stat": 10.662030785406037,
+      "anova_p_value": 5.461202758923583e-07,
+      "kruskal_h_stat": 28.52387010626447,
+      "kruskal_p_value": 2.8194214148386274e-06,
+      "discriminative": true
+    },
+    "F8 - RequestSizeUniformity": {
+      "anova_f_stat": 6.115431257662202,
+      "anova_p_value": 0.0003773587411601825,
+      "kruskal_h_stat": 17.8745596484772,
+      "kruskal_p_value": 0.0004668430671403346,
+      "discriminative": true
+    },
+    "F9 - AvgPayloadSize": {
+      "anova_f_stat": 5432.707511102444,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4914.171471547197,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F10 - FwdBwdRatio": {
+      "anova_f_stat": 3754.423179108254,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4432.6528320877915,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F11 - PacketsPerPort": {
+      "anova_f_stat": 139.79717844008522,
+      "anova_p_value": 7.467550980107593e-88,
+      "kruskal_h_stat": 2763.38992544357,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F12 - SqlSpecialChar": {
+      "anova_f_stat": 39860.48393355405,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 6266.990836044331,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F13 - CrsSqliScore": {
+      "anova_f_stat": 4313.990619780689,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4355.3218266897575,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F14 - SqlUnionSelect": {
+      "anova_f_stat": 1525.9837455356928,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 2718.741797423124,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F15 - SqlComment": {
+      "anova_f_stat": 2950.235241369,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 3810.8085161124627,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F16 - SqlStackedQuery": {
+      "anova_f_stat": NaN,
+      "anova_p_value": NaN,
+      "kruskal_h_stat": NaN,
+      "kruskal_p_value": NaN,
+      "discriminative": false
+    },
+    "F17 - SqlSelectCount": {
+      "anova_f_stat": 1525.9837455356928,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 2718.741797423124,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F18 - CrsXssScore": {
+      "anova_f_stat": 11837.244149396316,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 5658.48821525758,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F19 - JsFunctionCall": {
+      "anova_f_stat": 12398.891303072915,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 5670.576920415902,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F20 - HtmlEventHandler": {
+      "anova_f_stat": NaN,
+      "anova_p_value": NaN,
+      "kruskal_h_stat": NaN,
+      "kruskal_p_value": NaN,
+      "discriminative": false
+    }
+  },
+  "anova_2017": {
+    "F1 - PacketRate": {
+      "anova_f_stat": 1389.3630969536002,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 3579.7735006445623,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F2 - SynAckRatio": {
+      "anova_f_stat": 6958.417582209294,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4092.546981192488,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F3 - InterArrivalTime": {
+      "anova_f_stat": 222.01101940033578,
+      "anova_p_value": 5.25155103172055e-256,
+      "kruskal_h_stat": 3639.1620731685744,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F4 - RstRatio": {
+      "anova_f_stat": 1657.1222344358432,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4844.72492194337,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F5 - DistinctPorts": {
+      "anova_f_stat": 2061.727625848153,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4013.189008258939,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F6 - URLConcentration": {
+      "anova_f_stat": 4815.556054020113,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4704.238404480918,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F7 - HttpIatUniformity": {
+      "anova_f_stat": 1849.4176945711888,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 3721.6587869284094,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F8 - RequestSizeUniformity": {
+      "anova_f_stat": 1878.563534690532,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 3833.0822096164165,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F9 - AvgPayloadSize": {
+      "anova_f_stat": 2518.394247407544,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4350.031030110984,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F10 - FwdBwdRatio": {
+      "anova_f_stat": 26711.445531010188,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4590.831610080837,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F11 - PacketsPerPort": {
+      "anova_f_stat": 7414.4200366947,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4217.219600376001,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F12 - SqlSpecialChar": {
+      "anova_f_stat": 9806.010512249655,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 5136.344367331545,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F13 - CrsSqliScore": {
+      "anova_f_stat": 2018.361635456315,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 3543.7638792817525,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F14 - SqlUnionSelect": {
+      "anova_f_stat": 804.5870071376769,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 2640.4460989800928,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F15 - SqlComment": {
+      "anova_f_stat": 493.3405789175294,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 1963.5701078061747,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F16 - SqlStackedQuery": {
+      "anova_f_stat": NaN,
+      "anova_p_value": NaN,
+      "kruskal_h_stat": NaN,
+      "kruskal_p_value": NaN,
+      "discriminative": false
+    },
+    "F17 - SqlSelectCount": {
+      "anova_f_stat": 804.5870071376769,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 2640.4460989800928,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F18 - CrsXssScore": {
+      "anova_f_stat": 2918.2190463424276,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4373.481597447278,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F19 - JsFunctionCall": {
+      "anova_f_stat": 2958.9654728825794,
+      "anova_p_value": 0.0,
+      "kruskal_h_stat": 4384.816346739794,
+      "kruskal_p_value": 0.0,
+      "discriminative": true
+    },
+    "F20 - HtmlEventHandler": {
+      "anova_f_stat": NaN,
+      "anova_p_value": NaN,
+      "kruskal_h_stat": NaN,
+      "kruskal_p_value": NaN,
+      "discriminative": false
+    }
+  },
+  "summary": {
+    "n_discriminative_features_2018": 18,
+    "n_discriminative_features_2017": 18,
+    "pca_variance_explained_2018": 0.4623863888029116,
+    "pca_variance_explained_2017": 0.5126945624943473,
+    "tsne_knn5_purity_2018": 0.996,
+    "tsne_knn5_purity_2017": 0.9906666666666667
+  }
+}
