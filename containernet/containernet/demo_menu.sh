@@ -110,8 +110,16 @@ run_scenario() {
         ;;
 
     v)
-        echo -e "\n${CYAN}[Verify] Webserver hay Honeypot?${NC}"
-        RESULT=$(demo_curl --max-time 3 "$WEB/?cb=$(date +%s%N)" 2>&1)
+        echo -e "\n${CYAN}[Verify] HTTPS + Webserver/Honeypot?${NC}"
+        VERIFY_URL="$WEB/?cb=$(date +%s%N)"
+        echo -e "${YELLOW}URL:${NC} $VERIFY_URL"
+        echo -e "${YELLOW}TLS proof:${NC}"
+        SSLKEYLOGFILE=/tmp/tls_keys.log curl -vkI --http1.1 \
+            --connect-timeout 2 --max-time 3 \
+            "$VERIFY_URL" -o /dev/null 2>&1 \
+            | grep -E 'Trying|Connected|SSL connection using|subject:|issuer:|HTTP/'
+        echo -e "${YELLOW}Response route:${NC}"
+        RESULT=$(demo_curl --max-time 3 "$VERIFY_URL" 2>&1)
         if echo "$RESULT" | grep -q "T3ch Stor3"; then
             echo -e "${YELLOW}→ HONEYPOT (bị Redirect)${NC}"
         elif echo "$RESULT" | grep -q "Tech Store"; then
